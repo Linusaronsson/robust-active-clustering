@@ -2,7 +2,7 @@
     "general_options": {
         "experiment_name": "TEST_EXPERIMENT",
         "num_repeats": 10,
-        "n_workers": 15,
+        "n_workers": 60,
         "local": true,
         "verbose": true
     },
