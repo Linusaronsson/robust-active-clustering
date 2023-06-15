@@ -699,32 +699,34 @@ class ActiveClustering:
 
     def infer_similarities(self):
         for k1 in range(0, self.num_clusters):
-            for k2 in range(0, k1):
+            for k2 in range(0, k1 + 1):
                 c1 = self.clustering[k1]
                 c2 = self.clustering[k2]
 
-                # Extract inter-cluster pairwise similarities where F > 1
                 pairwise_sims = self.pairwise_similarities[np.ix_(c1, c2)]
                 pairwise_counts = self.feedback_freq[np.ix_(c1, c2)]
+
+                # If the clusters are the same, only consider the lower triangular part of the matrix, excluding the diagonal
+                if k1 == k2:
+                    mask = np.tril(np.ones_like(pairwise_sims, dtype=bool), k=-1)
+                    pairwise_sims = np.where(mask, pairwise_sims, np.nan)
+                    pairwise_counts = np.where(mask, pairwise_counts, np.nan)
+
                 sims_with_counts_gt_1 = pairwise_sims[pairwise_counts > 1]
 
-                if sims_with_counts_gt_1.size > 0: # If there are any pairwise similarities with count > 1
-                    # Calculate the mean of these pairwise similarities
-                    mean_sim = np.mean(sims_with_counts_gt_1)
+                if np.isnan(sims_with_counts_gt_1).all():  # If all elements are NaN, skip this iteration
+                    return
 
-                    # Identify the pairwise similarities with F <= 1
-                    sims_with_counts_le_1_idx = np.where(pairwise_counts <= 1)
+                mean_sim = np.nanmean(sims_with_counts_gt_1)
 
-                    # Update their value in S to be the average of their current value and the mean calculated
-                    for idx in np.ndindex(sims_with_counts_le_1_idx[0].shape):
-                        idx_cluster1 = c1[sims_with_counts_le_1_idx[0][idx]]
-                        idx_cluster2 = c2[sims_with_counts_le_1_idx[1][idx]]
+                # Identify the pairwise similarities with F <= 1
+                sims_with_counts_le_1_idx = np.where(pairwise_counts <= 1)
 
-                        # Call function update_similarity(ind1, ind2, mean_sim)
-                        self.update_similarity(idx_cluster1, idx_cluster2, custom_query=mean_sim)
-
-                    #self.pairwise_similarities[np.ix_(c1, c2)][sims_with_counts_le_1_idx] = \
-                    #    (self.pairwise_similarities[np.ix_(c1, c2)][sims_with_counts_le_1_idx] + mean_sim) / 2
+                # Loop over every index in sims_with_counts_le_1_idx 
+                for idx in zip(*sims_with_counts_le_1_idx):
+                    idx_cluster1 = c1[idx[0]]
+                    idx_cluster2 = c2[idx[1]]
+                    self.update_similarity(idx_cluster1, idx_cluster2, mean_sim)
 
 
             
