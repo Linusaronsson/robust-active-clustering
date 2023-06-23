@@ -715,7 +715,7 @@ class ActiveClustering:
                 sims_with_counts_gt_1 = pairwise_sims[pairwise_counts > 1]
 
                 if np.isnan(sims_with_counts_gt_1).all():  # If all elements are NaN, skip this iteration
-                    return
+                    continue
 
                 mean_sim = np.nanmean(sims_with_counts_gt_1)
 
@@ -726,7 +726,9 @@ class ActiveClustering:
                 for idx in zip(*sims_with_counts_le_1_idx):
                     idx_cluster1 = c1[idx[0]]
                     idx_cluster2 = c2[idx[1]]
-                    self.update_similarity(idx_cluster1, idx_cluster2, mean_sim)
+                    self.pairwise_similarities[idx_cluster1, idx_cluster2] = mean_sim
+                    self.pairwise_similarities[idx_cluster2, idx_cluster1] = mean_sim
+                    #self.update_similarity(idx_cluster1, idx_cluster2, mean_sim)
 
 
             
