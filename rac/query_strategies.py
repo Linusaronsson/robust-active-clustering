@@ -264,13 +264,13 @@ class QueryStrategy:
                                 sims = [np.abs(sim_ij), np.abs(sim_ik), np.abs(sim_jk)]
                                 smallest_sim = self.random_sort(np.array(sims))[0]
                                 if smallest_sim == 0 and self.ac.feedback_freq[i, j] <= self.ac.tau:
-                                    self.custom_informativeness[i, j] = np.maximum(expected_loss, self.similarity_costs[i, j])
-                                    self.custom_informativeness[j, i] = np.maximum(expected_loss, self.similarity_costs[j, i])
+                                    self.custom_informativeness[i, j] = np.maximum(expected_loss, self.custom_informativeness[i, j])
+                                    self.custom_informativeness[j, i] = np.maximum(expected_loss, self.custom_informativeness[j, i])
                                 if smallest_sim == 1 and self.ac.feedback_freq[i, k] <=  self.ac.tau:
-                                    self.custom_informativeness[i, k] = np.maximum(expected_loss, self.similarity_costs[i, k])
-                                    self.custom_informativeness[k, i] = np.maximum(expected_loss, self.similarity_costs[k, i])
+                                    self.custom_informativeness[i, k] = np.maximum(expected_loss, self.custom_informativeness[i, k])
+                                    self.custom_informativeness[k, i] = np.maximum(expected_loss, self.custom_informativeness[k, i])
                                 if smallest_sim == 2 and self.ac.feedback_freq[j, k] <= self.ac.tau:
-                                    self.custom_informativeness[j, k] = np.maximum(expected_loss, self.similarity_costs[j, k])
-                                    self.custom_informativeness[k, j] = np.maximum(expected_loss, self.similarity_costs[k, j])
+                                    self.custom_informativeness[j, k] = np.maximum(expected_loss, self.custom_informativeness[j, k])
+                                    self.custom_informativeness[k, j] = np.maximum(expected_loss, self.custom_informativeness[k, j])
         else:
             raise ValueError("Invalid acquisition function maxmin/maxexp.")
