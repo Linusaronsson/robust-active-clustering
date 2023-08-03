@@ -1,16 +1,23 @@
 import numpy as np 
 from itertools import combinations, product
+from scipy.special import softmax
 
 class QueryStrategy:
     def __init__(self, ac):
         self.ac = ac
+        self.custom_informativeness = None
 
     def select_batch(self, acq_fn, local_regions, batch_size):
+        if self.ac.random.rand() < self.ac.eps:
+            acq_fn = "unif"
+            local_regions = "pairs"
+
         if type(local_regions) == str:
             if local_regions == "pairs":
                 return np.array(self.select_pairs(acq_fn, "all_pairs", batch_size)), None
             elif local_regions == "triangles":
-                pass
+                self.compute_informativeness(acq_fn)
+                return np.array(self.select_pairs("custom", "all_pairs", batch_size)), None
             elif local_regions == "clusters":
                 local_regions = self.clusters()
             else:
@@ -43,6 +50,9 @@ class QueryStrategy:
         return self.incon(local_region) + self.ac.alpha * self.uncert(local_region)
 
     def maxmin(self, local_region):
+        pass
+
+    def maxexp(self, local_region):
         pass
 
     def maxmin_ucb(self, local_region):
@@ -88,6 +98,8 @@ class QueryStrategy:
             S = -self.ac.feedback_freq
         elif acq_fn == "uncert":
             S = -np.abs(self.ac.pairwise_similarities)
+        elif acq_fn == "custom":
+            S = self.custom_informativeness
         else:
             raise ValueError("Invalid acquisition function. Must be one of 'unif', 'freq', or 'uncert'.")
 
@@ -110,3 +122,155 @@ class QueryStrategy:
         result = [tuple(indices) for indices, value in zip(pairwise_indices, top_M_values)]
 
         return result
+
+    def min_triple_cost(self, i, j, k, beta=1):
+        sim_ij = self.ac.pairwise_similarities[i, j]
+        sim_ik = self.ac.pairwise_similarities[i, k]
+        sim_jk = self.ac.pairwise_similarities[j, k]
+
+        # (i, j, k)
+        c1 = 0
+        if sim_ij < 0:
+            c1 += np.abs(sim_ij)
+
+        if sim_ik < 0:
+            c1 += np.abs(sim_ik)
+
+        if sim_jk < 0:
+            c1 += np.abs(sim_jk)
+
+        # (i, k), (j)
+        c2 = 0
+        if sim_ij >= 0:
+            c2 += np.abs(sim_ij)
+
+        if sim_ik < 0:
+            c2 += np.abs(sim_ik)
+
+        if sim_jk >= 0:
+            c2 += np.abs(sim_jk)
+
+        # (i, j), (k)
+        c3 = 0
+        if sim_ij < 0:
+            c3 += np.abs(sim_ij)
+
+        if sim_ik >= 0:
+            c3 += np.abs(sim_ik)
+
+        if sim_jk >= 0:
+            c3 += np.abs(sim_jk)
+
+        # (k, j), (i)
+        c4 = 0
+        if sim_ij >= 0:
+            c4 += np.abs(sim_ij)
+
+        if sim_ik >= 0:
+            c4 += np.abs(sim_ik)
+
+        if sim_jk < 0:
+            c4 += np.abs(sim_jk)
+
+        # (i), (j), (k)
+        c5 = 0
+        if sim_ij >= 0:
+            c5 += np.abs(sim_ij)
+
+        if sim_ik >= 0:
+            c5 += np.abs(sim_ik)
+
+        if sim_jk >= 0:
+            c5 += np.abs(sim_jk)
+
+        costs = np.array([c1, c2, c3, c4, c5])
+        probs = softmax(-beta*costs)
+        expected_loss = np.sum(costs*probs)
+
+        return expected_loss
+
+    def triangle_is_bad(self, i, j, k):
+        sim_ij = self.ac.pairwise_similarities[i, j]
+        sim_ik = self.ac.pairwise_similarities[i, k]
+        sim_jk = self.ac.pairwise_similarities[j, k]
+        num_pos = 0
+
+        if sim_ij > 0:
+            num_pos +=1
+
+        if sim_ik > 0:
+            num_pos +=1
+
+        if sim_jk > 0:
+            num_pos +=1
+
+        return num_pos == 2
+
+    def in_same_cluster(self, o1, o2):
+        return self.ac.clustering_solution[o1] == self.ac.clustering_solution[o2]
+
+    def violates_clustering(self, o1, o2): 
+        return (not self.in_same_cluster(o1, o2) and self.ac.pairwise_similarities[o1, o2] >= 0) or \
+                (self.in_same_cluster(o1, o2) and self.ac.pairwise_similarities[o1, o2] < 0)
+    
+    def random_sort(self, arr, ascending=True):
+        if not ascending:
+            arr = -arr
+        b = self.ac.random.random(arr.size)
+        return np.lexsort((b, arr))
+
+    def compute_informativeness(self, acq_fn):
+        if acq_fn == "maxmin":
+            self.custom_informativeness = np.zeros((self.ac.N, self.ac.N), dtype=np.float32) 
+            N = self.ac.N
+            for i in range(0, N):
+                for j in range(0, i):
+                    if self.violates_clustering(i, j):# and self.ac.feedback_freq[i, j] > 1: # adding this condition should not change anything when there are no bad triangles initially! since all new triangles must include at least one queried edge
+                        for k in range(0, N):
+                            if k == i or k == j:
+                                continue
+                            sim_ij = self.ac.pairwise_similarities[i, j]
+                            sim_ik = self.ac.pairwise_similarities[i, k]
+                            sim_jk = self.ac.pairwise_similarities[j, k]
+
+                            if self.triangle_is_bad(i, j, k):# and (self.ac.feedback_freq[i, j] > 1 or self.ac.feedback_freq[i, k] > 1 or self.ac.feedback_freq[j, k] > 1):
+                                sims = [np.abs(sim_ij), np.abs(sim_ik), np.abs(sim_jk)]
+                                smallest_sim = self.random_sort(np.array(sims))[0]
+
+                                if smallest_sim == 0 and self.ac.feedback_freq[i, j] <= self.ac.tau:
+                                    self.custom_informativeness[i, j] = np.abs(sim_ij)
+                                    self.custom_informativeness[j, i] = np.abs(sim_ij)
+                                if smallest_sim == 1 and self.ac.feedback_freq[i, k] <= self.ac.tau:
+                                    self.custom_informativeness[i, k] = np.abs(sim_ik)
+                                    self.custom_informativeness[k, i] = np.abs(sim_ik)
+                                if smallest_sim == 2 and self.ac.feedback_freq[j, k] <= self.ac.tau:
+                                    self.custom_informativeness[j, k] = np.abs(sim_jk)
+                                    self.custom_informativeness[k, j] = np.abs(sim_jk)
+        elif acq_fn == "maxexp":
+            self.custom_informativeness = np.zeros((self.ac.N, self.ac.N), dtype=np.float32) 
+            N = self.ac.N
+            for i in range(0, N):
+                for j in range(0, i):
+                    if self.violates_clustering(i, j):# and self.ac.feedback_freq[i, j] > 1:
+                        for k in range(0, N):
+                            if k == i or k == j:
+                                continue
+                            sim_ij = self.ac.pairwise_similarities[i, j]
+                            sim_ik = self.ac.pairwise_similarities[i, k]
+                            sim_jk = self.ac.pairwise_similarities[j, k]
+
+                            if self.triangle_is_bad(i, j, k):# and (self.ac.feedback_freq[i, j] > 1 or self.ac.feedback_freq[i, k] > 1 or self.ac.feedback_freq[j, k] > 1):
+                                expected_loss = self.min_triple_cost(i, j, k, beta=self.ac.beta) 
+                                sims = [np.abs(sim_ij), np.abs(sim_ik), np.abs(sim_jk)]
+                                smallest_sim = self.random_sort(np.array(sims))[0]
+                                if smallest_sim == 0 and self.ac.feedback_freq[i, j] <= self.ac.tau:
+                                    self.custom_informativeness[i, j] = np.maximum(expected_loss, self.similarity_costs[i, j])
+                                    self.custom_informativeness[j, i] = np.maximum(expected_loss, self.similarity_costs[j, i])
+                                if smallest_sim == 1 and self.ac.feedback_freq[i, k] <=  self.ac.tau:
+                                    self.custom_informativeness[i, k] = np.maximum(expected_loss, self.similarity_costs[i, k])
+                                    self.custom_informativeness[k, i] = np.maximum(expected_loss, self.similarity_costs[k, i])
+                                if smallest_sim == 2 and self.ac.feedback_freq[j, k] <= self.ac.tau:
+                                    self.custom_informativeness[j, k] = np.maximum(expected_loss, self.similarity_costs[j, k])
+                                    self.custom_informativeness[k, j] = np.maximum(expected_loss, self.similarity_costs[k, j])
+        else:
+            raise ValueError("Invalid acquisition function maxmin/maxexp.")

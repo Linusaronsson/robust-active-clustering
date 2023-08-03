@@ -71,6 +71,12 @@ class ActiveClustering:
         self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         self.net = None
 
+        if hasattr(self, "tau"):
+            if self.tau == -1:
+                self.tau = np.inf
+            else:
+                self.tau = self.tau
+
         if not hasattr(self, "predict_sims"):
             self.predict_sims = False
         

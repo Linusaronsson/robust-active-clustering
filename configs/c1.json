@@ -1,8 +1,8 @@
 {
     "general_options": {
-        "experiment_name": "TEST_EXPERIMENT",
-        "num_repeats": 10,
-        "n_workers": 60,
+        "experiment_name": "TESTINGTEST",
+        "num_repeats": 5,
+        "n_workers": 8,
         "local": true,
         "verbose": true
     },

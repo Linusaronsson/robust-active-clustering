@@ -1,8 +1,8 @@
 {
     "general_options": {
-        "experiment_name": "TEST_EXPERIMENT",
-        "num_repeats": 10,
-        "n_workers": 60,
+        "experiment_name": "TESTINGTEST",
+        "num_repeats": 5,
+        "n_workers": 8,
         "local": true,
         "verbose": true
     },
@@ -14,7 +14,7 @@
         "force_global_update": true,
         "save_matrix_data": false,
         "infer_sims": false,
-        "infer_sims2": true
+        "infer_sims2": false
     },
     "sim_init_options": {
         "K_init": 10,
@@ -22,8 +22,8 @@
         "sim_init_type": "custom"
     },
     "query_strategy_options": {
-        "acq_fn": ["freq"],
-        "local_regions": "pairs",
+        "acq_fn": ["maxmin", "maxexp"],
+        "local_regions": "triangles",
         "eps": 0.0,
         "beta": 1,
         "tau": -1,
