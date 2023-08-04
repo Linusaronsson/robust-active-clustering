@@ -8,16 +8,15 @@ class QueryStrategy:
         self.custom_informativeness = None
 
     def select_batch(self, acq_fn, local_regions, batch_size):
-        if self.ac.random.rand() < self.ac.eps:
-            acq_fn = "unif"
-            local_regions = "pairs"
-
         if type(local_regions) == str:
             if local_regions == "pairs":
                 return np.array(self.select_pairs(acq_fn, "all_pairs", batch_size)), None
             elif local_regions == "triangles":
-                self.compute_informativeness(acq_fn)
-                return np.array(self.select_pairs("custom", "all_pairs", batch_size)), None
+                if self.ac.random.rand() < self.ac.eps:
+                    return np.array(self.select_pairs("freq", "all_pairs", batch_size)), None
+                else:
+                    self.compute_informativeness(acq_fn)
+                    return np.array(self.select_pairs("custom", "all_pairs", batch_size)), None
             elif local_regions == "clusters":
                 local_regions = self.clusters()
             else:
