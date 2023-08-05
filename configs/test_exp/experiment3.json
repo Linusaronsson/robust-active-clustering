@@ -25,20 +25,18 @@
         "sim_init_type": "custom"
     },
     "query_strategy_options": {
-        "acq_fn": "maxmin",
-        "local_regions": "triangles",
+        "acq_fn": "unif",
+        "local_regions": "pairs",
         "beta": 1,
-        "tau": 10,
+        "tau": 7,
         "alpha": 1,
         "eps": [
-            0.0,
-            0.1,
             0.3
         ]
     },
     "dataset_options": {
         "dataset": "synthetic",
-        "n_samples": 1000,
+        "n_samples": 500,
         "n_clusters": 10,
         "class_balance": null
     }
