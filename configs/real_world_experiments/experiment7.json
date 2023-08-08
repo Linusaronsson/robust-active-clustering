@@ -26,8 +26,8 @@
         "sim_init_type": "custom"
     },
     "query_strategy_options": {
-        "acq_fn": "QECC",
-        "local_regions": "none",
+        "acq_fn": "maxmin",
+        "local_regions": "triangles",
         "beta": 1,
         "tau": 7,
         "alpha": 1,
@@ -36,6 +36,6 @@
         ]
     },
     "dataset_options": {
-        "dataset": "yeast"
+        "dataset": "20newsgroups"
     }
 }

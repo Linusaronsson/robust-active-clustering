@@ -36,6 +36,6 @@
         ]
     },
     "dataset_options": {
-        "dataset": "forest_type_mapping"
+        "dataset": "20newsgroups"
     }
 }

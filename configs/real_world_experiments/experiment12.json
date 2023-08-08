@@ -26,7 +26,7 @@
         "sim_init_type": "custom"
     },
     "query_strategy_options": {
-        "acq_fn": "nCOBRAS",
+        "acq_fn": "QECC",
         "local_regions": "none",
         "beta": 1,
         "tau": 7,
@@ -36,6 +36,6 @@
         ]
     },
     "dataset_options": {
-        "dataset": "ecoli"
+        "dataset": "cifar10"
     }
 }

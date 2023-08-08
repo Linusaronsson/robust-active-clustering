@@ -36,6 +36,6 @@
         ]
     },
     "dataset_options": {
-        "dataset": "mushrooms"
+        "dataset": "cifar10"
     }
 }
