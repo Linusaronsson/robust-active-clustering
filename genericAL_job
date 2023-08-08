@@ -2,7 +2,7 @@
 #SBATCH -A NAISS2023-22-272 -p alvis
 #SBATCH -N 1 
 #SBATCH --gpus-per-node=A40:1  # We're launching 2 nodes with 4 Nvidia T4 GPUs each
-#SBATCH -t 24:00:00
+#SBATCH -t 72:00:00
 
 #Here you should typically call your GPU-hungry application
 module load SciPy-bundle/2022.05-foss-2022a
@@ -13,4 +13,4 @@ source ../my_python/bin/activate
 pip install torchvision
 pip install --no-cache-dir --no-build-isolation flair
 
-python rac/run_experiments.py --config configs/test_exp/experiment$SLURM_ARRAY_TASK_ID.json
+python rac/run_experiments.py --config configs/real_world_experiments/experiment$SLURM_ARRAY_TASK_ID.json

@@ -1,7 +1,7 @@
 {
     "general_options": {
-        "experiment_name": "real_world_experiments",
-        "num_repeats": 15,
+        "experiment_name": "real_world_experiments_new",
+        "num_repeats": 5,
         "n_workers": 60,
         "local": false,
         "verbose": false
@@ -21,21 +21,24 @@
         ]
     },
     "sim_init_options": {
-        "K_init": 10,
+        "K_init": 2,
         "sim_init": 0.1,
         "sim_init_type": "custom"
     },
     "query_strategy_options": {
-        "acq_fn": "QECC",
-        "local_regions": "none",
+        "local_regions": "triangles",
         "beta": 1,
         "tau": 7,
         "alpha": 1,
+        "acq_fn": [
+            "maxmin",
+            "maxexp"
+        ],
         "eps": [
             0.3
         ]
     },
     "dataset_options": {
-        "dataset": "20newsgroups"
+        "dataset": "breast_cancer"
     }
 }

@@ -39,6 +39,6 @@
         ]
     },
     "dataset_options": {
-        "dataset": "ecoli"
+        "dataset": "yeast"
     }
 }

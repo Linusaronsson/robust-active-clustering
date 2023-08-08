@@ -93,6 +93,7 @@ class ActiveClustering:
             self.init_noise_level = 0
 
     def run_AL_procedure(self):
+        self.start_time = time.time()
         self.initialize_ac_procedure()
         self.store_experiment_data(initial=True)
         perfect_rand_count = 0
@@ -189,8 +190,14 @@ class ActiveClustering:
                     self.update_clustering(objects) 
                 print("time_nn: ", time.time() - time_nn)
 
+
             self.store_experiment_data()
             total_queries += self.query_size
+
+            self.total_time_elapsed = time.time() - self.start_time
+            num_hours = self.total_time_elapsed / 3600
+            if num_hours > 60:
+                break
 
             if self.verbose:
                 #print("iteration: ", ii)
