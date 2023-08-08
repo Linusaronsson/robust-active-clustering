@@ -1,8 +1,8 @@
 {
     "general_options": {
         "experiment_name": "synthetic_experiment",
-        "num_repeats": 10,
-        "n_workers": 60,
+        "num_repeats": 5,
+        "n_workers": 15,
         "local": false,
         "verbose": false
     },
@@ -26,22 +26,17 @@
         "sim_init_type": "custom"
     },
     "query_strategy_options": {
-        "acq_fn": "maxmin",
-        "local_regions": "triangles",
+        "acq_fn": "freq",
+        "local_regions": "pairs",
+        "eps": 0.3,
         "beta": 1,
         "tau": 7,
-        "alpha": 1,
-        "eps": [
-            0.3
-        ]
+        "alpha": 1
     },
     "dataset_options": {
         "dataset": "synthetic",
+        "n_samples": 500,
         "n_clusters": 10,
-        "class_balance": null,
-        "n_samples": [
-            250,
-            500
-        ]
+        "class_balance": null
     }
 }

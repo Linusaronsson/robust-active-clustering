@@ -2,7 +2,7 @@
     "general_options": {
         "experiment_name": "real_world_experiments_new",
         "num_repeats": 5,
-        "n_workers": 60,
+        "n_workers": 15,
         "local": false,
         "verbose": false
     },
@@ -26,14 +26,11 @@
         "sim_init_type": "custom"
     },
     "query_strategy_options": {
-        "local_regions": "triangles",
+        "acq_fn": "unif",
+        "local_regions": "pairs",
         "beta": 1,
         "tau": 7,
         "alpha": 1,
-        "acq_fn": [
-            "maxmin",
-            "maxexp"
-        ],
         "eps": [
             0.3
         ]
