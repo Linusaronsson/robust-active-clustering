@@ -1,4 +1,5 @@
 datasets/
+datasets_small/
 experiment_results/
 experiment_results_local/
 experiment_results_paper1/

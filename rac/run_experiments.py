@@ -52,12 +52,6 @@ def get_dataset(**options):
     elif dataset == "cifar10":
         X = np.load("datasets/cifar10_data/X.npy")
         Y = np.load("datasets/cifar10_data/Y.npy")
-    elif dataset == "20newsgroups_small":
-        X = np.load("datasets/20newsgroups_small_data/X.npy")
-        Y = np.load("datasets/20newsgroups_small_data/Y.npy")
-    elif dataset == "cifar10_small":
-        X = np.load("datasets/cifar10_small_data/X.npy")
-        Y = np.load("datasets/cifar10_small_data/Y.npy")
     elif dataset == "mnist":
         X = np.load("datasets/mnist_data/X.npy")
         Y = np.load("datasets/mnist_data/Y.npy")
@@ -82,6 +76,36 @@ def get_dataset(**options):
     elif dataset == "yeast":
         X = np.load("datasets/yeast_data/X.npy")
         Y = np.load("datasets/yeast_data/Y.npy")
+    elif dataset == "20newsgroups_small": ##############################
+        X = np.load("datasets_small/20newsgroups_data/X.npy")
+        Y = np.load("datasets_small/20newsgroups_data/Y.npy")
+    elif dataset == "cifar10_small":
+        X = np.load("datasets_small/cifar10_data/X.npy")
+        Y = np.load("datasets_small/cifar10_data/Y.npy")
+    elif dataset == "mnist_small":
+        X = np.load("datasets_small/mnist_data/X.npy")
+        Y = np.load("datasets_small/mnist_data/Y.npy")
+    elif dataset == "breast_cancer_small":
+        X = np.load("datasets_small/breast_cancer_data/X.npy")
+        Y = np.load("datasets_small/breast_cancer_data/Y.npy")
+    elif dataset == "cardiotocography_small":
+        X = np.load("datasets_small/cardiotocography_data/X.npy")
+        Y = np.load("datasets_small/cardiotocography_data/Y.npy")
+    elif dataset == "ecoli_small":
+        X = np.load("datasets_small/ecoli_data/X.npy")
+        Y = np.load("datasets_small/ecoli_data/Y.npy")
+    elif dataset == "forest_type_mapping_small":
+        X = np.load("datasets_small/ForestTypeMapping_data/X.npy")
+        Y = np.load("datasets_small/ForestTypeMapping_data/Y.npy")
+    elif dataset == "mushrooms_small":
+        X = np.load("datasets_small/mushrooms_data/X.npy")
+        Y = np.load("datasets_small/mushrooms_data/Y.npy")
+    elif dataset == "user_knowledge_small":
+        X = np.load("datasets_small/user_knowledge_data/X.npy")
+        Y = np.load("datasets_small/user_knowledge_data/Y.npy")
+    elif dataset == "yeast_small":
+        X = np.load("datasets_small/yeast_data/X.npy")
+        Y = np.load("datasets_small/yeast_data/Y.npy")
     else:
         raise ValueError("INVALID DATASET")
     if normalize:
