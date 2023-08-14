@@ -100,7 +100,8 @@ class ExperimentReader:
         self.metrics = metrics
         self.metrics.append("rand")
         self.metrics = list(set(self.metrics))
-        pass
+        self.Y = None
+        self.num_feedback = None
 
     def get_metric_data(self, exp):
         data = {}
@@ -133,8 +134,13 @@ class ExperimentReader:
                         exp = []
                     
                     dat = exp[0].__dict__
+                    if self.Y is None:
+                        self.Y = exp[0].Y
+                        self.dataset = exp[0].dataset_name
+                        self.num_feedback = exp[0].num_feedback
                     wanted_keys = exp[0].experiment_params
                     sub_dat = dict((k, dat[k]) for k in wanted_keys if k in dat)
+                    sub_dat
                     #sub_dat["data"] = exp
                     metric_data = self.get_metric_data(exp)
                     for metric in self.metrics:
@@ -305,6 +311,14 @@ class ExperimentReader:
                 indices=indices, 
                 threshold=threshold
             )
+        
+        # extending
+        for metric in self.metrics:
+            col = "mean_" + metric
+            data[col] = data[metric].apply(lambda x: np.mean(x, axis=0)) # axis 1 since we transpose in read_all_data (i.e., shape is (num_iterations, num_repeats))
+            data['array_lengths'] = data[col].apply(lambda x: len(x))
+            max_length = data['array_lengths'].max()
+            data = self.extend_dataframe(data, metric, max_length)
 
         data_column_names = self.metrics
         non_data_column_names = list(set(data.columns) - set(data_column_names))
@@ -357,18 +371,157 @@ class ExperimentReader:
                 else:
                     err_kws={}
 
-                sns.lineplot(
-                    x=vary[0],
-                    y="y",
-                    hue=df_filtered[hues].apply(tuple, axis=1),
-                    errorbar=("se", 2),
-                    err_style=err_style,
-                    data=df_filtered,
-                    linestyle=linestyle,
-                    err_kws=err_kws,
-                )
-                plt.xlabel(str(vary))
-                plt.ylabel(metric)
+                cut_threshold = 0
+                cut_axis = False
+                errorbar = ("se", 2)
+                if self.dataset == "20newsgroups_small":
+                    cut_threshold = 600
+                elif self.dataset == "breast_cancer_small":
+                    #errorbar = None
+                    cut_axis = True
+                    l1 = 0
+                    l2 = 0.72
+                    l3 = 0.725
+                    l4 = 1.01
+                    cut_threshold = 400
+                elif self.dataset == "cardiotocography_small":
+                    cut_threshold = 400
+                elif self.dataset == "cifar10_small":
+                    cut_threshold = 400
+                    cut_axis = True
+                    l1 = 0
+                    l2 = 0.4
+                    l3 = 0.65
+                    l4 = 1.01
+                elif self.dataset == "ecoli_small":
+                    cut_threshold = 450
+                    #cut_axis = True
+                    #l1 = 0
+                    #l2 = 0.4
+                    #l3 = 0.45
+                    #l4 = 1.01
+                elif self.dataset == "forest_type_mapping_small":
+                    cut_threshold = 400
+                elif self.dataset == "mnist_small":
+                    cut_threshold = 450
+                elif self.dataset == "mushrooms_small":
+                    cut_threshold = 400
+                elif self.dataset == "user_knowledge_small":
+                    cut_threshold = 500
+                elif self.dataset == "yeast_small":
+                    cut_threshold = 400
+                else:
+                    raise ValueError("incorrect dataset!")
+
+                df_filtered = df_filtered[df_filtered[vary[0]] < cut_threshold]
+                metric_map = {"ami": "AMI", "rand": "ARI"}
+
+                if not cut_axis:
+                    ax = sns.lineplot(
+                        x=vary[0],
+                        y="y",
+                        hue=df_filtered[hues].apply(tuple, axis=1),
+                        errorbar=errorbar,
+                        err_style=err_style,
+                        data=df_filtered,
+                        linestyle=linestyle,
+                        err_kws=err_kws,
+                    )
+                    plt.ylabel(metric_map[metric])
+                else:
+                    f, (ax1, ax2) = plt.subplots(ncols=1, nrows=2, sharex=True, sharey=False, gridspec_kw={'height_ratios': [3, 1]})
+                    ax = sns.lineplot(
+                        x=vary[0],
+                        y="y",
+                        hue=df_filtered[hues].apply(tuple, axis=1),
+                        errorbar=errorbar,
+                        err_style=err_style,
+                        data=df_filtered,
+                        linestyle=linestyle,
+                        err_kws=err_kws,
+                        ax=ax1
+                    )
+                    ax = sns.lineplot(
+                        x=vary[0],
+                        y="y",
+                        hue=df_filtered[hues].apply(tuple, axis=1),
+                        errorbar=errorbar,
+                        err_style=err_style,
+                        data=df_filtered,
+                        linestyle=linestyle,
+                        err_kws=err_kws,
+                        ax=ax2
+                    )
+                    ax1.spines['bottom'].set_visible(False)
+                    ax2.spines['top'].set_visible(False)
+                    ax1.set_ylim(l3, l4)
+                    ax2.set_ylim(l1, l2)
+
+                    d = .015  # how big to make the diagonal lines in axes coordinates
+                    # arguments to pass to plot, just so we don't keep repeating them
+                    kwargs = dict(transform=ax1.transAxes, color='k', clip_on=False)
+                    ax1.plot((-d, +d), (-d, +d), **kwargs)        # top-left diagonal
+                    ax1.plot((1 - d, 1 + d), (-d, +d), **kwargs)  # top-right diagonal
+
+                    kwargs.update(transform=ax2.transAxes)  # switch to the bottom axes
+                    ax2.plot((-d, +d), (1 - d, 1 + d), **kwargs)  # bottom-left diagonal
+                    ax2.plot((1 - d, 1 + d), (1 - d, 1 + d), **kwargs)  # bottom-right diagonal
+                    ax1.set_ylabel("")
+                    ax2.set_ylabel("")
+                    #f.text(metric_map[metric])
+                    f.text(0.02, 0.5, metric_map[metric], va='center', rotation='vertical')
+
+
+                    #plt.subplots_adjust(wspace=0, hspace=0)
+                N = len(self.Y)
+                n_edges = (N*(N-1))/2
+                batch_size = math.ceil(n_edges * self.num_feedback)
+                n_iterations = int(n_edges/batch_size)
+                #tick_labels = np.array(list(range(0, n_iterations))) * batch_size
+                labels = [int(item)*batch_size for item in ax.get_xticks()]
+
+
+                if not cut_axis:
+                    ax.set_xticklabels(labels)
+                else:
+                    ax2.get_legend().remove()
+                    ax2.set_xticklabels(labels)
+                    ax = ax1
+
+                #ax.set_xticks(range(n_iterations), labels=tick_labels)
+                #plt.xlabel(str(vary))
+                plt.xlabel("Number of queries")
+
+                legs = ax.get_legend().get_texts()
+                #legs = [l.get_text() for l in legs]
+                #new_legends = []
+                for ll in legs:
+                    l = ll.get_text()
+                    if "unif" in l:
+                        #new_legends.append("Uniform")
+                        ll.set_text("Uniform")
+                    if "COBRAS" in l and "nCOBRAS" not in l:
+                        #new_legends.append("COBRAS")
+                        ll.set_text("COBRAS")
+                    if "nCOBRAS" in l:
+                        #new_legends.append("nCOBRAS")
+                        ll.set_text("nCOBRAS")
+                    if "freq" in l:
+                        #new_legends.append("Frequency")
+                        ll.set_text("Frequency")
+                    if "uncert" in l:
+                        #new_legends.append("Uncertainty")
+                        ll.set_text("Uncertainty")
+                    if "maxmin" in l:
+                        #new_legends.append("Maxmin")
+                        ll.set_text("Maxmin")
+                    if "maxexp" in l:
+                        #new_legends.append("Maxexp")
+                        ll.set_text("Maxexp")
+                    if "QECC" in l:
+                        #new_legends.append("QECC")
+                        ll.set_text("QECC")
+                #ax.legend(labels=new_legends)
                 #legend = ax.get_legend()
                 #plt.savefig(file_path, bbox_extra_artists=(legend,), bbox_inches='tight')
                 plt.savefig(file_path, dpi=200, bbox_inches='tight')
