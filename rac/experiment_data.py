@@ -350,18 +350,21 @@ class ExperimentReader:
                 #hues.extend(list(compare_options.keys()))
                 hues = list(compare_options.keys())
                 sns.set_theme()
-                #SMALL_SIZE = 16
-                #MEDIUM_SIZE = 18
-                #BIGGER_SIZE = 18
+                sns.set_style("whitegrid")
+                SMALL_SIZE = 16
+                MEDIUM_SIZE = 18
+                BIGGER_SIZE = 18
 
-                #plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
-                #plt.rc('axes', titlesize=SMALL_SIZE)     # fontsize of the axes title
-                #plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels
-                #plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
-                #plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
-                #plt.rc('legend', fontsize=SMALL_SIZE)    # legend fontsize
-                #plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
-                #plt.rc('figure', figsize=(6, 6))
+                plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
+                plt.rc('axes', titlesize=SMALL_SIZE)     # fontsize of the axes title
+                plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels
+                plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+                plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+                plt.rc('legend', fontsize=SMALL_SIZE)    # legend fontsize
+                plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
+                plt.rc('figure', dpi=200)
+                plt.rc('figure', figsize=(6, 6))
+
                 if err_style == "bars":
                     err_kws = {
                         "capsize": capsize,
@@ -377,7 +380,7 @@ class ExperimentReader:
                 if self.dataset == "20newsgroups_small":
                     cut_threshold = 600
                 elif self.dataset == "breast_cancer_small":
-                    #errorbar = None
+                    errorbar = None
                     cut_axis = True
                     l1 = 0
                     l2 = 0.72
@@ -410,6 +413,8 @@ class ExperimentReader:
                     cut_threshold = 500
                 elif self.dataset == "yeast_small":
                     cut_threshold = 400
+                elif "synthetic" in self.dataset:
+                    cut_threshold = 900
                 else:
                     raise ValueError("incorrect dataset!")
 
@@ -420,7 +425,9 @@ class ExperimentReader:
                     ax = sns.lineplot(
                         x=vary[0],
                         y="y",
-                        hue=df_filtered[hues].apply(tuple, axis=1),
+                        #hue=df_filtered[hues].apply(tuple, axis=1),
+                        hue="acq_fn",
+                        hue_order=["maxexp", "maxmin", "uncert", "freq", "unif", "nCOBRAS", "COBRAS", "QECC"],
                         errorbar=errorbar,
                         err_style=err_style,
                         data=df_filtered,
@@ -433,7 +440,9 @@ class ExperimentReader:
                     ax = sns.lineplot(
                         x=vary[0],
                         y="y",
-                        hue=df_filtered[hues].apply(tuple, axis=1),
+                        #hue=df_filtered[hues].apply(tuple, axis=1),
+                        hue="acq_fn",
+                        hue_order=["maxexp", "maxmin", "uncert", "freq", "unif", "nCOBRAS", "COBRAS", "QECC"],
                         errorbar=errorbar,
                         err_style=err_style,
                         data=df_filtered,
@@ -444,7 +453,9 @@ class ExperimentReader:
                     ax = sns.lineplot(
                         x=vary[0],
                         y="y",
-                        hue=df_filtered[hues].apply(tuple, axis=1),
+                        #hue=df_filtered[hues].apply(tuple, axis=1),
+                        hue="acq_fn",
+                        hue_order=["maxexp", "maxmin", "uncert", "freq", "unif", "nCOBRAS", "COBRAS", "QECC"],
                         errorbar=errorbar,
                         err_style=err_style,
                         data=df_filtered,
@@ -495,6 +506,7 @@ class ExperimentReader:
                 legs = ax.get_legend().get_texts()
                 #legs = [l.get_text() for l in legs]
                 #new_legends = []
+                ax.get_legend().set_title(None)
                 for ll in legs:
                     l = ll.get_text()
                     if "unif" in l:

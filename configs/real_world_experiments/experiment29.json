@@ -1,7 +1,7 @@
 {
     "general_options": {
-        "experiment_name": "real_world_experiments_new",
-        "num_repeats": 5,
+        "experiment_name": "real_world_experiments",
+        "num_repeats": 15,
         "n_workers": 15,
         "local": false,
         "verbose": false
@@ -15,9 +15,7 @@
         "infer_sims": false,
         "infer_sims2": false,
         "noise_level": [
-            0.0,
-            0.2,
-            0.4
+            0.2
         ]
     },
     "sim_init_options": {
