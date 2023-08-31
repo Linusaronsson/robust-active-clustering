@@ -376,36 +376,79 @@ class ExperimentReader:
 
                 cut_threshold = 0
                 cut_axis = False
-                errorbar = ("se", 2)
+                errorbar = ("sd", 1)
                 if self.dataset == "20newsgroups_small":
                     cut_threshold = 600
                 elif self.dataset == "breast_cancer_small":
+                    # noise = 0.0
                     errorbar = None
                     cut_axis = True
                     l1 = 0
-                    l2 = 0.72
-                    l3 = 0.725
+                    l2 = 0.7
+                    l3 = 0.72
                     l4 = 1.01
-                    cut_threshold = 400
+                    cut_threshold = 300
+
+                    # noise = 0.2, ari
+                    #errorbar = None
+                    #cut_axis = True
+                    #l1 = 0
+                    #l2 = 0.69
+                    #l3 = 0.7
+                    #l4 = 1.01
+                    #cut_threshold = 400
+
+                    # noise = 0.2, ami
+                    #errorbar = None
+                    #cut_axis = True
+                    #l1 = 0
+                    #l2 = 0.6
+                    #l3 = 0.71
+                    #l4 = 1.01
+                    #cut_threshold = 400
                 elif self.dataset == "cardiotocography_small":
                     cut_threshold = 400
                 elif self.dataset == "cifar10_small":
-                    cut_threshold = 400
-                    cut_axis = True
-                    l1 = 0
-                    l2 = 0.4
-                    l3 = 0.65
-                    l4 = 1.01
-                elif self.dataset == "ecoli_small":
-                    cut_threshold = 450
+                    # ari
+                    #cut_threshold = 400
                     #cut_axis = True
                     #l1 = 0
                     #l2 = 0.4
-                    #l3 = 0.45
+                    #l3 = 0.65
                     #l4 = 1.01
+
+                    # 
+                    cut_threshold = 400
+                    cut_axis = True
+                    l1 = 0
+                    l2 = 0.82
+                    l3 = 0.84
+                    l4 = 1.01
+                elif self.dataset == "ecoli_small":
+                    # ami
+                    #cut_threshold = 450
+                    #cut_axis = True
+                    #l1 = 0
+                    #l2 = 0.57
+                    #l3 = 0.58
+                    #l4 = 1.01
+
+                    ##ari
+                    cut_threshold = 450
+                    #cut_axis = True
+                    #l1 = 0
+                    #l2 = 0.3
+                    #l3 = 0.44
+                    #l4 = 1.01
+
                 elif self.dataset == "forest_type_mapping_small":
                     cut_threshold = 400
                 elif self.dataset == "mnist_small":
+                    cut_axis = True
+                    l1 = 0
+                    l2 = 0.55
+                    l3 = 0.6
+                    l4 = 1.01
                     cut_threshold = 450
                 elif self.dataset == "mushrooms_small":
                     cut_threshold = 400
@@ -414,6 +457,34 @@ class ExperimentReader:
                 elif self.dataset == "yeast_small":
                     cut_threshold = 400
                 elif "synthetic" in self.dataset:
+                    cut_threshold = 900
+                elif self.dataset == "20newsgroups":
+                    cut_threshold = 900
+                elif self.dataset == "breast_cancer":
+                    # noise = 0.0
+                    errorbar = None
+                    cut_axis = True
+                    l1 = 0
+                    l2 = 0.7
+                    l3 = 0.72
+                    l4 = 1.01
+                    cut_threshold = 300
+                    #cut_threshold = 900
+                elif self.dataset == "cardiotocography":
+                    cut_threshold = 900
+                elif self.dataset == "cifar10":
+                    cut_threshold = 900
+                elif self.dataset == "ecoli":
+                    cut_threshold = 900
+                elif self.dataset == "forest_type_mapping":
+                    cut_threshold = 900
+                elif self.dataset == "mnist":
+                    cut_threshold = 900
+                elif self.dataset == "mushrooms":
+                    cut_threshold = 900
+                elif self.dataset == "user_knowledge":
+                    cut_threshold = 900
+                elif self.dataset == "yeast":
                     cut_threshold = 900
                 else:
                     raise ValueError("incorrect dataset!")
@@ -425,9 +496,9 @@ class ExperimentReader:
                     ax = sns.lineplot(
                         x=vary[0],
                         y="y",
-                        #hue=df_filtered[hues].apply(tuple, axis=1),
-                        hue="acq_fn",
-                        hue_order=["maxexp", "maxmin", "uncert", "freq", "unif", "nCOBRAS", "COBRAS", "QECC"],
+                        hue=df_filtered[hues].apply(tuple, axis=1),
+                        #hue="acq_fn",
+                        #hue_order=["maxexp", "maxmin", "uncert", "freq", "unif", "nCOBRAS", "COBRAS", "QECC"],
                         errorbar=errorbar,
                         err_style=err_style,
                         data=df_filtered,
@@ -480,7 +551,7 @@ class ExperimentReader:
                     ax1.set_ylabel("")
                     ax2.set_ylabel("")
                     #f.text(metric_map[metric])
-                    f.text(0.02, 0.5, metric_map[metric], va='center', rotation='vertical')
+                    f.text(-0.02, 0.5, metric_map[metric], va='center', rotation='vertical')
 
 
                     #plt.subplots_adjust(wspace=0, hspace=0)
@@ -502,37 +573,38 @@ class ExperimentReader:
                 #ax.set_xticks(range(n_iterations), labels=tick_labels)
                 #plt.xlabel(str(vary))
                 plt.xlabel("Number of queries")
+                ax.legend(loc='lower right')
 
-                legs = ax.get_legend().get_texts()
-                #legs = [l.get_text() for l in legs]
-                #new_legends = []
-                ax.get_legend().set_title(None)
-                for ll in legs:
-                    l = ll.get_text()
-                    if "unif" in l:
-                        #new_legends.append("Uniform")
-                        ll.set_text("Uniform")
-                    if "COBRAS" in l and "nCOBRAS" not in l:
-                        #new_legends.append("COBRAS")
-                        ll.set_text("COBRAS")
-                    if "nCOBRAS" in l:
-                        #new_legends.append("nCOBRAS")
-                        ll.set_text("nCOBRAS")
-                    if "freq" in l:
-                        #new_legends.append("Frequency")
-                        ll.set_text("Frequency")
-                    if "uncert" in l:
-                        #new_legends.append("Uncertainty")
-                        ll.set_text("Uncertainty")
-                    if "maxmin" in l:
-                        #new_legends.append("Maxmin")
-                        ll.set_text("Maxmin")
-                    if "maxexp" in l:
-                        #new_legends.append("Maxexp")
-                        ll.set_text("Maxexp")
-                    if "QECC" in l:
-                        #new_legends.append("QECC")
-                        ll.set_text("QECC")
+                #legs = ax.get_legend().get_texts()
+                ##legs = [l.get_text() for l in legs]
+                ##new_legends = []
+                #ax.get_legend().set_title(None)
+                #for ll in legs:
+                #    l = ll.get_text()
+                #    if "unif" in l:
+                #        #new_legends.append("Uniform")
+                #        ll.set_text("Uniform")
+                #    if "COBRAS" in l and "nCOBRAS" not in l:
+                #        #new_legends.append("COBRAS")
+                #        ll.set_text("COBRAS")
+                #    if "nCOBRAS" in l:
+                #        #new_legends.append("nCOBRAS")
+                #        ll.set_text("nCOBRAS")
+                #    if "freq" in l:
+                #        #new_legends.append("Frequency")
+                #        ll.set_text("Frequency")
+                #    if "uncert" in l:
+                #        #new_legends.append("Uncertainty")
+                #        ll.set_text("Uncertainty")
+                #    if "maxmin" in l:
+                #        #new_legends.append("Maxmin")
+                #        ll.set_text("Maxmin")
+                #    if "maxexp" in l:
+                #        #new_legends.append("Maxexp")
+                #        ll.set_text("Maxexp")
+                #    if "QECC" in l:
+                #        #new_legends.append("QECC")
+                #        ll.set_text("QECC")
                 #ax.legend(labels=new_legends)
                 #legend = ax.get_legend()
                 #plt.savefig(file_path, bbox_extra_artists=(legend,), bbox_inches='tight')

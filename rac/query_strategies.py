@@ -8,6 +8,10 @@ class QueryStrategy:
         self.custom_informativeness = None
 
     def select_batch(self, acq_fn, local_regions, batch_size):
+
+        if "maxmin" in acq_fn or "maxexp" in acq_fn:
+            self.compute_informativeness(acq_fn)
+
         if type(local_regions) == str:
             if local_regions == "pairs":
                 return np.array(self.select_pairs(acq_fn, "all_pairs", batch_size)), None
@@ -15,7 +19,7 @@ class QueryStrategy:
                 if self.ac.random.rand() < self.ac.eps:
                     return np.array(self.select_pairs("freq", "all_pairs", batch_size)), None
                 else:
-                    self.compute_informativeness(acq_fn)
+                    #self.compute_informativeness(acq_fn)
                     return np.array(self.select_pairs("custom", "all_pairs", batch_size)), None
             elif local_regions == "clusters":
                 local_regions = self.clusters()
@@ -49,13 +53,16 @@ class QueryStrategy:
         return self.incon(local_region) + self.ac.alpha * self.uncert(local_region)
 
     def maxmin(self, local_region):
-        pass
+        return self.index_matrix(local_region, self.custom_informativeness).sum() / len(local_region)
 
     def maxexp(self, local_region):
-        pass
+        return self.index_matrix(local_region, self.custom_informativeness).sum() / len(local_region)
 
     def maxmin_ucb(self, local_region):
-        pass
+        return self.maxmin(local_region) + self.ac.alpha * self.uncert(local_region)
+
+    def maxexp_ucb(self, local_region):
+        return self.maxexp(local_region) + self.ac.alpha * self.uncert(local_region)
 
     def triangles(self):
         pass

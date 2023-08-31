@@ -743,5 +743,35 @@ class ActiveClustering:
                     self.pairwise_similarities[idx_cluster2, idx_cluster1] = mean_sim
                     #self.update_similarity(idx_cluster1, idx_cluster2, mean_sim)
 
+    def violates_clustering(self, o1, o2): 
+        return (not self.in_same_cluster(o1, o2) and self.pairwise_similarities[o1, o2] >= 0) or \
+                (self.in_same_cluster(o1, o2) and self.pairwise_similarities[o1, o2] < 0)
+
+    def infer_similarities3(self): 
+        num_inferred = 0
+        confidence_limit = 1
+        for i in range(0, self.N):
+            current_indices_pos = []
+            current_indices_neg = []
+            for j in range(0, self.N):
+                if i == j:
+                    continue
+                #if self.similarity_matrix[i, j] > 0.5:
+                if self.feedback_freq[i, j] > confidence_limit:
+                    if self.pairwise_similarities[i, j] > 0:
+                        current_indices_pos.append(j)
+                    if self.pairwise_similarities[i, j] < 0:
+                        current_indices_neg.append(j)
+            for k in itertools.permutations(current_indices_pos, 2): 
+                if self.feedback_freq[k] <= confidence_limit:
+                    self.update_similarity(k[0], k[1], custom_query=1)
+                    num_inferred += 1
+            for pos_ind in current_indices_pos:
+                for neg_ind in current_indices_neg:
+                    if self.feedback_freq[pos_ind, neg_ind] <= confidence_limit:
+                        self.update_similarity(pos_ind, neg_ind, custom_query=-1)
+                        num_inferred += 1
+        return num_inferred
+
 
             
