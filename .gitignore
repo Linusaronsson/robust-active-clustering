@@ -5,6 +5,7 @@ experiment_results_local/
 experiment_results_paper1/
 plots/
 plots_saved/
+plots*/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
