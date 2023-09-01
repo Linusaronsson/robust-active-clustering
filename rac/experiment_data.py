@@ -96,10 +96,11 @@ class ExperimentData:
         return self.is_equal_no_repeat(a2) and self.repeat_id == a2.repeat_id
 
 class ExperimentReader:
-    def __init__(self, metrics):
+    def __init__(self, metrics=None):
         self.metrics = metrics
-        self.metrics.append("rand")
-        self.metrics = list(set(self.metrics))
+        if self.metrics is not None:
+            self.metrics.append("rand")
+            self.metrics = list(set(self.metrics))
         self.Y = None
         self.num_feedback = None
 

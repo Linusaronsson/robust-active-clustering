@@ -1,8 +1,8 @@
 {
     "general_options": {
         "experiment_name": "infer_exp",
-        "num_repeats": 5,
-        "n_workers": 8,
+        "num_repeats": 10,
+        "n_workers": 60,
         "local": true,
         "verbose": false
     },
@@ -14,14 +14,18 @@
         "save_matrix_data": false,
         "infer_sims": false,
         "infer_sims2": false,
+        "infer_sims3": false,
         "noise_level": [
-            0.0
+            0.0,
+            0.2,
+            0.4
         ]
     },
     "sim_init_options": {
         "K_init": 10,
         "sim_init": 0.1,
-        "sim_init_type": "uniform_random"
+        "sim_init_type": "custom",
+        "init_noise_level": 0.2
     },
     "query_strategy_options": {
         "acq_fn": "freq",

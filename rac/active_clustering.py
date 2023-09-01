@@ -86,6 +86,9 @@ class ActiveClustering:
         if not hasattr(self, "infer_sims2"):
             self.infer_sims2 = False
 
+        if not hasattr(self, "infer_sims3"):
+            self.infer_sims3 = False
+
         if not hasattr(self, "binary_noise"):
             self.binary_noise = False
 
@@ -182,6 +185,9 @@ class ActiveClustering:
                     num_inferred = np.inf
                     while num_inferred > 0:
                         num_inferred = self.infer_similarities2()
+
+                if self.infer_sims3:
+                    self.infer_similarities2()
 
                 time_nn = time.time()
                 if self.force_global_update:
@@ -751,6 +757,7 @@ class ActiveClustering:
         num_inferred = 0
         confidence_limit = 1
         infer_count = np.zeros((self.N, self.N))
+        inferred_values = np.zeros((self.N, self.N))
         for i in range(0, self.N):
             current_indices_pos = []
             current_indices_neg = []
@@ -765,13 +772,35 @@ class ActiveClustering:
                         current_indices_neg.append(j)
             for k in itertools.permutations(current_indices_pos, 2): 
                 if self.feedback_freq[k] <= confidence_limit:
-                    self.update_similarity(k[0], k[1], custom_query=1)
-                    num_inferred += 1
+                    infer_count[k[0], k[1]] += 1
+                    infer_count[k[1], k[0]] += 1
+                    inferred_values[k[0], k[1]] += 1
+                    inferred_values[k[1], k[0]] += 1
+
+                    #self.update_similarity(k[0], k[1], custom_query=1)
+                    #num_inferred += 1
             for pos_ind in current_indices_pos:
                 for neg_ind in current_indices_neg:
                     if self.feedback_freq[pos_ind, neg_ind] <= confidence_limit:
-                        self.update_similarity(pos_ind, neg_ind, custom_query=-1)
-                        num_inferred += 1
+                        #self.update_similarity(pos_ind, neg_ind, custom_query=-1)
+                        #num_inferred += 1
+                        infer_count[k[0], k[1]] += 1
+                        infer_count[k[1], k[0]] += 1
+                        inferred_values[k[0], k[1]] -= 1
+                        inferred_values[k[1], k[0]] -= 1
+        
+        for i in range(0, self.N):
+            for j in range(0, i):
+                if self.infer_count[i, j] > 10:
+                    if self.inferred_values[i, j] > 0:
+                        self.pairwise_similarities[i, j] = 1
+                        self.pairwise_similarities[j, i] = 1
+                    else:
+                        self.pairwise_similarities[i, j] = -1
+                        self.pairwise_similarities[j, i] = -1
+                        
+
+            
         return num_inferred
 
 
