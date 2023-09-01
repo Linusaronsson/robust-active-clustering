@@ -716,7 +716,7 @@ class ActiveClustering:
                 c1 = self.clustering[k1]
                 c2 = self.clustering[k2]
 
-                pairwise_sims = self.pairwise_similarities[np.ix_(c1, c2)]
+                pairwise_sims = self.parwise_similarities[np.ix_(c1, c2)]
                 pairwise_counts = self.feedback_freq[np.ix_(c1, c2)]
 
                 # If the clusters are the same, only consider the lower triangular part of the matrix, excluding the diagonal
@@ -750,6 +750,7 @@ class ActiveClustering:
     def infer_similarities3(self): 
         num_inferred = 0
         confidence_limit = 1
+        infer_count = np.zeros((self.N, self.N))
         for i in range(0, self.N):
             current_indices_pos = []
             current_indices_neg = []
