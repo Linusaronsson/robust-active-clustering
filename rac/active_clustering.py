@@ -372,7 +372,7 @@ class ActiveClustering:
 
         if self.init_noise_level > 0 and self.sim_init_type == "custom":
             total_noisy_edges = int(self.n_edges * self.init_noise_level)
-            edges = self.qs.select_batch("unif", "pairs", total_noisy_edges)
+            edges, objects = self.qs.select_batch("unif", "pairs", total_noisy_edges)
 
             for ind1, ind2 in edges:
                 self.pairwise_similarities[ind1, ind2] *= -1
@@ -407,7 +407,7 @@ class ActiveClustering:
         self.total_flips = int(self.n_edges * self.persistent_noise_level)
         if self.persistent_noise_level == 0:
             return
-        edges = self.qs.select_batch("unif", "pairs", self.total_flips)
+        edges, objects = self.qs.select_batch("unif", "pairs", self.total_flips)
 
         for ind1, ind2 in edges:
             if self.binary_noise:
@@ -646,7 +646,7 @@ class ActiveClustering:
         print("predicting")
         #lower_triangle_indices = np.tril_indices(self.N, -1) # -1 gives lower triangle without diagonal (0 includes diagonal)
         num_preds = self.query_size * 6
-        edges = self.qs.select_batch("uncert", "pairs", num_preds)
+        edges, objects = self.qs.select_batch("uncert", "pairs", num_preds)
         ind1, ind2 = edges[:, 0], edges[:, 1]
 
         #self.saved_ind1, self.saved_ind2 = self.select_similarities_all2()

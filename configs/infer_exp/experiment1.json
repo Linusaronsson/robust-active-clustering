@@ -2,7 +2,7 @@
     "general_options": {
         "experiment_name": "infer_exp",
         "num_repeats": 10,
-        "n_workers": 60,
+        "n_workers": 1,
         "local": true,
         "verbose": false
     },
