@@ -187,7 +187,7 @@ class ActiveClustering:
                         num_inferred = self.infer_similarities2()
 
                 if self.infer_sims3:
-                    self.infer_similarities2()
+                    self.infer_similarities3()
 
                 time_nn = time.time()
                 if self.force_global_update:
@@ -784,21 +784,21 @@ class ActiveClustering:
                     if self.feedback_freq[pos_ind, neg_ind] <= confidence_limit:
                         #self.update_similarity(pos_ind, neg_ind, custom_query=-1)
                         #num_inferred += 1
-                        infer_count[k[0], k[1]] += 1
-                        infer_count[k[1], k[0]] += 1
-                        inferred_values[k[0], k[1]] -= 1
-                        inferred_values[k[1], k[0]] -= 1
+                        infer_count[pos_ind, neg_ind] += 1
+                        infer_count[neg_ind, pos_ind] += 1
+                        inferred_values[pos_ind, neg_ind] -= 1
+                        inferred_values[neg_ind, pos_ind] -= 1
         
         for i in range(0, self.N):
             for j in range(0, i):
-                if self.infer_count[i, j] > 10:
-                    if self.inferred_values[i, j] > 0:
+                if infer_count[i, j] > 5:
+                    if inferred_values[i, j] > 0:
                         self.pairwise_similarities[i, j] = 1
                         self.pairwise_similarities[j, i] = 1
                     else:
                         self.pairwise_similarities[i, j] = -1
                         self.pairwise_similarities[j, i] = -1
-        print(np.max((self.infer_counts)))
+        print("HERE: ", np.max((infer_count)))
                         
 
             
