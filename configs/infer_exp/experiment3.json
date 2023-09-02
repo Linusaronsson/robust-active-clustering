@@ -2,7 +2,7 @@
     "general_options": {
         "experiment_name": "infer_exp",
         "num_repeats": 10,
-        "n_workers": 60,
+        "n_workers": 1,
         "local": true,
         "verbose": false
     },
@@ -16,9 +16,7 @@
         "infer_sims2": false,
         "infer_sims3": true,
         "noise_level": [
-            0.0,
-            0.2,
-            0.4
+            0.2
         ]
     },
     "sim_init_options": {

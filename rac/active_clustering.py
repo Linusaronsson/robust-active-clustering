@@ -798,6 +798,7 @@ class ActiveClustering:
                     else:
                         self.pairwise_similarities[i, j] = -1
                         self.pairwise_similarities[j, i] = -1
+        print(np.max((self.infer_counts)))
                         
 
             
