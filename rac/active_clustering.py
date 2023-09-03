@@ -791,13 +791,16 @@ class ActiveClustering:
         
         for i in range(0, self.N):
             for j in range(0, i):
-                if infer_count[i, j] > 5:
+                if infer_count[i, j] > 10:
                     if inferred_values[i, j] > 0:
                         self.pairwise_similarities[i, j] = 1
+                        self.pairwise_similarities[j, i] = 1
                         self.pairwise_similarities[j, i] = 1
                     else:
                         self.pairwise_similarities[i, j] = -1
                         self.pairwise_similarities[j, i] = -1
+                    self.feedback_freq[i, j] +=1
+                    self.feedback_freq[j, i] +=1
         print("HERE: ", np.max((infer_count)))
                         
 
