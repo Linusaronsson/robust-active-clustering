@@ -197,6 +197,15 @@ class ActiveClustering:
                 print("time_nn: ", time.time() - time_nn)
 
 
+                for i in range(self.N):
+                    for j in range(i):
+                        if self.violates_clustering(i, j):
+                            self.violations[i, j] = np.abs(self.pairwise_similarities[i, j])
+                            self.violations[j, i] = np.abs(self.pairwise_similarities[j, i])
+                        else:
+                            self.violations[i, j] = 0
+                            self.violations[j, i] = 0
+
             self.store_experiment_data()
             total_queries += self.query_size
 
@@ -563,12 +572,12 @@ class ActiveClustering:
 
         self.pairwise_similarities[ind1, ind2] = ((feedback-1) * similarity + query)/(feedback)
         self.pairwise_similarities[ind2, ind1] = ((feedback-1) * similarity + query)/(feedback)
-        if self.violates_clustering(ind1, ind2):
-            self.violations[ind1, ind2] = np.abs(self.pairwise_similarities[ind1, ind2])
-            self.violations[ind2, ind1] = np.abs(self.pairwise_similarities[ind2, ind1])
-        else:
-            self.violations[ind1, ind2] = 0.0
-            self.violations[ind2, ind1] = 0.0
+        #if self.violates_clustering(ind1, ind2):
+        #    self.violations[ind1, ind2] = np.abs(self.pairwise_similarities[ind1, ind2])
+        #    self.violations[ind2, ind1] = np.abs(self.pairwise_similarities[ind2, ind1])
+        #else:
+        #    self.violations[ind1, ind2] = 0.0
+        #    self.violations[ind2, ind1] = 0.0
 
     def get_similarity(self, ind1, ind2):
         if self.random.rand() <= self.noise_level:
