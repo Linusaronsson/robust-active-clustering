@@ -490,7 +490,7 @@ class ExperimentReader:
                 else:
                     raise ValueError("incorrect dataset!")
 
-                df_filtered = df_filtered[df_filtered[vary[0]] < cut_threshold]
+                #df_filtered = df_filtered[df_filtered[vary[0]] < cut_threshold]
                 metric_map = {"ami": "AMI", "rand": "ARI"}
 
                 if not cut_axis:
@@ -558,7 +558,10 @@ class ExperimentReader:
                     #plt.subplots_adjust(wspace=0, hspace=0)
                 N = len(self.Y)
                 n_edges = (N*(N-1))/2
-                batch_size = math.ceil(n_edges * self.num_feedback)
+                if self.num_feedback < 1:
+                    batch_size = math.ceil(n_edges * self.num_feedback)
+                else:
+                    batch_size = self.num_feedback
                 n_iterations = int(n_edges/batch_size)
                 #tick_labels = np.array(list(range(0, n_iterations))) * batch_size
                 labels = [int(item)*batch_size for item in ax.get_xticks()]

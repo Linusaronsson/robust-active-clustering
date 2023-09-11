@@ -105,9 +105,9 @@ class ActiveClustering:
         total_queries = 0
 
         if self.acq_fn in ["QECC"]:
-            stopping_criteria = self.query_size * 200
+            stopping_criteria = self.query_size * 250
         if self.acq_fn in ["nCOBRAS", "COBRAS"]:
-            stopping_criteria = self.query_size * 120
+            stopping_criteria = self.query_size * 200
         else:
             stopping_criteria = self.n_edges
 
