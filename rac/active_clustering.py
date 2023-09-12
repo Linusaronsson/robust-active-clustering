@@ -711,7 +711,7 @@ class ActiveClustering:
                     continue
                 #if self.similarity_matrix[i, j] > 0.5:
                 if self.feedback_freq[i, j] > confidence_limit:
-                    if self.pairwise_similarities[i, j] > 0:
+                    if self.pairwise_similarities[i, j] >= 0:
                         current_indices_pos.append(j)
                     if self.pairwise_similarities[i, j] < 0:
                         current_indices_neg.append(j)
