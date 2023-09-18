@@ -16,12 +16,15 @@
         "noise_level": [
             0.0,
             0.2,
-            0.4
+            0.4,
+            0.6,
+            0.8,
+            0.85
         ]
     },
     "sim_init_options": {
         "K_init": 10,
-        "sim_init": 0.001,
+        "sim_init": 0.1,
         "sim_init_type": "random_clustering"
     },
     "query_strategy_options": {

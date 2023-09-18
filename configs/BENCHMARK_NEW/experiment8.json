@@ -16,7 +16,10 @@
         "noise_level": [
             0.0,
             0.2,
-            0.4
+            0.4,
+            0.6,
+            0.8,
+            0.85
         ]
     },
     "sim_init_options": {
@@ -25,8 +28,8 @@
         "sim_init_type": "random_clustering"
     },
     "query_strategy_options": {
-        "acq_fn": "freq",
-        "local_regions": "pairs",
+        "acq_fn": "maxexp",
+        "local_regions": "triangles",
         "beta": 1,
         "tau": 7,
         "alpha": 1,
