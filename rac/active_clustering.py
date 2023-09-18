@@ -60,6 +60,7 @@ class ActiveClustering:
         self.clustering_solution = None
         self.N = len(self.Y)
         self.n_edges = (self.N*(self.N-1))/2
+        self.queried_edges = set()
 
         if self.num_feedback < 1:
             self.query_size = math.ceil(self.n_edges * self.num_feedback)
@@ -573,6 +574,7 @@ class ActiveClustering:
 
         self.pairwise_similarities[ind1, ind2] = ((feedback-1) * similarity + query)/(feedback)
         self.pairwise_similarities[ind2, ind1] = ((feedback-1) * similarity + query)/(feedback)
+        self.queried_edges.add((ind1, ind2))
         #if self.violates_clustering(ind1, ind2):
         #    self.violations[ind1, ind2] = np.abs(self.pairwise_similarities[ind1, ind2])
         #    self.violations[ind2, ind1] = np.abs(self.pairwise_similarities[ind2, ind1])
