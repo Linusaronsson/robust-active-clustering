@@ -475,6 +475,16 @@ class ActiveClustering:
                 size=(self.N, self.N)
             )
             self.update_clustering(np.arange(self.N).tolist()) 
+        elif self.sim_init_type == "uniform_random2":
+            self.clustering = [np.arange(self.N).tolist()]
+            self.pairwise_similarities = self.random.uniform(
+                low=-self.sim_init,
+                high=self.sim_init, 
+                size=(self.N, self.N)
+            )
+            self.pairwise_similarities[np.where(self.pairwise_similarities >= 0)] = self.sim_init
+            self.pairwise_similarities[np.where(self.pairwise_similarities < 0)] = -self.sim_init
+            self.update_clustering(np.arange(self.N).tolist()) 
         elif self.sim_init_type == "uniform_random_clustering":
             self.clustering = [np.arange(self.N).tolist()]
             self.pairwise_similarities = self.random.uniform(
