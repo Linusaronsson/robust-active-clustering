@@ -13,7 +13,7 @@ class CifarNet(nn.Module):
         self.pool = nn.MaxPool2d(2, 2)
         self.fc1 = nn.Linear(64 * 4 * 4, 128)
         self.fc2 = nn.Linear(128, 256)
-        self.fc3 = nn.Linear(256, 10)
+        #self.fc3 = nn.Linear(256, 10)
 
 
     def forward(self, x, last=False, freeze=False):
@@ -31,8 +31,9 @@ class CifarNet(nn.Module):
             out = self.pool(F.relu(self.conv3(out)))
             out = out.view(-1, 64 * 4 * 4)
             out = F.relu(self.fc1(out))
-            e = F.relu(self.fc2(out))
-        out = self.fc3(e)
+            #e = F.relu(self.fc2(out))
+        #out = self.fc3(e)
+        out = self.fc2(out)
         if last:
             return out, e
         else:

@@ -13,12 +13,15 @@ from scipy.spatial import distance
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
+from torch.utils.data import Dataset, TensorDataset
+
+from torchvision import transforms
 from scipy.stats import entropy as scipy_entropy
 
 from noise_robust_cobras.cobras import COBRAS
 from noise_robust_cobras.querier.noisy_labelquerier import ProbabilisticNoisyQuerier
 
-from rac.utils.models import TwoLayerNet, ThreeLayerNet
+from rac.utils.models import TwoLayerNet, ThreeLayerNet, CifarNet
 from rac.experiment_data import ExperimentData
 from rac.correlation_clustering import max_correlation, max_correlation_dynamic_K
 from rac.query_strategies import QueryStrategy
@@ -26,20 +29,52 @@ from rac.query_strategies import QueryStrategy
 import warnings
 warnings.filterwarnings("once") 
 
+
+class CustomTensorDataset(Dataset):
+    """TensorDataset with support of transforms.
+    """
+    def __init__(self, tensors1, tensors2, labels=None, transform=None):
+        self.tensors1 = tensors1
+        self.tensors2 = tensors2
+        self.labels = labels
+        self.transform = transform
+
+    def __getitem__(self, index):
+        x1 = self.tensors1[index]
+        x2 = self.tensors2[index]
+
+        #print("AAAA ", x1.shape)
+        #print("BBBB ", x2.shape)
+        if self.transform:
+            x1 = self.transform(x1)
+            x2 = self.transform(x2)
+
+        if self.labels is not None:
+            y = self.labels[index]
+            return x1, x2, y
+
+        return x1, x2
+
+    def __len__(self):
+        return len(self.tensors1)
+
+
 #self.net = ACCNet(TwoLayerNet(input_dim, 512, 1024), TwoLayerNet(input_dim, 512, 1024)).to(self.device)
 class ACCNet(nn.Module):
     def __init__(self, net1, net2):
         super(ACCNet, self).__init__()
         self.net1 = net1
         self.net2 = net2
-        self.combined_net1 = ThreeLayerNet(1024, 256, 2048, 516)
+        self.combined_net1 = ThreeLayerNet(512, 256, 2048, 1024)
         self.combined_net2 = ThreeLayerNet(256, 1, 128, 32)
 
-    def forward(self, X):
-        if X.shape[1] != 2:
-            raise ValueError("WRONG INPUT DIM")
-        out1 = self.net1(X[:, 0, :])
-        out2 = self.net2(X[:, 1, :])
+    def forward(self, X1, X2):
+        #if X1.shape[1] != 2:
+            #raise ValueError("WRONG INPUT DIM")
+        out1 = self.net1(X1)
+        out2 = self.net2(X2)
+        print("OUT1: ", out1.shape)
+        print("OUT2: ", out2.shape)
         combined = torch.cat((out1, out2), 1)
         res1 = F.relu(self.combined_net1(combined))
         #return torch.clip(self.combined_net(combined), min=-1, max=1)
@@ -50,6 +85,7 @@ class ActiveClustering:
         for key, value in kwargs.items():
             self.__dict__.update(kwargs[key])
 
+        print("ASDASD: ", X.shape)
         self.X, self.Y = X, Y
         self.repeat_id = repeat_id
         self.initial_clustering_solution = initial_clustering_solution
@@ -603,16 +639,20 @@ class ActiveClustering:
         self.retrain_net = False
 
         if self.retrain_net or self.net is None:
-            self.net = ACCNet(TwoLayerNet(input_dim, 512, 1024), TwoLayerNet(input_dim, 512, 1024)).to(self.device)
+            #self.net = ACCNet(TwoLayerNet(input_dim, 512, 1024), TwoLayerNet(input_dim, 512, 1024)).to(self.device)
+            #self.net = ACCNet(TwoLayerNet(input_dim, 512, 1024), TwoLayerNet(input_dim, 512, 1024)).to(self.device)
+            self.net = ACCNet(CifarNet(), CifarNet()).to(self.device)
 
         lower_triangle_indices = np.tril_indices(self.N, -1) # -1 gives lower triangle without diagonal (0 includes diagonal)
         #cond1 = np.where((self.feedback_freq[lower_triangle_indices] > 1) & (self.pairwise_similarities[lower_triangle_indices] > 0.5) & (self.edges_predicted[lower_triangle_indices] == False))[0]
         #cond2 = np.where((self.feedback_freq[lower_triangle_indices] > 1) & (self.pairwise_similarities[lower_triangle_indices] < -0.5) & (self.edges_predicted[lower_triangle_indices] == False))[0]
         cond1 = np.where((self.feedback_freq[lower_triangle_indices] > 1) & (self.pairwise_similarities[lower_triangle_indices] > 0.5))[0]
         cond2 = np.where((self.feedback_freq[lower_triangle_indices] > 1) & (self.pairwise_similarities[lower_triangle_indices] < -0.5))[0]
+        #cond1 = np.where((self.feedback_freq[lower_triangle_indices] > 1))[0]
+        #cond2 = np.where((self.feedback_freq[lower_triangle_indices] > 1))[0]
         print("cond1 len ", len(cond1))
         print("cond2 len ", len(cond2))
-        if len(cond1) < 50 or len(cond2) < 50:
+        if len(cond1) < 30 or len(cond2) < 30:
             return
 
         print("predicting sims...")
@@ -621,20 +661,31 @@ class ActiveClustering:
 
         indices1 = self.random.choice(cond1, np.min([len(cond1), len(cond2), 2000]))
         indices2 = self.random.choice(cond2, len(indices1))
-        #indices1 = cond1
-        #indices2 = cond2
+
         indices = np.concatenate([indices1, indices2])
         ind1, ind2 = lower_triangle_indices[0][indices], lower_triangle_indices[1][indices]
-        x1 = self.X[ind1].reshape((len(ind1), 1, input_dim))
-        x2 = self.X[ind2].reshape((len(ind2), 1, input_dim))
-        dataset = np.concatenate((x1, x2), axis=1)
+        print("HERE: ", self.X.shape)
+        x1 = self.X[ind1]
+        x2 = self.X[ind2]
+        #dataset = np.concatenate((x1, x2), axis=1)
         labels = self.pairwise_similarities[ind1, ind2]
         lab1 = np.where(labels >= 0)
         lab2 = np.where(labels < 0)
         labels[lab1] = 1.0
         labels[lab2] = 0.0
-        print("Dataset shape: ", dataset.shape)
-        train_dataset = torch.utils.data.TensorDataset(torch.Tensor(dataset), torch.Tensor(labels))
+        #print("Dataset shape: ", dataset.shape)
+        print("x1 shape: ", x1.shape)
+        print("x2 shape: ", x2.shape)
+
+        cifar_training_transform = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.RandomCrop(32, padding=4),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+        ])
+
+        train_dataset = CustomTensorDataset(x1, x2, torch.Tensor(labels), transform=cifar_training_transform)
         train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=128)
         #criterion = nn.MSELoss()
         #criterion = nn.SmoothL1Loss()
@@ -649,11 +700,11 @@ class ActiveClustering:
             running_loss = 0.0
             for i, data in enumerate(train_loader, 0):
                 # get the inputs; data is a list of [inputs, labels]
-                inputs, labels = data[0].to(self.device), data[1].to(self.device)
+                x1, x2, labels = data[0].to(self.device), data[1].to(self.device), data[2].to(self.device)
                 # zero the parameter gradients
                 optimizer.zero_grad()
                 # forward + backward + optimize
-                outputs = self.net(inputs)
+                outputs = self.net(x1, x2)
                 outputs = outputs.reshape((outputs.shape[0]))
                 #labels = labels.reshape((labels.shape[0], 1))
                 loss = criterion(outputs, labels)
@@ -675,16 +726,21 @@ class ActiveClustering:
         #self.num_feedback = saved_fb
         #indices = self.random.choice(ind_not_queried, num_preds)
         #ind1, ind2 = lower_triangle_indices[0][indices], lower_triangle_indices[1][indices] 
-        dat1 = self.X[ind1].reshape(num_preds, 1, input_dim)
-        dat2 = self.X[ind2].reshape(num_preds, 1, input_dim)
-        dat_all = torch.Tensor(np.concatenate((dat1, dat2), axis=1))
-        dat_all = torch.utils.data.TensorDataset(dat_all)
+        dat1 = self.X[ind1]
+        dat2 = self.X[ind2]
+        
+        cifar_test_transform = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.ToTensor(),
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+        ])
+        dat_all = CustomTensorDataset(dat1, dat2, transform=cifar_test_transform)
         test_loader = torch.utils.data.DataLoader(dat_all, shuffle=False, batch_size=1024)
         preds = []
         #self.saved_queries = self.similarity_matrix[self.saved_ind1, self.saved_ind2]
         for i, data in enumerate(test_loader, 0):
-            input = data[0].to(self.device)
-            pred = self.net(input)
+            input1, input2 = data[0].to(self.device), data[1].to(self.device)
+            pred = self.net(input1, input2)
             pred = nn.Sigmoid()(pred)
             preds.extend(pred[:, 0].tolist())
         print("NUM PREDS: ", num_preds)

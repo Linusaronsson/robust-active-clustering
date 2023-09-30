@@ -52,6 +52,9 @@ def get_dataset(**options):
     elif dataset == "cifar10":
         X = np.load("datasets/cifar10_data/X.npy")
         Y = np.load("datasets/cifar10_data/Y.npy")
+    elif dataset == "cifar10_original":
+        X = np.load("datasets/cifar10_original_data/X.npy")
+        Y = np.load("datasets/cifar10_original_data/Y.npy")
     elif dataset == "mnist":
         X = np.load("datasets/mnist_data/X.npy")
         Y = np.load("datasets/mnist_data/Y.npy")
