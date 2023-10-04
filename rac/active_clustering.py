@@ -648,8 +648,8 @@ class ActiveClustering:
         lower_triangle_indices = np.tril_indices(self.N, -1) # -1 gives lower triangle without diagonal (0 includes diagonal)
         #cond1 = np.where((self.feedback_freq[lower_triangle_indices] > 1) & (self.pairwise_similarities[lower_triangle_indices] > 0.5) & (self.edges_predicted[lower_triangle_indices] == False))[0]
         #cond2 = np.where((self.feedback_freq[lower_triangle_indices] > 1) & (self.pairwise_similarities[lower_triangle_indices] < -0.5) & (self.edges_predicted[lower_triangle_indices] == False))[0]
-        cond1 = np.where((self.feedback_freq[lower_triangle_indices] > 1) & (self.pairwise_similarities[lower_triangle_indices] >= 0.5))[0]
-        cond2 = np.where((self.feedback_freq[lower_triangle_indices] > 1) & (self.pairwise_similarities[lower_triangle_indices] < 0.5))[0]
+        cond1 = np.where((self.feedback_freq[lower_triangle_indices] > 1) & (self.pairwise_similarities[lower_triangle_indices] > 0.5))[0]
+        cond2 = np.where((self.feedback_freq[lower_triangle_indices] > 1) & (self.pairwise_similarities[lower_triangle_indices] < -0.5))[0]
 
         print("cond1 len ", len(cond1))
         print("cond2 len ", len(cond2))
@@ -698,7 +698,6 @@ class ActiveClustering:
         print("training...")
         print(len(train_dataset))
         for epoch in range(150):  # loop over the dataset multiple times
-            print(epoch)
             running_loss = 0.0
             for i, data in enumerate(train_loader, 0):
                 # get the inputs; data is a list of [inputs, labels]
@@ -717,7 +716,6 @@ class ActiveClustering:
                 if i % 1000 == 999:    # print every 2000 mini-batches
                     print(f'[{epoch + 1}, {i + 1:5d}] loss: {running_loss / 1000:.10f}')
                     running_loss = 0.0
-                print(running_loss)
         # CONTINUE HERE, MAKE PREDS FILL UP SIM MATRIX
         print("predicting")
         #lower_triangle_indices = np.tril_indices(self.N, -1) # -1 gives lower triangle without diagonal (0 includes diagonal)
