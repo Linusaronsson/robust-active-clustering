@@ -664,7 +664,7 @@ class ActiveClustering:
         #indices2 = self.random.choice(cond2, len(indices1))
 
         indices1 = cond1
-        indices2 = self.random.choice(cond2, np.min(len(indices2), 2000))
+        indices2 = self.random.choice(cond2, np.min(len(cond2), 2000))
 
         indices = np.concatenate([indices1, indices2])
         ind1, ind2 = lower_triangle_indices[0][indices], lower_triangle_indices[1][indices]
