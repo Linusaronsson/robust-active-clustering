@@ -660,11 +660,11 @@ class ActiveClustering:
         print("cond1 shape ", cond1.shape)
         print("cond2 shape ", cond2.shape)
 
-        indices1 = self.random.choice(cond1, np.min([len(cond1), len(cond2), 5000]))
-        indices2 = self.random.choice(cond2, len(indices1))
+        #indices1 = self.random.choice(cond1, np.min([len(cond1), len(cond2), 5000]))
+        #indices2 = self.random.choice(cond2, len(indices1))
 
         indices1 = cond1
-        indices2 = cond2
+        indices2 = self.random.choice(cond2, np.min(len(indices2), 2000))
 
         indices = np.concatenate([indices1, indices2])
         ind1, ind2 = lower_triangle_indices[0][indices], lower_triangle_indices[1][indices]
