@@ -763,9 +763,9 @@ class ActiveClustering:
             countt += 1
             #pred = (pred - 0.5) * 2
             if pred >= 0.5:
-                pred = 0.25
+                pred = 0.7
             else:
-                pred = -0.25
+                pred = -0.7
             self.pairwise_similarities[i1, i2] = pred
             self.pairwise_similarities[i2, i1] = pred
             #self.update_similarity(i1, i2, custom_query=pred, update_freq=False)
