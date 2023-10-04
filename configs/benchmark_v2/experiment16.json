@@ -22,7 +22,7 @@
     },
     "query_strategy_options": {
         "acq_fn": "freq",
-        "local_regions": "clusters",
+        "local_regions": "pairs",
         "eps": 0.3,
         "beta": 1,
         "tau": 7,

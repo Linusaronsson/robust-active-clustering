@@ -608,12 +608,12 @@ class ActiveClustering:
                 else:
                     query = self.ground_truth_pairwise_similarities_noisy[ind1, ind2]
             else:
-                #query = self.random.uniform(-1.0, 1.0)
-                noisy_val = self.random.uniform(0.15, 0.5)
-                if self.random.uniform(-1.0, 1.0) > 0:
-                    query = -noisy_val
-                else:
-                    query = noisy_val
+                query = self.random.uniform(-1.0, 1.0)
+                #noisy_val = self.random.uniform(0.15, 0.5)
+                #if self.random.uniform(-1.0, 1.0) > 0:
+                #    query = -noisy_val
+                #else:
+                #    query = noisy_val
 
                 #query = self.random.uniform(-1.0, 1.0)
         else:
