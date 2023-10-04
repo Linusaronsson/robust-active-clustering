@@ -1,8 +1,8 @@
 {
     "general_options": {
         "experiment_name": "predicting_exp",
-        "num_repeats": 10,
-        "n_workers": 10,
+        "num_repeats": 5,
+        "n_workers": 1,
         "local": true,
         "verbose": false
     },
@@ -14,7 +14,7 @@
         "force_global_update": true,
         "save_matrix_data": false,
         "infer_sims": false,
-        "predict_sims": false
+        "predict_sims": true
     },
     "sim_init_options": {
         "K_init": 20,

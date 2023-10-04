@@ -14,7 +14,7 @@
         "force_global_update": true,
         "save_matrix_data": false,
         "infer_sims": false,
-        "predict_sims": true
+        "predict_sims": false
     },
     "sim_init_options": {
         "K_init": 20,
