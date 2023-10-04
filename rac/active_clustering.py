@@ -21,7 +21,7 @@ from scipy.stats import entropy as scipy_entropy
 from noise_robust_cobras.cobras import COBRAS
 from noise_robust_cobras.querier.noisy_labelquerier import ProbabilisticNoisyQuerier
 
-from rac.utils.models import TwoLayerNet, ThreeLayerNet, CifarNet
+from rac.utils.models import TwoLayerNet, ThreeLayerNet, CifarNet, ResNet18
 from rac.experiment_data import ExperimentData
 from rac.correlation_clustering import max_correlation, max_correlation_dynamic_K
 from rac.query_strategies import QueryStrategy
@@ -65,17 +65,18 @@ class ACCNet(nn.Module):
         super(ACCNet, self).__init__()
         self.net1 = net1
         self.net2 = net2
-        self.combined_net1 = ThreeLayerNet(512, 256, 2048, 1024)
+        self.combined_net1 = ThreeLayerNet(1024, 256, 2048, 512)
         self.combined_net2 = ThreeLayerNet(256, 1, 128, 32)
 
     def forward(self, X1, X2):
         #if X1.shape[1] != 2:
             #raise ValueError("WRONG INPUT DIM")
-        out1 = self.net1(X1)
-        out2 = self.net2(X2)
-        print("OUT1: ", out1.shape)
-        print("OUT2: ", out2.shape)
-        combined = torch.cat((out1, out2), 1)
+        out1, e1 = self.net1(X1, last=True)
+        out2, e2 = self.net2(X2, last=True)
+        #print("OUT1: ", e1.shape)
+        #print("OUT2: ", e2.shape)
+        #combined = torch.cat((out1, out2), 1)
+        combined = torch.cat((e1, e2), 1)
         res1 = F.relu(self.combined_net1(combined))
         #return torch.clip(self.combined_net(combined), min=-1, max=1)
         return self.combined_net2(res1)
@@ -85,7 +86,6 @@ class ActiveClustering:
         for key, value in kwargs.items():
             self.__dict__.update(kwargs[key])
 
-        print("ASDASD: ", X.shape)
         self.X, self.Y = X, Y
         self.repeat_id = repeat_id
         self.initial_clustering_solution = initial_clustering_solution
@@ -608,6 +608,7 @@ class ActiveClustering:
                 else:
                     query = self.ground_truth_pairwise_similarities_noisy[ind1, ind2]
             else:
+                #query = self.random.uniform(-1.0, 1.0)
                 noisy_val = self.random.uniform(0.15, 0.5)
                 if self.random.uniform(-1.0, 1.0) > 0:
                     query = -noisy_val
@@ -641,25 +642,25 @@ class ActiveClustering:
         if self.retrain_net or self.net is None:
             #self.net = ACCNet(TwoLayerNet(input_dim, 512, 1024), TwoLayerNet(input_dim, 512, 1024)).to(self.device)
             #self.net = ACCNet(TwoLayerNet(input_dim, 512, 1024), TwoLayerNet(input_dim, 512, 1024)).to(self.device)
-            self.net = ACCNet(CifarNet(), CifarNet()).to(self.device)
+            #self.net = ACCNet(CifarNet(), CifarNet()).to(self.device)
+            self.net = ACCNet(ResNet18(), ResNet18()).to(self.device)
 
         lower_triangle_indices = np.tril_indices(self.N, -1) # -1 gives lower triangle without diagonal (0 includes diagonal)
         #cond1 = np.where((self.feedback_freq[lower_triangle_indices] > 1) & (self.pairwise_similarities[lower_triangle_indices] > 0.5) & (self.edges_predicted[lower_triangle_indices] == False))[0]
         #cond2 = np.where((self.feedback_freq[lower_triangle_indices] > 1) & (self.pairwise_similarities[lower_triangle_indices] < -0.5) & (self.edges_predicted[lower_triangle_indices] == False))[0]
-        cond1 = np.where((self.feedback_freq[lower_triangle_indices] > 1) & (self.pairwise_similarities[lower_triangle_indices] > 0.5))[0]
-        cond2 = np.where((self.feedback_freq[lower_triangle_indices] > 1) & (self.pairwise_similarities[lower_triangle_indices] < -0.5))[0]
-        #cond1 = np.where((self.feedback_freq[lower_triangle_indices] > 1))[0]
-        #cond2 = np.where((self.feedback_freq[lower_triangle_indices] > 1))[0]
+        cond1 = np.where((self.feedback_freq[lower_triangle_indices] > 1) & (self.pairwise_similarities[lower_triangle_indices] >= 0.5))[0]
+        cond2 = np.where((self.feedback_freq[lower_triangle_indices] > 1) & (self.pairwise_similarities[lower_triangle_indices] < 0.5))[0]
+
         print("cond1 len ", len(cond1))
         print("cond2 len ", len(cond2))
-        if len(cond1) < 30 or len(cond2) < 30:
+        if len(cond1) < 50 or len(cond2) < 50:
             return
 
         print("predicting sims...")
         print("cond1 shape ", cond1.shape)
         print("cond2 shape ", cond2.shape)
 
-        indices1 = self.random.choice(cond1, np.min([len(cond1), len(cond2), 2000]))
+        indices1 = self.random.choice(cond1, np.min([len(cond1), len(cond2), 5000]))
         indices2 = self.random.choice(cond2, len(indices1))
 
         indices = np.concatenate([indices1, indices2])
@@ -691,9 +692,9 @@ class ActiveClustering:
         #criterion = nn.SmoothL1Loss()
         criterion = nn.BCEWithLogitsLoss()
         #optimizer = torch.optim.SGD(self.net.parameters(), lr=0.0005, momentum=0.9)
-        #optimizer = torch.optim.SGD(self.net.parameters(), lr=0.0005, momentum=0.9, weight_decay=5e-4)
+        optimizer = torch.optim.SGD(self.net.parameters(), lr=0.0005, momentum=0.9, weight_decay=5e-4)
         #optimizer = torch.optim.Adam(self.net.parameters(), lr=0.0001, weight_decay=0.0001)
-        optimizer = torch.optim.Adam(self.net.parameters(), lr=0.0001)
+        #optimizer = torch.optim.Adam(self.net.parameters(), lr=0.0001)
         print("training...")
         print(len(train_dataset))
         for epoch in range(25):  # loop over the dataset multiple times
@@ -718,8 +719,8 @@ class ActiveClustering:
         # CONTINUE HERE, MAKE PREDS FILL UP SIM MATRIX
         print("predicting")
         #lower_triangle_indices = np.tril_indices(self.N, -1) # -1 gives lower triangle without diagonal (0 includes diagonal)
-        num_preds = self.query_size * 6
-        edges, objects = self.qs.select_batch("uncert", "pairs", num_preds)
+        num_preds = self.query_size * 3
+        edges, objects = self.qs.select_batch("freq", "pairs", num_preds)
         ind1, ind2 = edges[:, 0], edges[:, 1]
 
         #self.saved_ind1, self.saved_ind2 = self.select_similarities_all2()
@@ -741,7 +742,9 @@ class ActiveClustering:
         for i, data in enumerate(test_loader, 0):
             input1, input2 = data[0].to(self.device), data[1].to(self.device)
             pred = self.net(input1, input2)
+            #pred = torch.clip(pred, min=-1, max=1)
             pred = nn.Sigmoid()(pred)
+            print("PREDDD ", pred.shape)
             preds.extend(pred[:, 0].tolist())
         print("NUM PREDS: ", num_preds)
         countt = 0
@@ -763,7 +766,9 @@ class ActiveClustering:
                 pred = 0.25
             else:
                 pred = -0.25
-            self.update_similarity(i1, i2, custom_query=pred, update_freq=False)
+            self.pairwise_similarities[i1, i2] = pred
+            self.pairwise_similarities[i2, i1] = pred
+            #self.update_similarity(i1, i2, custom_query=pred, update_freq=False)
         #self.saved_queries = self.similarity_matrix[self.saved_ind11, self.saved_ind22]
         print("COUNTT: ", countt)
             #self.similarity_matrix[i1, i2] = pred

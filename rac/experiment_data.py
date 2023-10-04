@@ -473,7 +473,7 @@ class ExperimentReader:
                     #cut_threshold = 900
                 elif self.dataset == "cardiotocography":
                     cut_threshold = 900
-                elif self.dataset == "cifar10":
+                elif self.dataset == "cifar10" or self.dataset == "cifar10_original":
                     cut_threshold = 900
                 elif self.dataset == "ecoli":
                     cut_threshold = 900
