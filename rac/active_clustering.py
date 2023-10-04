@@ -691,13 +691,13 @@ class ActiveClustering:
         #criterion = nn.MSELoss()
         #criterion = nn.SmoothL1Loss()
         criterion = nn.BCEWithLogitsLoss()
-        #optimizer = torch.optim.SGD(self.net.parameters(), lr=0.0005, momentum=0.9)
-        optimizer = torch.optim.SGD(self.net.parameters(), lr=0.0005, momentum=0.9, weight_decay=5e-4)
+        optimizer = torch.optim.SGD(self.net.parameters(), lr=0.0005, momentum=0.9)
+        #optimizer = torch.optim.SGD(self.net.parameters(), lr=0.0005, momentum=0.9, weight_decay=5e-4)
         #optimizer = torch.optim.Adam(self.net.parameters(), lr=0.0001, weight_decay=0.0001)
         #optimizer = torch.optim.Adam(self.net.parameters(), lr=0.0001)
         print("training...")
         print(len(train_dataset))
-        for epoch in range(25):  # loop over the dataset multiple times
+        for epoch in range(150):  # loop over the dataset multiple times
             running_loss = 0.0
             for i, data in enumerate(train_loader, 0):
                 # get the inputs; data is a list of [inputs, labels]
