@@ -653,8 +653,8 @@ class ActiveClustering:
 
         print("cond1 len ", len(cond1))
         print("cond2 len ", len(cond2))
-        if len(cond1) < 50 or len(cond2) < 50:
-            return
+        #if len(cond1) < 50 or len(cond2) < 50:
+            #return
 
         print("predicting sims...")
         print("cond1 shape ", cond1.shape)
@@ -663,8 +663,8 @@ class ActiveClustering:
         #indices1 = self.random.choice(cond1, np.min([len(cond1), len(cond2), 5000]))
         #indices2 = self.random.choice(cond2, len(indices1))
 
-        indices1 = cond1
-        indices2 = self.random.choice(cond2, np.min(len(cond2), 2000))
+        indices1 = self.random.choice(cond1, np.min([len(cond1), 2000]))
+        indices2 = self.random.choice(cond2, np.min([len(cond2), 2000]))
 
         indices = np.concatenate([indices1, indices2])
         ind1, ind2 = lower_triangle_indices[0][indices], lower_triangle_indices[1][indices]
