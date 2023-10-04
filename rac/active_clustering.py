@@ -754,6 +754,7 @@ class ActiveClustering:
         for i1, i2, pred in zip(ind1, ind2, preds):
             prob = [1-pred, pred]
             entropy = scipy_entropy(prob)
+            print("ENTROPY: ", entropy)
             if entropy > 0.05:
                 continue
             #self.edges_predicted[i1, i2] = True
