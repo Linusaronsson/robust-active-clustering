@@ -21,7 +21,8 @@ from scipy.stats import entropy as scipy_entropy
 from noise_robust_cobras.cobras import COBRAS
 from noise_robust_cobras.querier.noisy_labelquerier import ProbabilisticNoisyQuerier
 
-from rac.utils.models import TwoLayerNet, ThreeLayerNet, CifarNet, ResNet18
+from rac.pred_models import ACCNet, CustomTensorDataset
+
 from rac.experiment_data import ExperimentData
 from rac.correlation_clustering import max_correlation, max_correlation_dynamic_K
 from rac.query_strategies import QueryStrategy
@@ -29,57 +30,6 @@ from rac.query_strategies import QueryStrategy
 import warnings
 warnings.filterwarnings("once") 
 
-
-class CustomTensorDataset(Dataset):
-    """TensorDataset with support of transforms.
-    """
-    def __init__(self, tensors1, tensors2, labels=None, transform=None):
-        self.tensors1 = tensors1
-        self.tensors2 = tensors2
-        self.labels = labels
-        self.transform = transform
-
-    def __getitem__(self, index):
-        x1 = self.tensors1[index]
-        x2 = self.tensors2[index]
-
-        #print("AAAA ", x1.shape)
-        #print("BBBB ", x2.shape)
-        if self.transform:
-            x1 = self.transform(x1)
-            x2 = self.transform(x2)
-
-        if self.labels is not None:
-            y = self.labels[index]
-            return x1, x2, y
-
-        return x1, x2
-
-    def __len__(self):
-        return len(self.tensors1)
-
-
-#self.net = ACCNet(TwoLayerNet(input_dim, 512, 1024), TwoLayerNet(input_dim, 512, 1024)).to(self.device)
-class ACCNet(nn.Module):
-    def __init__(self, net1, net2):
-        super(ACCNet, self).__init__()
-        self.net1 = net1
-        self.net2 = net2
-        self.combined_net1 = ThreeLayerNet(1024, 256, 2048, 512)
-        self.combined_net2 = ThreeLayerNet(256, 1, 128, 32)
-
-    def forward(self, X1, X2):
-        #if X1.shape[1] != 2:
-            #raise ValueError("WRONG INPUT DIM")
-        out1, e1 = self.net1(X1, last=True)
-        out2, e2 = self.net2(X2, last=True)
-        #print("OUT1: ", e1.shape)
-        #print("OUT2: ", e2.shape)
-        #combined = torch.cat((out1, out2), 1)
-        combined = torch.cat((e1, e2), 1)
-        res1 = F.relu(self.combined_net1(combined))
-        #return torch.clip(self.combined_net(combined), min=-1, max=1)
-        return self.combined_net2(res1)
 
 class ActiveClustering:
     def __init__(self, X, Y, repeat_id, initial_clustering_solution=None, **kwargs):
@@ -640,10 +590,7 @@ class ActiveClustering:
         self.retrain_net = False
 
         if self.retrain_net or self.net is None:
-            #self.net = ACCNet(TwoLayerNet(input_dim, 512, 1024), TwoLayerNet(input_dim, 512, 1024)).to(self.device)
-            #self.net = ACCNet(TwoLayerNet(input_dim, 512, 1024), TwoLayerNet(input_dim, 512, 1024)).to(self.device)
-            #self.net = ACCNet(CifarNet(), CifarNet()).to(self.device)
-            self.net = ACCNet(ResNet18(), ResNet18()).to(self.device)
+            self.net = ACCNet(base_net=self.base_net, siamese=self.siamese).to(self.device)
 
         lower_triangle_indices = np.tril_indices(self.N, -1) # -1 gives lower triangle without diagonal (0 includes diagonal)
         #cond1 = np.where((self.feedback_freq[lower_triangle_indices] > 1) & (self.pairwise_similarities[lower_triangle_indices] > 0.5) & (self.edges_predicted[lower_triangle_indices] == False))[0]
@@ -693,11 +640,21 @@ class ActiveClustering:
         train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=128)
         #criterion = nn.MSELoss()
         #criterion = nn.SmoothL1Loss()
-        criterion = nn.BCEWithLogitsLoss()
-        optimizer = torch.optim.SGD(self.net.parameters(), lr=0.0005, momentum=0.9)
+        if self.criterion == "bce":
+            criterion = nn.BCEWithLogitsLoss()
+        elif self.criterion == "mse":
+            criterion = nn.MSELoss()
+        elif self.criterion == "smoothl1":
+            criterion = nn.SmoothL1Loss()
+        elif self.criterion == "contrastive":
+            #criterion = ContrastiveLoss()
+            pass
+        else:
+            raise ValueError("Invalid criterion")
+        #optimizer = torch.optim.SGD(self.net.parameters(), lr=0.0005, momentum=0.9)
         #optimizer = torch.optim.SGD(self.net.parameters(), lr=0.0005, momentum=0.9, weight_decay=5e-4)
         #optimizer = torch.optim.Adam(self.net.parameters(), lr=0.0001, weight_decay=0.0001)
-        #optimizer = torch.optim.Adam(self.net.parameters(), lr=0.0001)
+        optimizer = torch.optim.Adam(self.net.parameters(), lr=0.0001)
         print("training...")
         print(len(train_dataset))
         for epoch in range(150):  # loop over the dataset multiple times
