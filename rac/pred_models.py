@@ -107,7 +107,7 @@ class ACCNet(nn.Module):
                 out2 = F.relu(self.net2(X2))
             else:
                 _, out1 = self.net1(X1, last=True)
-                _, out2 = self.net2(X1, last=True)
+                _, out2 = self.net2(X2, last=True)
         combined = torch.cat((out1, out2), 1)
 
         #print("OUT1: ", e1.shape)
