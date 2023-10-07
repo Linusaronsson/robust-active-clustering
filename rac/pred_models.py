@@ -2,6 +2,7 @@ import torch
 import torch.nn.functional as F
 import torch.nn as nn
 from torch.utils.data import Dataset, TensorDataset
+import numpy as np
 
 import torch
 from rac.utils.models import TwoLayerNet, ThreeLayerNet, CifarNet, ResNet18, VGG, MnistNet
@@ -25,13 +26,20 @@ class ContrastiveLoss(torch.nn.Module):
 class CustomTensorDataset(Dataset):
     """TensorDataset with support of transforms.
     """
-    def __init__(self, tensors1, tensors2, labels=None, transform=None):
+    def __init__(self, tensors1, tensors2, labels=None, train=False, transform=None):
         self.tensors1 = tensors1
         self.tensors2 = tensors2
         self.labels = labels
+        self.train = train
         self.transform = transform
+        if self.train:
+            num_neg, num_pos = int(np.unique(labels, return_counts=True)[1][0]), int(np.unique(labels, return_counts=True)[1][1])
+            self.num_minority = num_pos if num_pos < num_neg else num_neg
+            self.num_majority = num_pos if num_pos > num_neg else num_neg
 
     def __getitem__(self, index):
+        if self.train:
+            index = index if index < self.num_majority else self.num_majority + ((index - self.num_majority) % self.num_minority)
         x1 = self.tensors1[index]
         x2 = self.tensors2[index]
 
@@ -46,7 +54,10 @@ class CustomTensorDataset(Dataset):
         return x1, x2
 
     def __len__(self):
-        return len(self.tensors1)
+        if self.train:
+            return 2*self.num_majority
+        else:
+            return len(self.tensors1)
 
 
 #self.net = ACCNet(TwoLayerNet(input_dim, 512, 1024), TwoLayerNet(input_dim, 512, 1024)).to(self.device)
