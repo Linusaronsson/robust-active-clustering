@@ -14,14 +14,13 @@ class ContrastiveLoss(torch.nn.Module):
         self.margin = margin
 
     def forward(self, output1, output2, label):
-      # Calculate the euclidean distance and calculate the contrastive loss
-      euclidean_distance = F.pairwise_distance(output1, output2, keepdim = True)
-
-      loss_contrastive = torch.mean((1-label) * torch.pow(euclidean_distance, 2) +
+        # Calculate the euclidean distance and calculate the contrastive loss
+        euclidean_distance = F.pairwise_distance(output1, output2, keepdim = True)
+        loss_contrastive = torch.mean((1-label) * torch.pow(euclidean_distance, 2) +
                                     (label) * torch.pow(torch.clamp(self.margin - euclidean_distance, min=0.0), 2))
 
 
-      return loss_contrastive
+        return loss_contrastive
 
 class CustomTensorDataset(Dataset):
     """TensorDataset with support of transforms.
@@ -85,7 +84,7 @@ class ACCNet(nn.Module):
             base_net_model = CifarNet
             emb_dim = 256
         elif base_net == "three_layer_net":
-            base_net_model = ThreeLayerNet(input_dim, 256, 1024, 512)
+            base_net_model = ThreeLayerNet
             kwargs = {"input_dim": input_dim, "num_classes": 256, "h1": 1024, "h2": 512}
             emb_dim = 256
         else:
