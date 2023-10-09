@@ -93,11 +93,13 @@ class ACCNet(nn.Module):
         if siamese:
             self.net1 = base_net_model(**kwargs)
             self.combined_net1 = ThreeLayerNet(emb_dim*2, 256, 2048, 512)
+            #self.combined_net1 = ThreeLayerNet(emb_dim*2, 1, 1024, 512)
             self.combined_net2 = ThreeLayerNet(256, 1, 128, 32)
         else:
             self.net1 = base_net_model(**kwargs)
             self.net2 = base_net_model(**kwargs)
             self.combined_net1 = ThreeLayerNet(emb_dim*2, 256, 2048, 512)
+            #self.combined_net1 = ThreeLayerNet(emb_dim*2, 1, 1024, 512)
             self.combined_net2 = ThreeLayerNet(256, 1, 128, 32)
 
     def forward(self, X1, X2):
@@ -122,6 +124,7 @@ class ACCNet(nn.Module):
 
         #print("OUT1: ", e1.shape)
         #print("OUT2: ", e2.shape)
+        #return self.combined_net1(combined)
         res1 = F.relu(self.combined_net1(combined))
         #return torch.clip(self.combined_net(combined), min=-1, max=1)
         return self.combined_net2(res1)
