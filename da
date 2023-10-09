@@ -1,0 +1,271 @@
+warning: LF will be replaced by CRLF in notebooks/predicting.ipynb.
+The file will have its original line endings in your working directory
+[1mdiff --git a/notebooks/predicting.ipynb b/notebooks/predicting.ipynb[m
+[1mindex f4b566e..67b4a2a 100644[m
+[1m--- a/notebooks/predicting.ipynb[m
+[1m+++ b/notebooks/predicting.ipynb[m
+[36m@@ -20,7 +20,7 @@[m
+     "    },\n",[m
+     "    \"experiment_options\": {\n",[m
+     "        \"seed\": 33,\n",[m
+[31m-    "        \"num_feedback\": 0.001,\n",[m
+[32m+[m[32m    "        \"num_feedback\": 0.01,\n",[m
+     "        \"noise_level\": [0.0, 0.4, 0.6],\n",[m
+     "        \"persistent_noise_level\": 0.0,\n",[m
+     "        \"force_global_update\": True,\n",[m
+[36m@@ -28,7 +28,8 @@[m
+     "        \"infer_sims\": False,\n",[m
+     "        \"predict_sims\": [True],\n",[m
+     "        \"base_net\": \"cifarnet\",\n",[m
+[31m-    "        \"siamese\": True\n",[m
+[32m+[m[32m    "        \"siamese\": True,\n",[m
+[32m+[m[32m    "        \"criterion\": \"bce\"\n",[m
+     "    },\n",[m
+     "    \"sim_init_options\": {\n",[m
+     "        \"K_init\": [20],\n",[m
+[36m@@ -75,7 +76,7 @@[m
+     "    },\n",[m
+     "    \"experiment_options\": {\n",[m
+     "        \"seed\": 33,\n",[m
+[31m-    "        \"num_feedback\": 0.001,\n",[m
+[32m+[m[32m    "        \"num_feedback\": 0.01,\n",[m
+     "        \"noise_level\": [0.0, 0.4, 0.6],\n",[m
+     "        \"persistent_noise_level\": 0.0,\n",[m
+     "        \"force_global_update\": True,\n",[m
+[36m@@ -114,7 +115,7 @@[m
+   },[m
+   {[m
+    "cell_type": "code",[m
+[31m-   "execution_count": 5,[m
+[32m+[m[32m   "execution_count": 1,[m
+    "metadata": {},[m
+    "outputs": [[m
+     {[m
+[36m@@ -344,27 +345,6 @@[m
+     "metrics.adjusted_rand_score(y, clusterer.labels_)"[m
+    ][m
+   },[m
+[31m-  {[m
+[31m-   "cell_type": "code",[m
+[31m-   "execution_count": 15,[m
+[31m-   "metadata": {},[m
+[31m-   "outputs": [[m
+[31m-    {[m
+[31m-     "name": "stdout",[m
+[31m-     "output_type": "stream",[m
+[31m-     "text": [[m
+[31m-      "14\n"[m
+[31m-     ][m
+[31m-    }[m
+[31m-   ],[m
+[31m-   "source": [[m
+[31m-    "num_majority = 10\n",[m
+[31m-    "num_minority = 5\n",[m
+[31m-    "index = 19\n",[m
+[31m-    "index = index if index < num_majority else num_majority + ((index - num_majority) % num_minority)\n",[m
+[31m-    "print(index)"[m
+[31m-   ][m
+[31m-  },[m
+   {[m
+    "cell_type": "code",[m
+    "execution_count": null,[m
+[36m@@ -375,7 +355,7 @@[m
+  ],[m
+  "metadata": {[m
+   "kernelspec": {[m
+[31m-   "display_name": "Python 3 (ipykernel)",[m
+[32m+[m[32m   "display_name": "base",[m
+    "language": "python",[m
+    "name": "python3"[m
+   },[m
+[36m@@ -389,9 +369,10 @@[m
+    "name": "python",[m
+    "nbconvert_exporter": "python",[m
+    "pygments_lexer": "ipython3",[m
+[31m-   "version": "3.10.4"[m
+[31m-  }[m
+[32m+[m[32m   "version": "3.9.13"[m
+[32m+[m[32m  },[m
+[32m+[m[32m  "orig_nbformat": 4[m
+  },[m
+  "nbformat": 4,[m
+[31m- "nbformat_minor": 4[m
+[32m+[m[32m "nbformat_minor": 2[m
+ }[m
+[1mdiff --git a/rac/active_clustering.py b/rac/active_clustering.py[m
+[1mindex ef847b8..d74a6be 100644[m
+[1m--- a/rac/active_clustering.py[m
+[1m+++ b/rac/active_clustering.py[m
+[36m@@ -153,6 +153,7 @@[m [mclass ActiveClustering:[m
+                     local_regions=self.local_regions,[m
+                     batch_size=self.query_size)[m
+ [m
+[32m+[m
+                 #if len(objects) == 1:[m
+                     #raise ValueError("Singleton cluster in run_AL_procedure(...)")[m
+ [m
+[36m@@ -203,7 +204,7 @@[m [mclass ActiveClustering:[m
+             #    break[m
+ [m
+             if self.verbose:[m
+[31m-                #print("iteration: ", ii)[m
+[32m+[m[32m                print("iteration: ", ii)[m
+                 print("prop_queried: ", total_queries/self.n_edges)[m
+                 print("feedback_freq max: ", np.max(self.feedback_freq))[m
+                 print("rand score: ", adjusted_rand_score(self.Y, self.clustering_solution))[m
+[36m@@ -218,7 +219,7 @@[m [mclass ActiveClustering:[m
+                 print("time: ", time.time()-self.start)[m
+                 [m
+                 if self.acq_fn not in ["QECC", "COBRAS", "nCOBRAS"]:[m
+[31m-                    print("num queries: ", len(self.edges[0]))[m
+[32m+[m[32m                    print("num queries: ", len(self.edges))[m
+                 print("num clusters: ", self.num_clusters)[m
+                 #print("-----------------")[m
+                 [m
+[36m@@ -586,7 +587,7 @@[m [mclass ActiveClustering:[m
+             return self.ground_truth_pairwise_similarities_noisy[ind1, ind2][m
+ [m
+     def predict_similarities(self): [m
+[31m-        input_dim = self.X.shape[1][m
+[32m+[m[32m        #input_dim = self.X.shape[1][m
+         self.retrain_net = False[m
+ [m
+         if self.retrain_net or self.net is None:[m
+[36m@@ -595,25 +596,29 @@[m [mclass ActiveClustering:[m
+         lower_triangle_indices = np.tril_indices(self.N, -1) # -1 gives lower triangle without diagonal (0 includes diagonal)[m
+         #cond1 = np.where((self.feedback_freq[lower_triangle_indices] > 1) & (self.pairwise_similarities[lower_triangle_indices] > 0.5) & (self.edges_predicted[lower_triangle_indices] == False))[0][m
+         #cond2 = np.where((self.feedback_freq[lower_triangle_indices] > 1) & (self.pairwise_similarities[lower_triangle_indices] < -0.5) & (self.edges_predicted[lower_triangle_indices] == False))[0][m
+[31m-        cond1 = np.where((self.feedback_freq[lower_triangle_indices] > 1) & (self.pairwise_similarities[lower_triangle_indices] > 0.5))[0][m
+[31m-        cond2 = np.where((self.feedback_freq[lower_triangle_indices] > 1) & (self.pairwise_similarities[lower_triangle_indices] < -0.5))[0][m
+[32m+[m[32m        cond_pos = np.where((self.feedback_freq[lower_triangle_indices] > 1) & (self.pairwise_similarities[lower_triangle_indices] > 0.5))[0][m
+[32m+[m[32m        cond_neg = np.where((self.feedback_freq[lower_triangle_indices] > 1) & (self.pairwise_similarities[lower_triangle_indices] < -0.5))[0][m
+ [m
+[31m-        print("cond1 len ", len(cond1))[m
+[31m-        print("cond2 len ", len(cond2))[m
+[31m-        #if len(cond1) < 50 or len(cond2) < 50:[m
+[31m-            #return[m
+[32m+[m[32m        print("cond_pos len ", len(cond_pos))[m
+[32m+[m[32m        print("cond_neg len ", len(cond_neg))[m
+[32m+[m[32m        if len(cond_pos) < 250 or len(cond_neg) < 250:[m
+[32m+[m[32m            return[m
+ [m
+         print("predicting sims...")[m
+[31m-        print("cond1 shape ", cond1.shape)[m
+[31m-        print("cond2 shape ", cond2.shape)[m
+[32m+[m[32m        print("cond_pos shape ", cond_pos.shape)[m
+[32m+[m[32m        print("cond_neg shape ", cond_neg.shape)[m
+ [m
+[31m-        #indices1 = self.random.choice(cond1, np.min([len(cond1), len(cond2), 5000]))[m
+[31m-        #indices2 = self.random.choice(cond2, len(indices1))[m
+[32m+[m[32m        ind_pos = self.random.choice(cond_pos, np.min([len(cond_pos), len(cond_neg), 10000]))[m
+[32m+[m[32m        ind_neg = self.random.choice(cond_neg, len(ind_pos))[m
+[32m+[m[32m        #print(len(indices1), len(indices2))[m
+ [m
+[31m-        indices1 = self.random.choice(cond1, np.min([len(cond1), 2000]))[m
+[31m-        indices2 = self.random.choice(cond2, np.min([len(cond2), 2000]))[m
+[32m+[m[32m        #indices1 = self.random.choice(cond1, np.min([len(cond1), 2000]))[m
+[32m+[m[32m        #indices2 = self.random.choice(cond2, np.min([len(cond2), 2000]))[m
+ [m
+[31m-        indices = np.concatenate([indices1, indices2])[m
+[32m+[m[32m        if len(ind_pos) < len(ind_neg):[m
+[32m+[m[32m            indices = np.concatenate([ind_neg, ind_pos])[m
+[32m+[m[32m        else:[m
+[32m+[m[32m            indices = np.concatenate([ind_pos, ind_neg])[m
+         ind1, ind2 = lower_triangle_indices[0][indices], lower_triangle_indices[1][indices][m
+         print("HERE: ", self.X.shape)[m
+         x1 = self.X[ind1][m
+[36m@@ -636,8 +641,8 @@[m [mclass ActiveClustering:[m
+             transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))[m
+         ])[m
+ [m
+[31m-        train_dataset = CustomTensorDataset(x1, x2, torch.Tensor(labels), transform=cifar_training_transform)[m
+[31m-        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=128)[m
+[32m+[m[32m        train_dataset = CustomTensorDataset(x1, x2, torch.Tensor(labels), train=True, transform=cifar_training_transform)[m
+[32m+[m[32m        train_loader = torch.utils.data.DataLoader(train_dataset, shuffle=True, batch_size=128)[m
+         #criterion = nn.MSELoss()[m
+         #criterion = nn.SmoothL1Loss()[m
+         if self.criterion == "bce":[m
+[36m@@ -657,8 +662,9 @@[m [mclass ActiveClustering:[m
+         optimizer = torch.optim.Adam(self.net.parameters(), lr=0.0001)[m
+         print("training...")[m
+         print(len(train_dataset))[m
+[31m-        for epoch in range(150):  # loop over the dataset multiple times[m
+[32m+[m[32m        for epoch in range(200):  # loop over the dataset multiple times[m
+             running_loss = 0.0[m
+[32m+[m[32m            step = 0[m
+             for i, data in enumerate(train_loader, 0):[m
+                 # get the inputs; data is a list of [inputs, labels][m
+                 x1, x2, labels = data[0].to(self.device), data[1].to(self.device), data[2].to(self.device)[m
+[36m@@ -673,54 +679,42 @@[m [mclass ActiveClustering:[m
+                 optimizer.step()[m
+                 # print statistics[m
+                 running_loss += loss.item()[m
+[31m-                if i % 1000 == 999:    # print every 2000 mini-batches[m
+[31m-                    print(f'[{epoch + 1}, {i + 1:5d}] loss: {running_loss / 1000:.10f}')[m
+[31m-                    running_loss = 0.0[m
+[31m-        # CONTINUE HERE, MAKE PREDS FILL UP SIM MATRIX[m
+[32m+[m[32m                step += 1[m
+[32m+[m
+[32m+[m[32m            print("loss: ", running_loss/step)[m
+[32m+[m[32m            step = 0[m
+[32m+[m[32m            running_loss = 0.0[m
+[32m+[m
+         print("predicting")[m
+[31m-        #lower_triangle_indices = np.tril_indices(self.N, -1) # -1 gives lower triangle without diagonal (0 includes diagonal)[m
+         num_preds = self.query_size * 3[m
+         edges, objects = self.qs.select_batch("freq", "pairs", num_preds)[m
+         ind1, ind2 = edges[:, 0], edges[:, 1][m
+ [m
+[31m-        #self.saved_ind1, self.saved_ind2 = self.select_similarities_all2()[m
+[31m-        #self.num_feedback = saved_fb[m
+[31m-        #indices = self.random.choice(ind_not_queried, num_preds)[m
+[31m-        #ind1, ind2 = lower_triangle_indices[0][indices], lower_triangle_indices[1][indices] [m
+         dat1 = self.X[ind1][m
+         dat2 = self.X[ind2][m
+         [m
+         cifar_test_transform = transforms.Compose([[m
+[31m-            transforms.ToPILImage(),[m
+[32m+[m[32m            #transforms.ToPILImage(),[m
+             transforms.ToTensor(),[m
+             transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))[m
+         ])[m
+         dat_all = CustomTensorDataset(dat1, dat2, transform=cifar_test_transform)[m
+         test_loader = torch.utils.data.DataLoader(dat_all, shuffle=False, batch_size=1024)[m
+         preds = [][m
+[31m-        #self.saved_queries = self.similarity_matrix[self.saved_ind1, self.saved_ind2][m
+         for i, data in enumerate(test_loader, 0):[m
+             input1, input2 = data[0].to(self.device), data[1].to(self.device)[m
+             pred = self.net(input1, input2)[m
+             #pred = torch.clip(pred, min=-1, max=1)[m
+             pred = nn.Sigmoid()(pred)[m
+[31m-            print("PREDDD ", pred.shape)[m
+             preds.extend(pred[:, 0].tolist())[m
+         print("NUM PREDS: ", num_preds)[m
+         countt = 0[m
+[31m-        #self.saved_ind11 = [][m
+[31m-        #self.saved_ind22 = [][m
+[31m-        #self.saved_queries = [][m
+         for i1, i2, pred in zip(ind1, ind2, preds):[m
+             prob = [1-pred, pred][m
+             entropy = scipy_entropy(prob)[m
+             print("ENTROPY: ", entropy)[m
+[31m-            if entropy > 0.05:[m
+[32m+[m[32m            if entropy > 0.3:[m
+                 continue[m
+[31m-            #self.edges_predicted[i1, i2] = True[m
+[31m-            #self.saved_queries.append(self.similarity_matrix[i1, i2])[m
+[31m-            #self.saved_ind11.append(i1)[m
+[31m-            #self.saved_ind22.append(i2)[m
+             countt += 1[m
+             pred = (pred - 0.5) * 2[m
+             #if pred >= 0.5:[m
+[36m@@ -730,9 +724,7 @@[m [mclass ActiveClustering:[m
+             self.pairwise_similarities[i1, i2] = pred[m
+             self.pairwise_similarities[i2, i1] = pred[m
+             #self.update_similarity(i1, i2, custom_query=pred, update_freq=False)[m
+[31m-        #self.saved_queries = self.similarity_matrix[self.saved_ind11, self.saved_ind22][m
+         print("COUNTT: ", countt)[m
+[31m-            #self.similarity_matrix[i1, i2] = pred[m
+ [m
+     def infer_similarities2(self): [m
+         num_inferred = 0[m

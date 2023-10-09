@@ -153,6 +153,7 @@ class ActiveClustering:
                     local_regions=self.local_regions,
                     batch_size=self.query_size)
 
+
                 #if len(objects) == 1:
                     #raise ValueError("Singleton cluster in run_AL_procedure(...)")
 
@@ -203,7 +204,7 @@ class ActiveClustering:
             #    break
 
             if self.verbose:
-                #print("iteration: ", ii)
+                print("iteration: ", ii)
                 print("prop_queried: ", total_queries/self.n_edges)
                 print("feedback_freq max: ", np.max(self.feedback_freq))
                 print("rand score: ", adjusted_rand_score(self.Y, self.clustering_solution))
@@ -218,7 +219,7 @@ class ActiveClustering:
                 print("time: ", time.time()-self.start)
                 
                 if self.acq_fn not in ["QECC", "COBRAS", "nCOBRAS"]:
-                    print("num queries: ", len(self.edges[0]))
+                    print("num queries: ", len(self.edges))
                 print("num clusters: ", self.num_clusters)
                 #print("-----------------")
                 
@@ -586,7 +587,7 @@ class ActiveClustering:
             return self.ground_truth_pairwise_similarities_noisy[ind1, ind2]
 
     def predict_similarities(self): 
-        input_dim = self.X.shape[1]
+        #input_dim = self.X.shape[1]
         self.retrain_net = False
 
         if self.retrain_net or self.net is None:
@@ -595,25 +596,29 @@ class ActiveClustering:
         lower_triangle_indices = np.tril_indices(self.N, -1) # -1 gives lower triangle without diagonal (0 includes diagonal)
         #cond1 = np.where((self.feedback_freq[lower_triangle_indices] > 1) & (self.pairwise_similarities[lower_triangle_indices] > 0.5) & (self.edges_predicted[lower_triangle_indices] == False))[0]
         #cond2 = np.where((self.feedback_freq[lower_triangle_indices] > 1) & (self.pairwise_similarities[lower_triangle_indices] < -0.5) & (self.edges_predicted[lower_triangle_indices] == False))[0]
-        cond1 = np.where((self.feedback_freq[lower_triangle_indices] > 1) & (self.pairwise_similarities[lower_triangle_indices] > 0.5))[0]
-        cond2 = np.where((self.feedback_freq[lower_triangle_indices] > 1) & (self.pairwise_similarities[lower_triangle_indices] < -0.5))[0]
+        cond_pos = np.where((self.feedback_freq[lower_triangle_indices] > 1) & (self.pairwise_similarities[lower_triangle_indices] > 0.5))[0]
+        cond_neg = np.where((self.feedback_freq[lower_triangle_indices] > 1) & (self.pairwise_similarities[lower_triangle_indices] < -0.5))[0]
 
-        print("cond1 len ", len(cond1))
-        print("cond2 len ", len(cond2))
-        #if len(cond1) < 50 or len(cond2) < 50:
-            #return
+        print("cond_pos len ", len(cond_pos))
+        print("cond_neg len ", len(cond_neg))
+        if len(cond_pos) < 250 or len(cond_neg) < 250:
+            return
 
         print("predicting sims...")
-        print("cond1 shape ", cond1.shape)
-        print("cond2 shape ", cond2.shape)
+        print("cond_pos shape ", cond_pos.shape)
+        print("cond_neg shape ", cond_neg.shape)
 
-        #indices1 = self.random.choice(cond1, np.min([len(cond1), len(cond2), 5000]))
-        #indices2 = self.random.choice(cond2, len(indices1))
+        ind_pos = self.random.choice(cond_pos, np.min([len(cond_pos), len(cond_neg), 10000]))
+        ind_neg = self.random.choice(cond_neg, len(ind_pos))
+        #print(len(indices1), len(indices2))
 
-        indices1 = self.random.choice(cond1, np.min([len(cond1), 2000]))
-        indices2 = self.random.choice(cond2, np.min([len(cond2), 2000]))
+        #indices1 = self.random.choice(cond1, np.min([len(cond1), 2000]))
+        #indices2 = self.random.choice(cond2, np.min([len(cond2), 2000]))
 
-        indices = np.concatenate([indices1, indices2])
+        if len(ind_pos) < len(ind_neg):
+            indices = np.concatenate([ind_neg, ind_pos])
+        else:
+            indices = np.concatenate([ind_pos, ind_neg])
         ind1, ind2 = lower_triangle_indices[0][indices], lower_triangle_indices[1][indices]
         print("HERE: ", self.X.shape)
         x1 = self.X[ind1]
@@ -636,8 +641,8 @@ class ActiveClustering:
             transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
         ])
 
-        train_dataset = CustomTensorDataset(x1, x2, torch.Tensor(labels), transform=cifar_training_transform)
-        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=128)
+        train_dataset = CustomTensorDataset(x1, x2, torch.Tensor(labels), train=True, transform=cifar_training_transform)
+        train_loader = torch.utils.data.DataLoader(train_dataset, shuffle=True, batch_size=128)
         #criterion = nn.MSELoss()
         #criterion = nn.SmoothL1Loss()
         if self.criterion == "bce":
@@ -657,8 +662,9 @@ class ActiveClustering:
         optimizer = torch.optim.Adam(self.net.parameters(), lr=0.0001)
         print("training...")
         print(len(train_dataset))
-        for epoch in range(150):  # loop over the dataset multiple times
+        for epoch in range(200):  # loop over the dataset multiple times
             running_loss = 0.0
+            step = 0
             for i, data in enumerate(train_loader, 0):
                 # get the inputs; data is a list of [inputs, labels]
                 x1, x2, labels = data[0].to(self.device), data[1].to(self.device), data[2].to(self.device)
@@ -673,54 +679,42 @@ class ActiveClustering:
                 optimizer.step()
                 # print statistics
                 running_loss += loss.item()
-                if i % 1000 == 999:    # print every 2000 mini-batches
-                    print(f'[{epoch + 1}, {i + 1:5d}] loss: {running_loss / 1000:.10f}')
-                    running_loss = 0.0
-        # CONTINUE HERE, MAKE PREDS FILL UP SIM MATRIX
+                step += 1
+
+            print("loss: ", running_loss/step)
+            step = 0
+            running_loss = 0.0
+
         print("predicting")
-        #lower_triangle_indices = np.tril_indices(self.N, -1) # -1 gives lower triangle without diagonal (0 includes diagonal)
         num_preds = self.query_size * 3
         edges, objects = self.qs.select_batch("freq", "pairs", num_preds)
         ind1, ind2 = edges[:, 0], edges[:, 1]
 
-        #self.saved_ind1, self.saved_ind2 = self.select_similarities_all2()
-        #self.num_feedback = saved_fb
-        #indices = self.random.choice(ind_not_queried, num_preds)
-        #ind1, ind2 = lower_triangle_indices[0][indices], lower_triangle_indices[1][indices] 
         dat1 = self.X[ind1]
         dat2 = self.X[ind2]
         
         cifar_test_transform = transforms.Compose([
-            transforms.ToPILImage(),
+            #transforms.ToPILImage(),
             transforms.ToTensor(),
             transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
         ])
         dat_all = CustomTensorDataset(dat1, dat2, transform=cifar_test_transform)
         test_loader = torch.utils.data.DataLoader(dat_all, shuffle=False, batch_size=1024)
         preds = []
-        #self.saved_queries = self.similarity_matrix[self.saved_ind1, self.saved_ind2]
         for i, data in enumerate(test_loader, 0):
             input1, input2 = data[0].to(self.device), data[1].to(self.device)
             pred = self.net(input1, input2)
             #pred = torch.clip(pred, min=-1, max=1)
             pred = nn.Sigmoid()(pred)
-            print("PREDDD ", pred.shape)
             preds.extend(pred[:, 0].tolist())
         print("NUM PREDS: ", num_preds)
         countt = 0
-        #self.saved_ind11 = []
-        #self.saved_ind22 = []
-        #self.saved_queries = []
         for i1, i2, pred in zip(ind1, ind2, preds):
             prob = [1-pred, pred]
             entropy = scipy_entropy(prob)
             print("ENTROPY: ", entropy)
-            if entropy > 0.05:
+            if entropy > 0.3:
                 continue
-            #self.edges_predicted[i1, i2] = True
-            #self.saved_queries.append(self.similarity_matrix[i1, i2])
-            #self.saved_ind11.append(i1)
-            #self.saved_ind22.append(i2)
             countt += 1
             pred = (pred - 0.5) * 2
             #if pred >= 0.5:
@@ -730,9 +724,7 @@ class ActiveClustering:
             self.pairwise_similarities[i1, i2] = pred
             self.pairwise_similarities[i2, i1] = pred
             #self.update_similarity(i1, i2, custom_query=pred, update_freq=False)
-        #self.saved_queries = self.similarity_matrix[self.saved_ind11, self.saved_ind22]
         print("COUNTT: ", countt)
-            #self.similarity_matrix[i1, i2] = pred
 
     def infer_similarities2(self): 
         num_inferred = 0
