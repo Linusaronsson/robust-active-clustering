@@ -2,7 +2,7 @@
     "general_options": {
         "experiment_name": "predicting_exp",
         "num_repeats": 10,
-        "n_workers": 5,
+        "n_workers": 10,
         "local": true,
         "verbose": false
     },
@@ -14,7 +14,7 @@
         "force_global_update": true,
         "save_matrix_data": false,
         "infer_sims": false,
-        "predict_sims": true,
+        "predict_sims": false,
         "base_net": "cifarnet",
         "siamese": true,
         "criterion": "bce"

@@ -601,19 +601,19 @@ class ActiveClustering:
 
         print("cond_pos len ", len(cond_pos))
         print("cond_neg len ", len(cond_neg))
-        if len(cond_pos) < 250 or len(cond_neg) < 250:
+        if len(cond_pos) < 100 or len(cond_neg) < 100:
             return
 
         print("predicting sims...")
         print("cond_pos shape ", cond_pos.shape)
         print("cond_neg shape ", cond_neg.shape)
 
-        ind_pos = self.random.choice(cond_pos, np.min([len(cond_pos), len(cond_neg), 10000]))
-        ind_neg = self.random.choice(cond_neg, len(ind_pos))
+        #ind_pos = self.random.choice(cond_pos, np.min([len(cond_pos), len(cond_neg), 10000]))
+        #ind_neg = self.random.choice(cond_neg, len(ind_pos))
         #print(len(indices1), len(indices2))
 
-        #indices1 = self.random.choice(cond1, np.min([len(cond1), 2000]))
-        #indices2 = self.random.choice(cond2, np.min([len(cond2), 2000]))
+        ind_pos = self.random.choice(cond_pos, np.min([len(cond_pos), 4000]))
+        ind_neg = self.random.choice(cond_neg, np.min([len(cond_neg), 4000]))
 
         if len(ind_pos) < len(ind_neg):
             indices = np.concatenate([ind_neg, ind_pos])
@@ -662,7 +662,7 @@ class ActiveClustering:
         optimizer = torch.optim.Adam(self.net.parameters(), lr=0.0001)
         print("training...")
         print(len(train_dataset))
-        for epoch in range(200):  # loop over the dataset multiple times
+        for epoch in range(100):  # loop over the dataset multiple times
             running_loss = 0.0
             step = 0
             for i, data in enumerate(train_loader, 0):

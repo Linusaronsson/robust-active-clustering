@@ -1,10 +1,10 @@
 {
     "general_options": {
         "experiment_name": "predicting_exp",
-        "num_repeats": 5,
+        "num_repeats": 10,
         "n_workers": 1,
         "local": true,
-        "verbose": true
+        "verbose": false
     },
     "experiment_options": {
         "seed": 33,
