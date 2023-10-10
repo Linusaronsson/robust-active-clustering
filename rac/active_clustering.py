@@ -590,8 +590,10 @@ class ActiveClustering:
         #input_dim = self.X.shape[1]
         self.retrain_net = False
 
+        print("HERE", self.X.shape)
+        self.X = np.float32(self.X)
         if self.retrain_net or self.net is None:
-            self.net = ACCNet(base_net=self.base_net, siamese=self.siamese).to(self.device)
+            self.net = ACCNet(base_net=self.base_net, siamese=self.siamese, input_dim=self.X.shape[1]).to(self.device)
 
         lower_triangle_indices = np.tril_indices(self.N, -1) # -1 gives lower triangle without diagonal (0 includes diagonal)
         #cond1 = np.where((self.feedback_freq[lower_triangle_indices] > 1) & (self.pairwise_similarities[lower_triangle_indices] > 0.5) & (self.edges_predicted[lower_triangle_indices] == False))[0]
@@ -601,7 +603,7 @@ class ActiveClustering:
 
         print("cond_pos len ", len(cond_pos))
         print("cond_neg len ", len(cond_neg))
-        if len(cond_pos) < 100 or len(cond_neg) < 100:
+        if len(cond_pos) < 10 or len(cond_neg) < 10:
             return
 
         print("predicting sims...")
@@ -641,7 +643,10 @@ class ActiveClustering:
             transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
         ])
 
-        train_dataset = CustomTensorDataset(x1, x2, torch.Tensor(labels), train=True, transform=cifar_training_transform)
+        if self.base_net == "three_layer_net":
+            train_dataset = CustomTensorDataset(x1, x2, torch.Tensor(labels), train=True, transform=None)
+        else:
+            train_dataset = CustomTensorDataset(x1, x2, torch.Tensor(labels), train=True, transform=cifar_training_transform)
         train_loader = torch.utils.data.DataLoader(train_dataset, shuffle=True, batch_size=128)
         #criterion = nn.MSELoss()
         #criterion = nn.SmoothL1Loss()
@@ -662,7 +667,7 @@ class ActiveClustering:
         optimizer = torch.optim.Adam(self.net.parameters(), lr=0.0001)
         print("training...")
         print(len(train_dataset))
-        for epoch in range(100):  # loop over the dataset multiple times
+        for epoch in range(150):  # loop over the dataset multiple times
             running_loss = 0.0
             step = 0
             for i, data in enumerate(train_loader, 0):
@@ -698,7 +703,11 @@ class ActiveClustering:
             transforms.ToTensor(),
             transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
         ])
-        dat_all = CustomTensorDataset(dat1, dat2, transform=cifar_test_transform)
+        if self.base_net == "three_layer_net":
+            dat_all = CustomTensorDataset(dat1, dat2, transform=None)
+        else:
+            dat_all = CustomTensorDataset(dat1, dat2, transform=cifar_test_transform)
+
         test_loader = torch.utils.data.DataLoader(dat_all, shuffle=False, batch_size=1024)
         preds = []
         for i, data in enumerate(test_loader, 0):
@@ -713,7 +722,7 @@ class ActiveClustering:
             prob = [1-pred, pred]
             entropy = scipy_entropy(prob)
             print("ENTROPY: ", entropy)
-            if entropy > 0.3:
+            if entropy > 0.05:
                 continue
             countt += 1
             pred = (pred - 0.5) * 2
