@@ -2,7 +2,7 @@
     "general_options": {
         "experiment_name": "predicting_exp",
         "num_repeats": 10,
-        "n_workers": 1,
+        "n_workers": 5,
         "local": true,
         "verbose": false
     },
