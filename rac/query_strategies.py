@@ -10,7 +10,10 @@ class QueryStrategy:
     def select_batch(self, acq_fn, local_regions, batch_size):
 
         if "maxmin" in acq_fn or "maxexp" in acq_fn:
-            self.compute_informativeness(acq_fn)
+            if "2" in acq_fn:
+                self.compute_informativeness_2(acq_fn)
+            else:
+                self.compute_informativeness(acq_fn)
 
         if type(local_regions) == str:
             if local_regions == "pairs":
@@ -332,3 +335,66 @@ class QueryStrategy:
                                     self.custom_informativeness[k, j] = np.maximum(expected_loss, self.custom_informativeness[k, j])
         else:
             raise ValueError("Invalid acquisition function maxmin/maxexp.")
+
+    def compute_informativeness_2(self, acq_fn):
+        print("@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+        max_edges = self.ac.N
+        lower_triangle_indices = np.tril_indices(self.ac.N, -1)
+        inds = np.where(np.abs(self.ac.violations[lower_triangle_indices]) > 0)[0]
+        inds = self.ac.random.choice(inds, np.min([max_edges, len(inds)]), replace=False)
+        a, b = lower_triangle_indices[0][inds], lower_triangle_indices[1][inds]
+
+        if acq_fn == "maxmin2":
+            self.custom_informativeness = np.zeros((self.ac.N, self.ac.N), dtype=np.float32) 
+            N = self.ac.N
+            for i, j in zip(a, b):
+                if self.violates_clustering(i, j):# and self.ac.feedback_freq[i, j] > 1: # adding this condition should not change anything when there are no bad triangles initially! since all new triangles must include at least one queried edge
+                    for k in range(0, N):
+                        if k == i or k == j:
+                            continue
+                        sim_ij = self.ac.pairwise_similarities[i, j]
+                        sim_ik = self.ac.pairwise_similarities[i, k]
+                        sim_jk = self.ac.pairwise_similarities[j, k]
+
+                        if self.triangle_is_bad(i, j, k):# and (self.ac.feedback_freq[i, j] > 1 or self.ac.feedback_freq[i, k] > 1 or self.ac.feedback_freq[j, k] > 1):
+                            sims = [np.abs(sim_ij), np.abs(sim_ik), np.abs(sim_jk)]
+                            smallest_sim = self.random_sort(np.array(sims))[0]
+
+                            if smallest_sim == 0 and self.ac.feedback_freq[i, j] <= self.ac.tau:
+                                self.custom_informativeness[i, j] = np.abs(sim_ij)
+                                self.custom_informativeness[j, i] = np.abs(sim_ij)
+                            if smallest_sim == 1 and self.ac.feedback_freq[i, k] <= self.ac.tau:
+                                self.custom_informativeness[i, k] = np.abs(sim_ik)
+                                self.custom_informativeness[k, i] = np.abs(sim_ik)
+                            if smallest_sim == 2 and self.ac.feedback_freq[j, k] <= self.ac.tau:
+                                self.custom_informativeness[j, k] = np.abs(sim_jk)
+                                self.custom_informativeness[k, j] = np.abs(sim_jk)
+        elif acq_fn == "maxexp2":
+            self.custom_informativeness = np.zeros((self.ac.N, self.ac.N), dtype=np.float32) 
+            N = self.ac.N
+            for i, j in zip(a, b):
+                if self.violates_clustering(i, j):# and self.ac.feedback_freq[i, j] > 1:
+                    for k in range(0, N):
+                        if k == i or k == j:
+                            continue
+                        sim_ij = self.ac.pairwise_similarities[i, j]
+                        sim_ik = self.ac.pairwise_similarities[i, k]
+                        sim_jk = self.ac.pairwise_similarities[j, k]
+
+                        if self.triangle_is_bad(i, j, k):# and (self.ac.feedback_freq[i, j] > 1 or self.ac.feedback_freq[i, k] > 1 or self.ac.feedback_freq[j, k] > 1):
+                            expected_loss = self.min_triple_cost(i, j, k, beta=self.ac.beta) 
+                            sims = [np.abs(sim_ij), np.abs(sim_ik), np.abs(sim_jk)]
+                            smallest_sim = self.random_sort(np.array(sims))[0]
+                            if smallest_sim == 0 and self.ac.feedback_freq[i, j] <= self.ac.tau:
+                                self.custom_informativeness[i, j] = np.maximum(expected_loss, self.custom_informativeness[i, j])
+                                self.custom_informativeness[j, i] = np.maximum(expected_loss, self.custom_informativeness[j, i])
+                            if smallest_sim == 1 and self.ac.feedback_freq[i, k] <=  self.ac.tau:
+                                self.custom_informativeness[i, k] = np.maximum(expected_loss, self.custom_informativeness[i, k])
+                                self.custom_informativeness[k, i] = np.maximum(expected_loss, self.custom_informativeness[k, i])
+                            if smallest_sim == 2 and self.ac.feedback_freq[j, k] <= self.ac.tau:
+                                self.custom_informativeness[j, k] = np.maximum(expected_loss, self.custom_informativeness[j, k])
+                                self.custom_informativeness[k, j] = np.maximum(expected_loss, self.custom_informativeness[k, j])
+        else:
+            raise ValueError("Invalid acquisition function maxmin/maxexp.")
+
+    
