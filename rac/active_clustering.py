@@ -614,8 +614,8 @@ class ActiveClustering:
         #ind_neg = self.random.choice(cond_neg, len(ind_pos))
         #print(len(indices1), len(indices2))
 
-        ind_pos = self.random.choice(cond_pos, np.min([len(cond_pos), 4000]))
-        ind_neg = self.random.choice(cond_neg, np.min([len(cond_neg), 4000]))
+        ind_pos = self.random.choice(cond_pos, np.min([len(cond_pos), 4000]), replace=False)
+        ind_neg = self.random.choice(cond_neg, np.min([len(cond_neg), 4000]), replace=False)
 
         if len(ind_pos) < len(ind_neg):
             indices = np.concatenate([ind_neg, ind_pos])
@@ -647,7 +647,7 @@ class ActiveClustering:
             train_dataset = CustomTensorDataset(x1, x2, torch.Tensor(labels), train=True, transform=None)
         else:
             train_dataset = CustomTensorDataset(x1, x2, torch.Tensor(labels), train=True, transform=cifar_training_transform)
-        train_loader = torch.utils.data.DataLoader(train_dataset, shuffle=True, batch_size=128)
+        train_loader = torch.utils.data.DataLoader(train_dataset, shuffle=True, batch_size=32)
         #criterion = nn.MSELoss()
         #criterion = nn.SmoothL1Loss()
         if self.criterion == "bce":
@@ -664,7 +664,7 @@ class ActiveClustering:
         #optimizer = torch.optim.SGD(self.net.parameters(), lr=0.0005, momentum=0.9)
         #optimizer = torch.optim.SGD(self.net.parameters(), lr=0.0005, momentum=0.9, weight_decay=5e-4)
         #optimizer = torch.optim.Adam(self.net.parameters(), lr=0.0001, weight_decay=0.0001)
-        optimizer = torch.optim.Adam(self.net.parameters(), lr=0.0001)
+        optimizer = torch.optim.Adam(self.net.parameters(), lr=0.001, weight_decay=0.00005)
         print("training...")
         print(len(train_dataset))
         for epoch in range(150):  # loop over the dataset multiple times
@@ -691,7 +691,7 @@ class ActiveClustering:
             running_loss = 0.0
 
         print("predicting")
-        num_preds = self.query_size * 3
+        num_preds = self.query_size * 50
         edges, objects = self.qs.select_batch("freq", "pairs", num_preds)
         ind1, ind2 = edges[:, 0], edges[:, 1]
 
@@ -722,14 +722,14 @@ class ActiveClustering:
             prob = [1-pred, pred]
             entropy = scipy_entropy(prob)
             print("ENTROPY: ", entropy)
-            if entropy > 0.05:
+            if entropy > 1e-13:
                 continue
             countt += 1
-            pred = (pred - 0.5) * 2
-            #if pred >= 0.5:
-                #pred = 0.7
-            #else:
-                #pred = -0.7
+            #pred = (pred - 0.5) * 2
+            if pred >= 0.5:
+                pred = 0.7
+            else:
+                pred = -0.7
             self.pairwise_similarities[i1, i2] = pred
             self.pairwise_similarities[i2, i1] = pred
             #self.update_similarity(i1, i2, custom_query=pred, update_freq=False)
