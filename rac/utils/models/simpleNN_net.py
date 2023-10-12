@@ -32,11 +32,14 @@ class TwoLayerNet(nn.Module):
 
 
 class ThreeLayerNet(nn.Module):
-    def __init__(self, input_dim, num_classes, h1, h2):
+    def __init__(self, input_dim, num_classes, h1, h2, p=0.0):
         super(ThreeLayerNet, self).__init__()
         self.linear1 = nn.Linear(input_dim, h1)
+        self.dropout1 = nn.Dropout(p=p)
         self.linear2 = nn.Linear(h1, h2)
+        self.dropout2 = nn.Dropout(p=p)
         self.linear3 = nn.Linear(h2, num_classes)
+        self.dropout3 = nn.Dropout(p=p)
         self.feature_dim = h2
 
     
@@ -47,7 +50,9 @@ class ThreeLayerNet(nn.Module):
                 l2scores = F.relu(self.linear2(l1scores))
         else:
             l1scores = F.relu(self.linear1(x))
+            l1scores = self.dropout1(l1scores)
             l2scores = F.relu(self.linear2(l1scores))
+            l2scores = self.dropout2(l2scores)
         scores = self.linear3(l2scores)
         if last:
             return scores, l2scores

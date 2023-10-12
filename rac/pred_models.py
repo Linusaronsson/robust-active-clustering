@@ -61,7 +61,7 @@ class CustomTensorDataset(Dataset):
 
 #self.net = ACCNet(TwoLayerNet(input_dim, 512, 1024), TwoLayerNet(input_dim, 512, 1024)).to(self.device)
 class ACCNet(nn.Module):
-    def __init__(self, base_net="resnet", siamese=False, output="", input_dim=128):
+    def __init__(self, base_net="resnet", siamese=False, output="", input_dim=128, p=0.0):
         super(ACCNet, self).__init__()
         self.base_net = base_net
         self.siamese = siamese
@@ -85,7 +85,7 @@ class ACCNet(nn.Module):
             emb_dim = 256
         elif base_net == "three_layer_net":
             base_net_model = ThreeLayerNet
-            kwargs = {"input_dim": input_dim, "num_classes": 256, "h1": 1024, "h2": 512}
+            kwargs = {"input_dim": input_dim, "num_classes": 256, "h1": 1024, "h2": 512, "p": p}
             emb_dim = 256
         else:
             raise ValueError("WRONG BASE NET")
