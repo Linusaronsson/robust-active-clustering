@@ -9,16 +9,16 @@
     "experiment_options": {
         "seed": 33,
         "num_feedback": 0.001,
-        "noise_level": 0.4,
+        "noise_level": 0.2,
         "persistent_noise_level": 0.0,
         "force_global_update": true,
         "save_matrix_data": false,
         "infer_sims": false
     },
     "sim_init_options": {
-        "K_init": 10,
+        "K_init": 2,
         "sim_init": 0.1,
-        "sim_init_type": "random_clustering"
+        "sim_init_type": "custom"
     },
     "query_strategy_options": {
         "acq_fn": "freq",
@@ -29,6 +29,6 @@
         "alpha": 1
     },
     "dataset_options": {
-        "dataset": "ecoli"
+        "dataset": "mushrooms"
     }
 }
