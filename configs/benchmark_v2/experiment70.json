@@ -16,7 +16,7 @@
         "infer_sims": false
     },
     "sim_init_options": {
-        "K_init": 20,
+        "K_init": 10,
         "sim_init": 0.1,
         "sim_init_type": "random_clustering"
     },
