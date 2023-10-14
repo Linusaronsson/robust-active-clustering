@@ -13,10 +13,11 @@
         "persistent_noise_level": 0.0,
         "force_global_update": true,
         "save_matrix_data": false,
-        "infer_sims": false
+        "infer_sims": false,
+        "regular_noise": true
     },
     "sim_init_options": {
-        "K_init": 4,
+        "K_init": 10,
         "sim_init": 0.1,
         "sim_init_type": "custom"
     },
@@ -29,6 +30,6 @@
         "alpha": 1
     },
     "dataset_options": {
-        "dataset": "forest_type_mapping"
+        "dataset": "cardiotocography"
     }
 }

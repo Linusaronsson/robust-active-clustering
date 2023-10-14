@@ -13,7 +13,8 @@
         "persistent_noise_level": 0.0,
         "force_global_update": true,
         "save_matrix_data": false,
-        "infer_sims": false
+        "infer_sims": false,
+        "regular_noise": false
     },
     "sim_init_options": {
         "K_init": 20,
