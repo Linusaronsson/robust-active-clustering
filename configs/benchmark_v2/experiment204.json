@@ -17,7 +17,7 @@
         "regular_noise": false
     },
     "sim_init_options": {
-        "K_init": 10,
+        "K_init": 2,
         "sim_init": 0.1,
         "sim_init_type": "random_clustering"
     },
@@ -30,6 +30,6 @@
         "alpha": 1
     },
     "dataset_options": {
-        "dataset": "breast_cancer"
+        "dataset": "mushrooms"
     }
 }

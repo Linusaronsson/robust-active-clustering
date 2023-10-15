@@ -30,6 +30,6 @@
         "alpha": 1
     },
     "dataset_options": {
-        "dataset": "cifar10"
+        "dataset": "mnist"
     }
 }

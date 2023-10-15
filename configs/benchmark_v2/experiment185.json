@@ -30,6 +30,6 @@
         "alpha": 1
     },
     "dataset_options": {
-        "dataset": "cardiotocography"
+        "dataset": "breast_cancer"
     }
 }

@@ -22,7 +22,7 @@
         "sim_init_type": "random_clustering"
     },
     "query_strategy_options": {
-        "acq_fn": "COBRAS",
+        "acq_fn": "nCOBRAS",
         "local_regions": "none",
         "eps": 0.3,
         "beta": 1,
