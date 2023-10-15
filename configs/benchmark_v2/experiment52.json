@@ -14,12 +14,12 @@
         "force_global_update": true,
         "save_matrix_data": false,
         "infer_sims": false,
-        "regular_noise": true
+        "regular_noise": false
     },
     "sim_init_options": {
-        "K_init": 3,
+        "K_init": 10,
         "sim_init": 0.1,
-        "sim_init_type": "custom"
+        "sim_init_type": "random_clustering"
     },
     "query_strategy_options": {
         "acq_fn": "unif",
@@ -30,6 +30,6 @@
         "alpha": 1
     },
     "dataset_options": {
-        "dataset": "mnist"
+        "dataset": "breast_cancer"
     }
 }

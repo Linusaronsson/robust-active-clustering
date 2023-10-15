@@ -14,22 +14,22 @@
         "force_global_update": true,
         "save_matrix_data": false,
         "infer_sims": false,
-        "regular_noise": true
+        "regular_noise": false
     },
     "sim_init_options": {
         "K_init": 10,
         "sim_init": 0.1,
-        "sim_init_type": "custom"
+        "sim_init_type": "random_clustering"
     },
     "query_strategy_options": {
-        "acq_fn": "unif",
-        "local_regions": "pairs",
+        "acq_fn": "maxexp2",
+        "local_regions": "triangles",
         "eps": 0.3,
         "beta": 1,
         "tau": 7,
         "alpha": 1
     },
     "dataset_options": {
-        "dataset": "ecoli"
+        "dataset": "yeast"
     }
 }
