@@ -8,7 +8,7 @@
     },
     "experiment_options": {
         "seed": 33,
-        "num_feedback": 10,
+        "num_feedback": 50,
         "noise_level": 0.2,
         "persistent_noise_level": 0.0,
         "force_global_update": true,

@@ -8,8 +8,8 @@
     },
     "experiment_options": {
         "seed": 33,
-        "num_feedback": 100,
-        "noise_level": 0.0,
+        "num_feedback": 4000,
+        "noise_level": 0.2,
         "persistent_noise_level": 0.0,
         "force_global_update": true,
         "save_matrix_data": false,
