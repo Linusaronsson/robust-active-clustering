@@ -1,6 +1,7 @@
 import time
 import math
 
+from active_semi_clustering.semi_supervised.pairwise_constraints import PCKMeans, MPCKMeans, COPKMeans
 from sklearn.metrics import adjusted_rand_score, adjusted_mutual_info_score, v_measure_score
 from sklearn.metrics import accuracy_score, precision_score, recall_score, mean_squared_error, f1_score
 import itertools
@@ -66,6 +67,9 @@ class ActiveClustering:
 
         if not hasattr(self, "regular_noise"):
             self.regular_noise = True
+
+        if not hasattr(self, "clustering_alg"):
+            self.clustering_alg = "CC"
 
         if not hasattr(self, "predict_sims"):
             self.predict_sims = False
@@ -519,31 +523,48 @@ class ActiveClustering:
 
     # Input: list of objects to update clustering w.r.t. (subset of all objects)
     def update_clustering(self, objects):
-        objects = np.unique(objects)
-        clusters = [] 
-        i = 0
-        for cluster_objs in self.clustering:
-            if not set(cluster_objs).isdisjoint(objects):
-                clusters.append(i)
-            i += 1
-        n_clusters = len(clusters)
+        if self.clustering_alg == "CC":
+            objects = np.unique(objects)
+            clusters = [] 
+            i = 0
+            for cluster_objs in self.clustering:
+                if not set(cluster_objs).isdisjoint(objects):
+                    clusters.append(i)
+                i += 1
+            n_clusters = len(clusters)
 
-        temp_graph = self.pairwise_similarities[np.ix_(objects, objects)]
-        new_clustering, _ = max_correlation_dynamic_K(temp_graph, n_clusters, 3, self.random)
+            temp_graph = self.pairwise_similarities[np.ix_(objects, objects)]
+            new_clustering, _ = max_correlation_dynamic_K(temp_graph, n_clusters, 3, self.random)
 
-        self.clustering = np.delete(np.array(self.clustering, dtype=object), clusters, axis=0).tolist()
+            self.clustering = np.delete(np.array(self.clustering, dtype=object), clusters, axis=0).tolist()
 
-        # integrate clustering solution
-        n_new_clusters = np.max(new_clustering) + 1
-        for i in range(n_new_clusters):
-            new_cluster = objects[np.where(new_clustering == i)].tolist()
-            self.clustering.append(new_cluster)
-        
-        self.clustering_solution = np.zeros(self.N, dtype=np.uint32)
-        for k in range(len(self.clustering)):
-            self.clustering_solution[self.clustering[k]] = k
-        #self.num_clusters = np.max(self.clustering_solution) + 1
-        self.num_clusters = len(self.clustering)
+            # integrate clustering solution
+            n_new_clusters = np.max(new_clustering) + 1
+            for i in range(n_new_clusters):
+                new_cluster = objects[np.where(new_clustering == i)].tolist()
+                self.clustering.append(new_cluster)
+            
+            self.clustering_solution = np.zeros(self.N, dtype=np.uint32)
+            for k in range(len(self.clustering)):
+                self.clustering_solution[self.clustering[k]] = k
+            #self.num_clusters = np.max(self.clustering_solution) + 1
+            self.num_clusters = len(self.clustering)
+        elif self.clustering_alg == "MPCKMeans":
+            num_classes = len(np.unique(self.Y))
+            clusterer = MPCKMeans(n_clusters=num_classes, max_iter=10, w=1)
+            lower_triangle_indices = np.tril_indices(self.N, -1)
+            ind_pos = np.where((self.feedback_freq[lower_triangle_indices] > 1) & (self.pairwise_similarities[lower_triangle_indices] >= 0))[0]
+            ind_neg = np.where((self.feedback_freq[lower_triangle_indices] > 1) & (self.pairwise_similarities[lower_triangle_indices] < 0))[0]
+            ind1_pos, ind2_pos = lower_triangle_indices[0][ind_pos], lower_triangle_indices[1][ind_pos]
+            ind1_neg, ind2_neg = lower_triangle_indices[0][ind_neg], lower_triangle_indices[1][ind_neg]
+            ml = [(i1, i2) for i1, i2 in zip(ind1_pos, ind2_pos)]
+            cl = [(i1, i2) for i1, i2 in zip(ind1_neg, ind2_neg)]
+            clusterer.fit(X=self.X, y=self.Y, ml=ml, cl=cl)
+            self.num_clusters = num_classes
+            self.clustering_solution = clusterer.labels_
+            self.clustering = self.clustering_from_clustering_solution(self.clustering_solution)[0]
+        else:
+            raise ValueError("Invalid clustering algorithm in update_clustering(...)")
     
     def update_similarity(self, ind1, ind2, custom_query=None, update_freq=True):
         #if update_freq:
