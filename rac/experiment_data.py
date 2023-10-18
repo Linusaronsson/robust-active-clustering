@@ -215,8 +215,34 @@ class ExperimentReader:
             df['last_index_above_threshold'] = df[col].apply(lambda x: np.where(x > threshold)[0][0] if any(x > threshold) else len(x))
             max_index = df['last_index_above_threshold'].max()
             min_index = df['last_index_above_threshold'].min()
+            #print("IASDJOASIDJIOASJD")
 
-            if method == "auc_max_ind":
+            if method == "batch_size":
+                ind_step = 2000
+                df = self.extend_dataframe(df, metric, max_length)
+                #print(len(df))
+                for i, row in df.iterrows():
+                    N = len(self.Y)
+                    n_edges = (N*(N-1))/2
+                    batch_size = row["num_feedback"]
+                    #print(batch_size)
+                    if batch_size < 1:
+                        continue
+                    indices = []
+                    for j in range(1, max_index):
+                        if (j * batch_size) % ind_step == 0:
+                            indices.append(j)
+                        if (j*batch_size)/n_edges > 0.5:
+                            break
+                    indices = np.array(indices)
+                    
+                    #print("ASD: ", batch_size, indices, len(indices))
+                    #print(df.at[i, metric].shape)
+                    #print(df.at[i, metric][:, indices])
+                    #print(np.mean(df.at[i, metric][:, indices], axis=1).reshape(-1, 1))
+                    df.at[i, metric] = np.mean(df.at[i, metric][:, indices], axis=1).reshape(-1, 1)
+                #df = self.summarize_metric(df, metric, auc, max_length)
+            elif method == "auc_max_ind":
                 df = self.extend_dataframe(df, metric, max_length)
                 df = self.summarize_metric(df, metric, auc, max_length)
             elif method == "auc_max_thresh":
@@ -377,90 +403,11 @@ class ExperimentReader:
 
                 cut_threshold = 0
                 cut_axis = False
-                errorbar = ("sd", 1)
-                if self.dataset == "20newsgroups_small":
-                    cut_threshold = 600
-                elif self.dataset == "breast_cancer_small":
-                    # noise = 0.0
-                    errorbar = None
-                    cut_axis = True
-                    l1 = 0
-                    l2 = 0.7
-                    l3 = 0.72
-                    l4 = 1.01
-                    cut_threshold = 300
-
-                    # noise = 0.2, ari
-                    #errorbar = None
-                    #cut_axis = True
-                    #l1 = 0
-                    #l2 = 0.69
-                    #l3 = 0.7
-                    #l4 = 1.01
-                    #cut_threshold = 400
-
-                    # noise = 0.2, ami
-                    #errorbar = None
-                    #cut_axis = True
-                    #l1 = 0
-                    #l2 = 0.6
-                    #l3 = 0.71
-                    #l4 = 1.01
-                    #cut_threshold = 400
-                elif self.dataset == "cardiotocography_small":
-                    cut_threshold = 400
-                elif self.dataset == "cifar10_small":
-                    # ari
-                    #cut_threshold = 400
-                    #cut_axis = True
-                    #l1 = 0
-                    #l2 = 0.4
-                    #l3 = 0.65
-                    #l4 = 1.01
-
-                    # 
-                    cut_threshold = 400
-                    cut_axis = True
-                    l1 = 0
-                    l2 = 0.82
-                    l3 = 0.84
-                    l4 = 1.01
-                elif self.dataset == "ecoli_small":
-                    # ami
-                    #cut_threshold = 450
-                    #cut_axis = True
-                    #l1 = 0
-                    #l2 = 0.57
-                    #l3 = 0.58
-                    #l4 = 1.01
-
-                    ##ari
-                    cut_threshold = 450
-                    #cut_axis = True
-                    #l1 = 0
-                    #l2 = 0.3
-                    #l3 = 0.44
-                    #l4 = 1.01
-
-                elif self.dataset == "forest_type_mapping_small":
-                    cut_threshold = 400
-                elif self.dataset == "mnist_small":
-                    cut_axis = True
-                    l1 = 0
-                    l2 = 0.55
-                    l3 = 0.6
-                    l4 = 1.01
-                    cut_threshold = 450
-                elif self.dataset == "mushrooms_small":
-                    cut_threshold = 400
-                elif self.dataset == "user_knowledge_small":
-                    cut_threshold = 500
-                elif self.dataset == "yeast_small":
-                    cut_threshold = 400
-                elif "synthetic" in self.dataset:
-                    cut_threshold = 900
+                errorbar = ("sd", 0.3)
+                if "synthetic" in self.dataset:
+                    cut_threshold = 700
                 elif self.dataset == "20newsgroups":
-                    cut_threshold = 900
+                    cut_threshold = 700
                 elif self.dataset == "breast_cancer":
                     # noise = 0.0
                     errorbar = None
@@ -469,37 +416,37 @@ class ExperimentReader:
                     l2 = 0.7
                     l3 = 0.72
                     l4 = 1.01
-                    cut_threshold = 300
+                    cut_threshold = 700
                     #cut_threshold = 900
                 elif self.dataset == "cardiotocography":
-                    cut_threshold = 900
+                    cut_threshold = 700
                 elif self.dataset == "cifar10" or self.dataset == "cifar10_original":
-                    cut_threshold = 900
+                    cut_threshold = 700
                 elif self.dataset == "ecoli":
-                    cut_threshold = 900
+                    cut_threshold = 700
                 elif self.dataset == "forest_type_mapping":
-                    cut_threshold = 900
+                    cut_threshold = 700
                 elif self.dataset == "mnist":
-                    cut_threshold = 900
+                    cut_threshold = 700
                 elif self.dataset == "mushrooms":
-                    cut_threshold = 900
+                    cut_threshold = 700
                 elif self.dataset == "user_knowledge":
-                    cut_threshold = 900
+                    cut_threshold = 700
                 elif self.dataset == "yeast":
-                    cut_threshold = 900
+                    cut_threshold = 700
                 else:
                     raise ValueError("incorrect dataset!")
 
-                #df_filtered = df_filtered[df_filtered[vary[0]] < cut_threshold]
+                df_filtered = df_filtered[df_filtered[vary[0]] < cut_threshold]
                 metric_map = {"ami": "AMI", "rand": "ARI"}
 
                 if not cut_axis:
                     ax = sns.lineplot(
                         x=vary[0],
                         y="y",
-                        hue=df_filtered[hues].apply(tuple, axis=1),
-                        #hue="acq_fn",
-                        #hue_order=["maxexp", "maxmin", "uncert", "freq", "unif", "nCOBRAS", "COBRAS", "QECC"],
+                        #hue=df_filtered[hues].apply(tuple, axis=1),
+                        hue="acq_fn",
+                        hue_order=["maxexp2", "maxmin2", "uncert", "freq", "unif", "nCOBRAS", "COBRAS", "QECC"],
                         errorbar=errorbar,
                         err_style=err_style,
                         data=df_filtered,
@@ -564,7 +511,7 @@ class ExperimentReader:
                     batch_size = self.num_feedback
                 n_iterations = int(n_edges/batch_size)
                 #tick_labels = np.array(list(range(0, n_iterations))) * batch_size
-                labels = [int(item)*batch_size for item in ax.get_xticks()]
+                labels = [round((int(item)*batch_size)/n_edges, 1) for item in ax.get_xticks()]
 
 
                 if not cut_axis:
@@ -576,12 +523,183 @@ class ExperimentReader:
 
                 #ax.set_xticks(range(n_iterations), labels=tick_labels)
                 #plt.xlabel(str(vary))
-                plt.xlabel("Number of queries")
+                plt.xlabel("Proportion of edges queried")
+                ax.legend(loc='lower right')
+
+                legs = ax.get_legend().get_texts()
+                #legs = [l.get_text() for l in legs]
+                new_legends = []
+                ax.get_legend().set_title(None)
+                for ll in legs:
+                    l = ll.get_text()
+                    if "unif" in l:
+                        #new_legends.append("Uniform")
+                        ll.set_text("Uniform")
+                    if "COBRAS" in l and "nCOBRAS" not in l:
+                        #new_legends.append("COBRAS")
+                        ll.set_text("COBRAS")
+                    if "nCOBRAS" in l:
+                        #new_legends.append("nCOBRAS")
+                        ll.set_text("nCOBRAS")
+                    if "freq" in l:
+                        #new_legends.append("Frequency")
+                        ll.set_text("Frequency")
+                    if "uncert" in l:
+                        #new_legends.append("Uncertainty")
+                        ll.set_text("Uncertainty")
+                    if "maxmin" in l:
+                        #new_legends.append("Maxmin")
+                        ll.set_text("Maxmin")
+                    if "maxexp" in l:
+                        #new_legends.append("Maxexp")
+                        ll.set_text("Maxexp")
+                    if "QECC" in l:
+                        #new_legends.append("QECC")
+                        ll.set_text("QECC")
+                #ax.legend(labels=new_legends)
+                legend = ax.get_legend()
+                plt.savefig(file_path, bbox_extra_artists=(legend,), bbox_inches='tight')
+                plt.savefig(file_path, dpi=200, bbox_inches='tight')
+                plt.clf()
+
+    def generate_AL_curves2(
+        self,
+        data,
+        save_location,
+        categorize,
+        compare,
+        vary,
+        auc, 
+        summary_method, 
+        indices, 
+        threshold, 
+        err_style="band",
+        marker=None,
+        markersize=6,
+        capsize=6,
+        linestyle="solid",
+        **config):
+        #data = self.read_all_data(folder="../experiment_results/maxexp_experiment")
+        config = copy.deepcopy(config)
+        options_keys = []
+        options_values = []
+        compare_options = {}
+        vary_options = {}
+        all_options = {}
+
+        for option_category, options in config.items():
+            if option_category == "general_options":
+                continue
+            for option, option_value in options.items():
+                if type(option_value) != list:
+                    option_value = [option_value]
+                all_options[option] = option_value
+                if option not in compare:
+                    options_keys.append(option)
+                    options_values.append(option_value)
+
+        for option in compare:
+            compare_options[option] = all_options[option]
+            all_options.pop(option, None)
+
+        if "x" not in vary:
+            for option in vary:
+                vary_options[option] = all_options[option]
+                all_options.pop(option, None)
+            data = self.summarize_AL_procedure(
+                data,
+                auc=auc, 
+                method=summary_method, 
+                indices=indices, 
+                threshold=threshold
+            )
+        
+        # extending
+        for metric in self.metrics:
+            col = "mean_" + metric
+            data[col] = data[metric].apply(lambda x: np.mean(x, axis=0)) # axis 1 since we transpose in read_all_data (i.e., shape is (num_iterations, num_repeats))
+            data['array_lengths'] = data[col].apply(lambda x: len(x))
+            max_length = data['array_lengths'].max()
+            data = self.extend_dataframe(data, metric, max_length)
+
+        data_column_names = self.metrics
+        non_data_column_names = list(set(data.columns) - set(data_column_names))
+        data = self.flatten_dataframe(data, non_data_column_names, data_column_names)
+
+        for exp_vals in itertools.product(*options_values):
+            exp_kwargs = dict(zip(options_keys, exp_vals))
+
+            for option in compare:
+                exp_kwargs[option] = compare_options[option]
+
+            if "x" not in vary:
+                for option in vary:
+                    exp_kwargs[option] = vary_options[option]
+
+            for metric in self.metrics:
+                exp_kwargs["metric"] = metric
+                df_filtered = self.filter_dataframe(data, exp_kwargs)
+
+                path = save_location + "/" + metric + "/"
+                for option in categorize:
+                    path += str(exp_kwargs[option]) + "/" 
+                fig_path = Path(path)
+                fig_path.mkdir(parents=True, exist_ok=True)
+                file_path = path + "plot.png"
+
+                # Cont
+                #hues = list(all_options.keys())
+                #hues.extend(list(compare_options.keys()))
+                hues = list(compare_options.keys())
+                sns.set_theme()
+                sns.set_style("whitegrid")
+                SMALL_SIZE = 16
+                MEDIUM_SIZE = 18
+                BIGGER_SIZE = 18
+
+                plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
+                plt.rc('axes', titlesize=SMALL_SIZE)     # fontsize of the axes title
+                plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels
+                plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+                plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+                plt.rc('legend', fontsize=SMALL_SIZE)    # legend fontsize
+                plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
+                plt.rc('figure', dpi=200)
+                plt.rc('figure', figsize=(6, 6))
+
+                if err_style == "bars":
+                    err_kws = {
+                        "capsize": capsize,
+                        "marker": marker,
+                        "markersize": markersize,
+                    }
+                else:
+                    err_kws={}
+
+                errorbar = ("sd", 1)
+                ax = sns.lineplot(
+                    x=vary[0],
+                    y="y",
+                    #hue=df_filtered[hues].apply(tuple, axis=1),
+                    hue="acq_fn",
+                    hue_order=["maxexp2", "maxmin2", "uncert", "freq", "unif", "nCOBRAS", "COBRAS", "QECC"],
+                    errorbar=errorbar,
+                    err_style=err_style,
+                    data=df_filtered,
+                    linestyle=linestyle,
+                    err_kws=err_kws,
+                )
+                metric_map = {"ami": "AMI", "rand": "ARI"}
+                plt.ylabel(metric_map[metric])
+              
+                #ax.set_xticks(range(n_iterations), labels=tick_labels)
+                plt.xlabel(str(vary))
+                #plt.xlabel("Proportion of edges queried")
                 ax.legend(loc='lower right')
 
                 #legs = ax.get_legend().get_texts()
-                ##legs = [l.get_text() for l in legs]
-                ##new_legends = []
+                #legs = [l.get_text() for l in legs]
+                #new_legends = []
                 #ax.get_legend().set_title(None)
                 #for ll in legs:
                 #    l = ll.get_text()
@@ -609,9 +727,9 @@ class ExperimentReader:
                 #    if "QECC" in l:
                 #        #new_legends.append("QECC")
                 #        ll.set_text("QECC")
-                #ax.legend(labels=new_legends)
-                #legend = ax.get_legend()
-                #plt.savefig(file_path, bbox_extra_artists=(legend,), bbox_inches='tight')
+                ##ax.legend(labels=new_legends)
+                legend = ax.get_legend()
+                plt.savefig(file_path, bbox_extra_artists=(legend,), bbox_inches='tight')
                 plt.savefig(file_path, dpi=200, bbox_inches='tight')
                 plt.clf()
 
