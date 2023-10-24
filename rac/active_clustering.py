@@ -571,7 +571,7 @@ class ActiveClustering:
         self.feedback_freq[ind1, ind2] += 1
         self.feedback_freq[ind2, ind1] += 1
 
-        feedback = self.feedback_freq[ind1, ind2]
+        feedback_frequency = self.feedback_freq[ind1, ind2]
         similarity = self.pairwise_similarities[ind1, ind2]
 
         if custom_query is not None:
@@ -594,15 +594,8 @@ class ActiveClustering:
         else:
             query = self.ground_truth_pairwise_similarities_noisy[ind1, ind2]
 
-        self.pairwise_similarities[ind1, ind2] = ((feedback-1) * similarity + query)/(feedback)
-        self.pairwise_similarities[ind2, ind1] = ((feedback-1) * similarity + query)/(feedback)
-        #self.queried_edges.add((ind1, ind2))
-        #if self.violates_clustering(ind1, ind2):
-        #    self.violations[ind1, ind2] = np.abs(self.pairwise_similarities[ind1, ind2])
-        #    self.violations[ind2, ind1] = np.abs(self.pairwise_similarities[ind2, ind1])
-        #else:
-        #    self.violations[ind1, ind2] = 0.0
-        #    self.violations[ind2, ind1] = 0.0
+        self.pairwise_similarities[ind1, ind2] = ((feedback_frequency-1) * similarity + query)/(feedback_frequency)
+        self.pairwise_similarities[ind2, ind1] = ((feedback_frequency-1) * similarity + query)/(feedback_frequency)
 
     def get_similarity(self, ind1, ind2):
         if self.random.rand() <= self.noise_level:
@@ -746,14 +739,14 @@ class ActiveClustering:
             prob = [1-pred, pred]
             entropy = scipy_entropy(prob)
             print("ENTROPY: ", entropy)
-            if entropy > 1e-13:
+            if entropy > 0:
                 continue
             countt += 1
             #pred = (pred - 0.5) * 2
             if pred >= 0.5:
-                pred = 0.7
+                pred = 0.25
             else:
-                pred = -0.7
+                pred = -0.25
             self.pairwise_similarities[i1, i2] = pred
             self.pairwise_similarities[i2, i1] = pred
             #self.update_similarity(i1, i2, custom_query=pred, update_freq=False)

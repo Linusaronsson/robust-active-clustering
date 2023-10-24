@@ -232,7 +232,7 @@ class ExperimentReader:
                     for j in range(1, max_index):
                         if (j * batch_size) % ind_step == 0:
                             indices.append(j)
-                        if (j*batch_size)/n_edges > 0.5:
+                        if (j*batch_size)/n_edges > 0.6:
                             break
                     indices = np.array(indices)
                     
@@ -370,7 +370,9 @@ class ExperimentReader:
                     path += str(exp_kwargs[option]) + "/" 
                 fig_path = Path(path)
                 fig_path.mkdir(parents=True, exist_ok=True)
-                file_path = path + "plot.png"
+                file_name = exp_kwargs["dataset"] + "_" + metric + "_" + str(exp_kwargs["noise_level"]) + "_" + exp_kwargs["sim_init_type"] + ".png"
+                #file_path = path + "plot.png"
+                file_path = path + file_name
 
                 # Cont
                 #hues = list(all_options.keys())
@@ -689,45 +691,46 @@ class ExperimentReader:
                     linestyle=linestyle,
                     err_kws=err_kws,
                 )
-                metric_map = {"ami": "AMI", "rand": "ARI"}
+                metric_map = {"ami": "AMI (AUC)", "rand": "ARI (AUC)"}
                 plt.ylabel(metric_map[metric])
               
                 #ax.set_xticks(range(n_iterations), labels=tick_labels)
-                plt.xlabel(str(vary))
+                x_label_ = "Noise level" if vary[0] == "noise_level" else "Batch size"
+                plt.xlabel(x_label_)
                 #plt.xlabel("Proportion of edges queried")
-                ax.legend(loc='lower right')
+                ax.legend(loc='best')
 
-                #legs = ax.get_legend().get_texts()
+                legs = ax.get_legend().get_texts()
                 #legs = [l.get_text() for l in legs]
-                #new_legends = []
-                #ax.get_legend().set_title(None)
-                #for ll in legs:
-                #    l = ll.get_text()
-                #    if "unif" in l:
-                #        #new_legends.append("Uniform")
-                #        ll.set_text("Uniform")
-                #    if "COBRAS" in l and "nCOBRAS" not in l:
-                #        #new_legends.append("COBRAS")
-                #        ll.set_text("COBRAS")
-                #    if "nCOBRAS" in l:
-                #        #new_legends.append("nCOBRAS")
-                #        ll.set_text("nCOBRAS")
-                #    if "freq" in l:
-                #        #new_legends.append("Frequency")
-                #        ll.set_text("Frequency")
-                #    if "uncert" in l:
-                #        #new_legends.append("Uncertainty")
-                #        ll.set_text("Uncertainty")
-                #    if "maxmin" in l:
-                #        #new_legends.append("Maxmin")
-                #        ll.set_text("Maxmin")
-                #    if "maxexp" in l:
-                #        #new_legends.append("Maxexp")
-                #        ll.set_text("Maxexp")
-                #    if "QECC" in l:
-                #        #new_legends.append("QECC")
-                #        ll.set_text("QECC")
-                ##ax.legend(labels=new_legends)
+                new_legends = []
+                ax.get_legend().set_title(None)
+                for ll in legs:
+                    l = ll.get_text()
+                    if "unif" in l:
+                        #new_legends.append("Uniform")
+                        ll.set_text("Uniform")
+                    if "COBRAS" in l and "nCOBRAS" not in l:
+                        #new_legends.append("COBRAS")
+                        ll.set_text("COBRAS")
+                    if "nCOBRAS" in l:
+                        #new_legends.append("nCOBRAS")
+                        ll.set_text("nCOBRAS")
+                    if "freq" in l:
+                        #new_legends.append("Frequency")
+                        ll.set_text("Frequency")
+                    if "uncert" in l:
+                        #new_legends.append("Uncertainty")
+                        ll.set_text("Uncertainty")
+                    if "maxmin" in l:
+                        #new_legends.append("Maxmin")
+                        ll.set_text("Maxmin")
+                    if "maxexp" in l:
+                        #new_legends.append("Maxexp")
+                        ll.set_text("Maxexp")
+                    if "QECC" in l:
+                        #new_legends.append("QECC")
+                        ll.set_text("QECC-heur")
+                #ax.legend(labels=new_legends)
                 legend = ax.get_legend()
                 plt.savefig(file_path, bbox_extra_artists=(legend,), bbox_inches='tight')
                 plt.savefig(file_path, dpi=200, bbox_inches='tight')
