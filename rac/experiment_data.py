@@ -446,9 +446,9 @@ class ExperimentReader:
                     ax = sns.lineplot(
                         x=vary[0],
                         y="y",
-                        #hue=df_filtered[hues].apply(tuple, axis=1),
-                        hue="acq_fn",
-                        hue_order=["maxexp2", "maxmin2", "uncert", "freq", "unif", "nCOBRAS", "COBRAS", "QECC"],
+                        hue=df_filtered[hues].apply(tuple, axis=1),
+                        #hue="acq_fn",
+                        #hue_order=["maxexp2", "maxmin2", "uncert", "freq", "unif", "nCOBRAS", "COBRAS", "QECC"],
                         errorbar=errorbar,
                         err_style=err_style,
                         data=df_filtered,
@@ -530,35 +530,37 @@ class ExperimentReader:
 
                 legs = ax.get_legend().get_texts()
                 #legs = [l.get_text() for l in legs]
-                new_legends = []
-                ax.get_legend().set_title(None)
-                for ll in legs:
-                    l = ll.get_text()
-                    if "unif" in l:
-                        #new_legends.append("Uniform")
-                        ll.set_text("Uniform")
-                    if "COBRAS" in l and "nCOBRAS" not in l:
-                        #new_legends.append("COBRAS")
-                        ll.set_text("COBRAS")
-                    if "nCOBRAS" in l:
-                        #new_legends.append("nCOBRAS")
-                        ll.set_text("nCOBRAS")
-                    if "freq" in l:
-                        #new_legends.append("Frequency")
-                        ll.set_text("Frequency")
-                    if "uncert" in l:
-                        #new_legends.append("Uncertainty")
-                        ll.set_text("Uncertainty")
-                    if "maxmin" in l:
-                        #new_legends.append("Maxmin")
-                        ll.set_text("Maxmin")
-                    if "maxexp" in l:
-                        #new_legends.append("Maxexp")
-                        ll.set_text("Maxexp")
-                    if "QECC" in l:
-                        #new_legends.append("QECC")
-                        ll.set_text("QECC")
-                #ax.legend(labels=new_legends)
+                fix_legends = False
+                if fix_legends:
+                    #new_legends = []
+                    ax.get_legend().set_title(None)
+                    for ll in legs:
+                        l = ll.get_text()
+                        if "unif" in l:
+                            #new_legends.append("Uniform")
+                            ll.set_text("Uniform")
+                        if "COBRAS" in l and "nCOBRAS" not in l:
+                            #new_legends.append("COBRAS")
+                            ll.set_text("COBRAS")
+                        if "nCOBRAS" in l:
+                            #new_legends.append("nCOBRAS")
+                            ll.set_text("nCOBRAS")
+                        if "freq" in l:
+                            #new_legends.append("Frequency")
+                            ll.set_text("Frequency")
+                        if "uncert" in l:
+                            #new_legends.append("Uncertainty")
+                            ll.set_text("Uncertainty")
+                        if "maxmin" in l:
+                            #new_legends.append("Maxmin")
+                            ll.set_text("Maxmin")
+                        if "maxexp" in l:
+                            #new_legends.append("Maxexp")
+                            ll.set_text("Maxexp")
+                        if "QECC" in l:
+                            #new_legends.append("QECC")
+                            ll.set_text("QECC")
+                    #ax.legend(labels=new_legends)
                 legend = ax.get_legend()
                 plt.savefig(file_path, bbox_extra_artists=(legend,), bbox_inches='tight')
                 plt.savefig(file_path, dpi=200, bbox_inches='tight')

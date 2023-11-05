@@ -2,9 +2,9 @@
     "general_options": {
         "experiment_name": "predicting_exp",
         "num_repeats": 10,
-        "n_workers": 10,
+        "n_workers": 1,
         "local": true,
-        "verbose": false
+        "verbose": true
     },
     "experiment_options": {
         "seed": 33,
@@ -15,7 +15,7 @@
         "save_matrix_data": false,
         "infer_sims": false,
         "predict_sims": true,
-        "base_net": "three_layer_net",
+        "base_net": "two_layer_net",
         "siamese": true,
         "criterion": "bce"
     },

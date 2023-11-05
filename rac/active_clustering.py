@@ -610,7 +610,7 @@ class ActiveClustering:
         print("HERE", self.X.shape)
         self.X = np.float32(self.X)
         if self.retrain_net or self.net is None:
-            self.net = ACCNet(base_net=self.base_net, siamese=self.siamese, input_dim=self.X.shape[1]).to(self.device)
+            self.net = ACCNet(base_net=self.base_net, siamese=self.siamese, input_dim=self.X.shape[1], p=0.0).to(self.device)
 
         lower_triangle_indices = np.tril_indices(self.N, -1) # -1 gives lower triangle without diagonal (0 includes diagonal)
         #cond1 = np.where((self.feedback_freq[lower_triangle_indices] > 1) & (self.pairwise_similarities[lower_triangle_indices] > 0.5) & (self.edges_predicted[lower_triangle_indices] == False))[0]
@@ -660,7 +660,7 @@ class ActiveClustering:
             transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
         ])
 
-        if self.base_net == "three_layer_net":
+        if self.base_net == "three_layer_net" or self.base_net == "two_layer_net":
             train_dataset = CustomTensorDataset(x1, x2, torch.Tensor(labels), train=True, transform=None)
         else:
             train_dataset = CustomTensorDataset(x1, x2, torch.Tensor(labels), train=True, transform=cifar_training_transform)
@@ -681,10 +681,11 @@ class ActiveClustering:
         #optimizer = torch.optim.SGD(self.net.parameters(), lr=0.0005, momentum=0.9)
         #optimizer = torch.optim.SGD(self.net.parameters(), lr=0.0005, momentum=0.9, weight_decay=5e-4)
         #optimizer = torch.optim.Adam(self.net.parameters(), lr=0.0001, weight_decay=0.0001)
-        optimizer = torch.optim.Adam(self.net.parameters(), lr=0.001, weight_decay=0.00005)
+        optimizer = torch.optim.Adam(self.net.parameters(), lr=0.0001, weight_decay=0.0001)
         print("training...")
         print(len(train_dataset))
-        for epoch in range(150):  # loop over the dataset multiple times
+        self.net.train()
+        for epoch in range(20):  # loop over the dataset multiple times
             running_loss = 0.0
             step = 0
             for i, data in enumerate(train_loader, 0):
@@ -708,7 +709,7 @@ class ActiveClustering:
             running_loss = 0.0
 
         print("predicting")
-        num_preds = self.query_size * 50
+        num_preds = self.query_size * 25
         edges, objects = self.qs.select_batch("freq", "pairs", num_preds)
         ind1, ind2 = edges[:, 0], edges[:, 1]
 
@@ -720,13 +721,15 @@ class ActiveClustering:
             transforms.ToTensor(),
             transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
         ])
-        if self.base_net == "three_layer_net":
+
+        if self.base_net == "three_layer_net" or self.base_net == "two_layer_net":
             dat_all = CustomTensorDataset(dat1, dat2, transform=None)
         else:
             dat_all = CustomTensorDataset(dat1, dat2, transform=cifar_test_transform)
 
         test_loader = torch.utils.data.DataLoader(dat_all, shuffle=False, batch_size=1024)
         preds = []
+        self.net.eval()
         for i, data in enumerate(test_loader, 0):
             input1, input2 = data[0].to(self.device), data[1].to(self.device)
             pred = self.net(input1, input2)
@@ -735,21 +738,57 @@ class ActiveClustering:
             preds.extend(pred[:, 0].tolist())
         print("NUM PREDS: ", num_preds)
         countt = 0
+        
+        pred_binary = []
+        true_binary = []
+        pred_binary_ent = []
+        true_binary_ent = []
         for i1, i2, pred in zip(ind1, ind2, preds):
             prob = [1-pred, pred]
             entropy = scipy_entropy(prob)
-            print("ENTROPY: ", entropy)
-            if entropy > 0:
+            #print("ENTROPY: ", entropy)
+            if pred >= 0.5:
+                pred_binary.append(1)
+            else:
+                pred_binary.append(0)
+            true_binary.append(self.ground_truth_pairwise_similarities[i1, i2])
+
+            if entropy > 0.0001:
                 continue
             countt += 1
+
             #pred = (pred - 0.5) * 2
             if pred >= 0.5:
                 pred = 0.25
+                pred_binary_ent.append(1)
             else:
+                pred_binary_ent.append(0)
                 pred = -0.25
-            self.pairwise_similarities[i1, i2] = pred
-            self.pairwise_similarities[i2, i1] = pred
-            #self.update_similarity(i1, i2, custom_query=pred, update_freq=False)
+
+            #self.pairwise_similarities[i1, i2] = pred
+            #self.pairwise_similarities[i2, i1] = pred
+            true_binary_ent.append(self.ground_truth_pairwise_similarities[i1, i2])
+            self.update_similarity(i1, i2, custom_query=pred, update_freq=False)
+        
+        pred_binary = np.array(pred_binary)
+        true_binary = np.array(true_binary)
+        true_binary[np.where(true_binary >= 0)[0]] = 1
+        true_binary[np.where(true_binary < 0)[0]] = 0
+
+        pred_binary_ent = np.array(pred_binary_ent)
+        true_binary_ent = np.array(true_binary_ent)
+        true_binary_ent[np.where(true_binary_ent >= 0)[0]] = 1
+        true_binary_ent[np.where(true_binary_ent < 0)[0]] = 0
+
+        if len(true_binary) > 0:
+            print("Accuracy: ", accuracy_score(true_binary, pred_binary))
+            print("Recall: ", recall_score(true_binary, pred_binary))
+            print("Precision: ", precision_score(true_binary, pred_binary))
+
+        if len(true_binary_ent) > 0:
+            print("Accuracy ent: ", accuracy_score(true_binary_ent, pred_binary_ent))
+            print("Recall ent: ", recall_score(true_binary_ent, pred_binary_ent))
+            print("Precision ent: ", precision_score(true_binary_ent, pred_binary_ent))
         print("COUNTT: ", countt)
 
     def infer_similarities2(self): 

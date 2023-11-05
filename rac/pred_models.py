@@ -87,34 +87,38 @@ class ACCNet(nn.Module):
             base_net_model = ThreeLayerNet
             kwargs = {"input_dim": input_dim, "num_classes": 256, "h1": 1024, "h2": 512, "p": p}
             emb_dim = 256
+        elif base_net == "two_layer_net":
+            base_net_model = TwoLayerNet
+            kwargs = {"input_dim": input_dim, "num_classes": 32, "hidden_units": 128, "p": p}
+            emb_dim = 32
         else:
             raise ValueError("WRONG BASE NET")
-        
+
+        if base_net == "two_layer_net":
+            self.combined_net1 = TwoLayerNet(input_dim=emb_dim*2, num_classes=1, hidden_units=128, p=p)
+        else:
+            self.combined_net1 = ThreeLayerNet(emb_dim*2, 256, 2048, 512, p=p)
+            self.combined_net2 = ThreeLayerNet(256, 1, 128, 32, p=p)
+
         if siamese:
             self.net1 = base_net_model(**kwargs)
-            self.combined_net1 = ThreeLayerNet(emb_dim*2, 256, 2048, 512)
-            #self.combined_net1 = ThreeLayerNet(emb_dim*2, 1, 1024, 512)
-            self.combined_net2 = ThreeLayerNet(256, 1, 128, 32)
         else:
             self.net1 = base_net_model(**kwargs)
             self.net2 = base_net_model(**kwargs)
-            self.combined_net1 = ThreeLayerNet(emb_dim*2, 256, 2048, 512)
-            #self.combined_net1 = ThreeLayerNet(emb_dim*2, 1, 1024, 512)
-            self.combined_net2 = ThreeLayerNet(256, 1, 128, 32)
 
     def forward(self, X1, X2):
         #if X1.shape[1] != 2:
             #raise ValueError("WRONG INPUT DIM")
         
         if self.siamese:
-            if self.base_net == "three_layer_net":
+            if self.base_net == "three_layer_net" or self.base_net == "two_layer_net":
                 out1 = F.relu(self.net1(X1))
                 out2 = F.relu(self.net1(X2))
             else:
                 _, out1 = self.net1(X1, last=True)
                 _, out2 = self.net1(X2, last=True)
         else:
-            if self.base_net == "three_layer_net":
+            if self.base_net == "three_layer_net" or self.base_net == "two_layer_net":
                 out1 = F.relu(self.net1(X1))
                 out2 = F.relu(self.net2(X2))
             else:
@@ -125,6 +129,9 @@ class ACCNet(nn.Module):
         #print("OUT1: ", e1.shape)
         #print("OUT2: ", e2.shape)
         #return self.combined_net1(combined)
-        res1 = F.relu(self.combined_net1(combined))
-        #return torch.clip(self.combined_net(combined), min=-1, max=1)
-        return self.combined_net2(res1)
+        if self.base_net == "two_layer_net":
+            return self.combined_net1(combined)
+        else:
+            res1 = F.relu(self.combined_net1(combined))
+            #return torch.clip(self.combined_net(combined), min=-1, max=1)
+            return self.combined_net2(res1)
