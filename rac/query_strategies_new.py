@@ -18,11 +18,6 @@ class QueryStrategy:
             self.info_matrix = self.ac.violations
         elif acq_fn == "incon_ucb":
 
-
-        
-
-
-
         if "maxmin" in acq_fn or "maxexp" in acq_fn:
             if "2" in acq_fn:
                 self.compute_informativeness_2(acq_fn)
