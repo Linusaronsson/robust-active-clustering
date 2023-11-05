@@ -1,7 +1,7 @@
 import time
 import math
 
-from active_semi_clustering.semi_supervised.pairwise_constraints import PCKMeans, MPCKMeans, COPKMeans
+#from active_semi_clustering.semi_supervised.pairwise_constraints import PCKMeans, MPCKMeans, COPKMeans
 from sklearn.metrics import adjusted_rand_score, adjusted_mutual_info_score, v_measure_score
 from sklearn.metrics import accuracy_score, precision_score, recall_score, mean_squared_error, f1_score
 import itertools
