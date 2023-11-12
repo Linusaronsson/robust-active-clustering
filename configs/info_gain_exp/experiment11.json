@@ -4,7 +4,7 @@
         "num_repeats": 14,
         "n_workers": 60,
         "local": true,
-        "verbose": true
+        "verbose": false
     },
     "experiment_options": {
         "seed": 33,
