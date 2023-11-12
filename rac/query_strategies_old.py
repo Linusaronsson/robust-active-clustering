@@ -5,18 +5,13 @@ from scipy.special import softmax
 class QueryStrategy:
     def __init__(self, ac):
         self.ac = ac
-        self.info_matrix = None
+        self.custom_informativeness = None
 
-    def select_batch(self, acq_fn, batch_size):
-        if acq_fn == "unif":
-            self.info_matrix = self.ac.random.rand(self.ac.N, self.ac.N)
-        elif acq_fn == "freq":
-            self.info_matrix = -self.ac.feedback_freq
-        elif acq_fn == "uncert":
-            self.info_matrix = -np.abs(self.ac.pairwise_similarities)
-        elif acq_fn == "incon":
-            self.info_matrix = self.ac.violations
-        elif acq_fn == "incon_ucb":
+    def select_batch(self, acq_fn, local_regions, batch_size):
+
+        if "info_gain" in acq_fn:
+            self.custom_informativeness = self.compute_information_gain_matrix(batch_size)
+            return np.array(self.select_pairs("custom", "all_pairs", batch_size)), None
 
         if "maxmin" in acq_fn or "maxexp" in acq_fn:
             if "2" in acq_fn:
@@ -78,6 +73,108 @@ class QueryStrategy:
 
     def triangles(self):
         pass
+
+    def compute_cluster_probs(self):
+        # Number of objects (N) and clusters (M)
+        N = self.ac.pairwise_similarities.shape[0]
+        M = len(self.ac.clustering)
+
+        # Initialize the NxM matrix to hold summed similarities of each object to each cluster
+        similarity_matrix = np.zeros((N, M))
+
+        # For each cluster, sum the similarities for each object
+        for cluster_index, cluster in enumerate(self.ac.clustering):
+            # Sum the similarities of each object to all objects in the cluster
+            # Note that we are using NumPy broadcasting here.
+            similarity_matrix[:, cluster_index] = self.ac.pairwise_similarities[:, cluster].sum(axis=1)
+
+        # Now compute the probability matrix by dividing each summed similarity by the sum across all clusters
+        prob_matrix = similarity_matrix / similarity_matrix.sum(axis=1, keepdims=True)
+
+        return prob_matrix
+
+    def compute_conditional_entropy(self, prob_matrix, object_i, object_j, same_cluster):
+        N, M = prob_matrix.shape
+        # For simplicity, create a deep copy to not modify the original matrix
+        conditional_prob_matrix = np.copy(prob_matrix)
+        
+        if same_cluster:
+            # Calculate the joint probability for each cluster
+            for k in range(M):
+                joint_prob = prob_matrix[object_i, k] * prob_matrix[object_j, k]
+                conditional_prob_matrix[object_i, k] = joint_prob
+                conditional_prob_matrix[object_j, k] = joint_prob
+        else:
+            # Calculate the probabilities considering they are in different clusters
+            for k in range(M):
+                conditional_prob_matrix[object_i, k] *= (1 - prob_matrix[object_j, k])
+                conditional_prob_matrix[object_j, k] *= (1 - prob_matrix[object_i, k])
+
+        # Normalize the updated probabilities for each object
+        conditional_prob_matrix[object_i, :] /= np.sum(conditional_prob_matrix[object_i, :])
+        conditional_prob_matrix[object_j, :] /= np.sum(conditional_prob_matrix[object_j, :])
+
+        conditional_prob_matrix = np.clip(conditional_prob_matrix, 1e-10, 1)
+
+        # Compute the entropy for the conditional matrix
+        H_C_given_R = 0
+        for i in range(N):
+            H_i = -np.sum(conditional_prob_matrix[i, :] * np.log(conditional_prob_matrix[i, :]))  # Added a small constant to prevent log(0)
+            H_C_given_R += H_i
+
+        return H_C_given_R
+
+    def compute_expected_conditional_entropy(self, prob_matrix, object_i, object_j):
+        M = prob_matrix.shape[1]
+        
+        # Compute the probability that objects i and j are in the same cluster
+        P_same = sum(prob_matrix[object_i, k] * prob_matrix[object_j, k] for k in range(M))
+        
+        # Compute the probability that objects i and j are in different clusters
+        P_diff = 1 - P_same
+        
+        # Compute the conditional entropy given that i and j are in the same cluster
+        H_C_given_same = self.compute_conditional_entropy(prob_matrix, object_i, object_j, True)
+        
+        # Compute the conditional entropy given that i and j are in different clusters
+        H_C_given_diff = self.compute_conditional_entropy(prob_matrix, object_i, object_j, False)
+        
+        # Compute the expected conditional entropy
+        H_C_given_R = P_same * H_C_given_same + P_diff * H_C_given_diff
+        
+        return H_C_given_R
+ 
+    def compute_information_gain_matrix(self, batch_size):
+        prob_matrix = self.compute_cluster_probs()
+        N = prob_matrix.shape[0]
+
+        # Initialize entropy of clustering
+        H_C = 0
+
+        # Iterate over each object
+        prob_matrix = np.clip(prob_matrix, 1e-10, 1)
+        for i in range(N):
+            # For each object, compute the contribution to the entropy from each cluster assignment
+            H_i = -np.sum(prob_matrix[i, :] * np.log(prob_matrix[i, :]))  # Added a small constant to prevent log(0)
+            H_C += H_i
+
+        N = prob_matrix.shape[0]
+        info_gain_matrix = np.zeros((N, N))
+        
+        for i in range(N):
+            for j in range(i + 1, N):  # No need to compute for j <= i because the matrix is symmetric
+                # Compute the expected conditional entropy H(C | R) for each pair (i, j)
+                H_C_given_R = self.compute_expected_conditional_entropy(prob_matrix, i, j)
+                
+                # Compute the information gain for pair (i, j)
+                info_gain = H_C - H_C_given_R
+                
+                # Fill in the symmetric matrix
+                info_gain_matrix[i, j] = info_gain
+                info_gain_matrix[j, i] = info_gain
+                
+        return info_gain_matrix
+
 
     def clusters(self):
         local_regions = []

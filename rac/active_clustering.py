@@ -18,6 +18,7 @@ from torch.utils.data import Dataset, TensorDataset
 
 from torchvision import transforms
 from scipy.stats import entropy as scipy_entropy
+from scipy.special import softmax
 
 from noise_robust_cobras.cobras import COBRAS
 from noise_robust_cobras.querier.noisy_labelquerier import ProbabilisticNoisyQuerier
@@ -25,7 +26,7 @@ from noise_robust_cobras.querier.noisy_labelquerier import ProbabilisticNoisyQue
 from rac.pred_models import ACCNet, CustomTensorDataset
 
 from rac.experiment_data import ExperimentData
-from rac.correlation_clustering import max_correlation, max_correlation_dynamic_K
+from rac.correlation_clustering import max_correlation, max_correlation_dynamic_K, mean_field_clustering
 from rac.query_strategies import QueryStrategy
 
 import warnings
@@ -54,7 +55,8 @@ class ActiveClustering:
         else:
             self.query_size = self.num_feedback
 
-        self.random = np.random.RandomState(self.repeat_id+self.seed+317421)
+        #self.random = np.random.RandomState(self.repeat_id+self.seed+317421)
+        np.random.seed(self.repeat_id+self.seed+317421)
         self.input_dim = self.X.shape[1]
         self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         self.net = None
@@ -155,11 +157,10 @@ class ActiveClustering:
                     self.clustering, num_clusters = self.clustering_from_clustering_solution(self.clustering_solution)
                     self.pairwise_similarities = self.sim_matrix_from_clustering(self.clustering)
             else:
-                self.edges, objects = self.qs.select_batch(
+                self.edges = self.qs.select_batch(
                     acq_fn=self.acq_fn,
-                    local_regions=self.local_regions,
-                    batch_size=self.query_size)
-
+                    batch_size=self.query_size
+                )
 
                 #if len(objects) == 1:
                     #raise ValueError("Singleton cluster in run_AL_procedure(...)")
@@ -174,23 +175,11 @@ class ActiveClustering:
                     self.predict_similarities()
 
                 if self.infer_sims:
-                    self.infer_similarities()
-
-                if self.infer_sims2:
-                    num_inferred = np.inf
-                    while num_inferred > 0:
-                        num_inferred = self.infer_similarities2()
-
-                if self.infer_sims3:
-                    self.infer_similarities3()
+                    self.transitive_closure()
 
                 time_nn = time.time()
-                if self.force_global_update:
-                    self.update_clustering(np.arange(self.N).tolist()) 
-                else:
-                    self.update_clustering(objects) 
+                self.update_clustering() 
                 print("time_nn: ", time.time() - time_nn)
-
 
                 for i in range(self.N):
                     for j in range(i):
@@ -215,16 +204,7 @@ class ActiveClustering:
                 print("prop_queried: ", total_queries/self.n_edges)
                 print("feedback_freq max: ", np.max(self.feedback_freq))
                 print("rand score: ", adjusted_rand_score(self.Y, self.clustering_solution))
-                #clustering_saved = self.clustering.copy()
-                #self.update_clustering(np.arange(self.N).tolist()) 
-                #print("rand score global: ", adjusted_rand_score(self.Y, self.clustering_solution))
-                #print("cost global ", self.compute_clustering_cost(self.pairwise_similarities, self.clustering))
-                #self.clustering = clustering_saved
-                #self.update_clustering(objects) 
-                #print("rand score local: ", adjusted_rand_score(self.Y, self.clustering_solution))
-                #print("cost local", self.compute_clustering_cost(self.pairwise_similarities, self.clustering))
                 print("time: ", time.time()-self.start)
-                
                 if self.acq_fn not in ["QECC", "COBRAS", "nCOBRAS"]:
                     print("num queries: ", len(self.edges))
                 print("num clusters: ", self.num_clusters)
@@ -241,14 +221,14 @@ class ActiveClustering:
             else:
                 early_stopping_count = 0
             
-            if current_rand >= 1.0:
+            if current_rand >= 0.99:
                 perfect_rand_count += 1
             else:
                 perfect_rand_count = 0
             
             old_rand = current_rand
 
-            if early_stopping_count > early_stopping or perfect_rand_count > 5:
+            if early_stopping_count > early_stopping or perfect_rand_count > 3:
                 break
         
         if self.save_matrix_data:
@@ -263,7 +243,7 @@ class ActiveClustering:
         clusters = []
         while len(vertices) > 1 and query_budget > (len(vertices) - 1):
             unique_pairs = list(itertools.combinations(vertices, 2))
-            self.random.shuffle(unique_pairs)
+            np.random.shuffle(unique_pairs)
             for (ind1, ind2) in unique_pairs:
                 query = self.get_similarity(ind1, ind2)
                 query_budget -= 1
@@ -287,7 +267,7 @@ class ActiveClustering:
         query_budget = num_queries
         clusters = []
         while len(vertices) > 1 and query_budget > (len(vertices) - 1):
-            ind1 = self.random.choice(len(vertices), 1, replace=False)[0]
+            ind1 = np.random.choice(len(vertices), 1, replace=False)[0]
             cluster = {ind1}
             for nd in vertices - {ind1}:
                 if self.get_similarity(ind1, nd) > 0:
@@ -392,7 +372,6 @@ class ActiveClustering:
                     self.violations[i, j] = np.abs(self.pairwise_similarities[i, j])
                     self.violations[j, i] = np.abs(self.pairwise_similarities[j, i])
 
-
     def construct_ground_truth_sim_matrix(self):
         num_clusters = np.max(self.Y) + 1
         self.num_clusters_ground_truth = num_clusters
@@ -416,12 +395,12 @@ class ActiveClustering:
 
         for ind1, ind2 in edges:
             if self.binary_noise:
-                if self.random.uniform(-1.0, 1.0) > 0:
+                if np.random.uniform(-1.0, 1.0) > 0:
                     self.ground_truth_pairwise_similarities_noisy[ind1, ind2] *= -1
                     self.ground_truth_pairwise_similarities_noisy[ind2, ind1] *= -1
             else:
-                noisy_val = self.random.uniform(0.15, 0.5)
-                if self.random.uniform(-1.0, 1.0) > 0:
+                noisy_val = np.random.uniform(0.15, 0.5)
+                if np.random.uniform(-1.0, 1.0) > 0:
                     self.ground_truth_pairwise_similarities_noisy[ind1, ind2] = -noisy_val
                     self.ground_truth_pairwise_similarities_noisy[ind2, ind1] = -noisy_val
                 else:
@@ -461,47 +440,52 @@ class ActiveClustering:
         if self.acq_fn in ["QECC", "COBRAS", "nCOBRAS"]:
             self.sim_init_type = "random_clustering"
 
-        if self.sim_init_type == "uniform_random":
-            self.clustering = [np.arange(self.N).tolist()]
-            self.pairwise_similarities = self.random.uniform(
+        if self.sim_init_type == "zeros":
+            self.pairwise_similarities = np.zeros((self.N, self.N))
+            self.num_clusters = 1
+            self.update_clustering() 
+        elif self.sim_init_type == "uniform_random":
+            self.pairwise_similarities = np.random.uniform(
                 low=-self.sim_init,
                 high=self.sim_init, 
                 size=(self.N, self.N)
             )
-            self.update_clustering(np.arange(self.N).tolist()) 
+            self.num_clusters = 1
+            self.update_clustering() 
         elif self.sim_init_type == "uniform_random2":
-            self.clustering = [np.arange(self.N).tolist()]
-            self.pairwise_similarities = self.random.uniform(
+            self.pairwise_similarities = np.random.uniform(
                 low=-self.sim_init,
                 high=self.sim_init, 
                 size=(self.N, self.N)
             )
             self.pairwise_similarities[np.where(self.pairwise_similarities >= 0)] = self.sim_init
             self.pairwise_similarities[np.where(self.pairwise_similarities < 0)] = -self.sim_init
-            self.update_clustering(np.arange(self.N).tolist()) 
+            self.num_clusters = 1
+            self.update_clustering() 
         elif self.sim_init_type == "uniform_random_clustering":
-            self.clustering = [np.arange(self.N).tolist()]
-            self.pairwise_similarities = self.random.uniform(
+            self.pairwise_similarities = np.random.uniform(
                 low=-self.sim_init,
                 high=self.sim_init, 
                 size=(self.N, self.N)
             )
-            self.update_clustering(np.arange(self.N).tolist()) 
+            self.num_clusters = 1
+            self.update_clustering() 
             self.pairwise_similarities = self.sim_matrix_from_clustering(self.clustering)
         elif self.sim_init_type == "inverse_dist":
             D = distance.cdist(self.X, self.X, 'euclidean')
             sim_matrix = np.max(D) - D + np.min(D)
             self.pairwise_similarities = self.sim_init * (2 * sim_matrix - np.max(sim_matrix) -  np.min(sim_matrix)) / (np.max(sim_matrix) - np.min(sim_matrix))
             np.fill_diagonal(self.pairwise_similarities, 0.0)
-            self.clustering = [np.arange(self.N).tolist()]
-            self.update_clustering(np.arange(self.N).tolist()) 
+            self.num_clusters = 1
+            self.update_clustering() 
         elif self.sim_init_type == "custom":
             self.clustering_solution = np.array(self.initial_clustering_solution)
             self.clustering, self.num_clusters = self.clustering_from_clustering_solution(self.clustering_solution)
             self.pairwise_similarities = self.sim_matrix_from_clustering(self.clustering)
+            self.update_clustering() 
         elif self.sim_init_type == "random_clustering":
             objects = np.arange(self.N)
-            self.random.shuffle(objects)
+            np.random.shuffle(objects)
             k = self.K_init
             cluster_size = int(len(objects) / k)
             cluster_sizes = [cluster_size for _ in range(k)]
@@ -517,37 +501,16 @@ class ActiveClustering:
                 i += 1
             self.clustering, self.num_clusters = self.clustering_from_clustering_solution(self.clustering_solution)
             self.pairwise_similarities = self.sim_matrix_from_clustering(self.clustering)
+            self.update_clustering() 
         else:
             raise ValueError("Invalid sim init type in construct_initial_sim_matrix(...)")
         np.fill_diagonal(self.pairwise_similarities, 0.0)
 
     # Input: list of objects to update clustering w.r.t. (subset of all objects)
-    def update_clustering(self, objects):
+    def update_clustering(self):
         if self.clustering_alg == "CC":
-            objects = np.unique(objects)
-            clusters = [] 
-            i = 0
-            for cluster_objs in self.clustering:
-                if not set(cluster_objs).isdisjoint(objects):
-                    clusters.append(i)
-                i += 1
-            n_clusters = len(clusters)
-
-            temp_graph = self.pairwise_similarities[np.ix_(objects, objects)]
-            new_clustering, _ = max_correlation_dynamic_K(temp_graph, n_clusters, 3, self.random)
-
-            self.clustering = np.delete(np.array(self.clustering, dtype=object), clusters, axis=0).tolist()
-
-            # integrate clustering solution
-            n_new_clusters = np.max(new_clustering) + 1
-            for i in range(n_new_clusters):
-                new_cluster = objects[np.where(new_clustering == i)].tolist()
-                self.clustering.append(new_cluster)
-            
-            self.clustering_solution = np.zeros(self.N, dtype=np.uint32)
-            for k in range(len(self.clustering)):
-                self.clustering_solution[self.clustering[k]] = k
-            #self.num_clusters = np.max(self.clustering_solution) + 1
+            self.clustering_solution, _ = max_correlation_dynamic_K(self.pairwise_similarities, self.num_clusters, 5)
+            self.clustering = self.clustering_from_clustering_solution(self.clustering_solution)[0]
             self.num_clusters = len(self.clustering)
         elif self.clustering_alg == "MPCKMeans":
             num_classes = len(np.unique(self.Y))
@@ -563,6 +526,10 @@ class ActiveClustering:
             self.num_clusters = num_classes
             self.clustering_solution = clusterer.labels_
             self.clustering = self.clustering_from_clustering_solution(self.clustering_solution)[0]
+        elif self.clustering_alg == "mean_field":
+            self.clustering_solution, self.q, self.h = mean_field_clustering(self.pairwise_similarities, self.num_clusters, betas=[self.mean_field_beta], max_iter=100, tol=1e-10, noise_level=0.0) 
+            self.clustering = self.clustering_from_clustering_solution(self.clustering_solution)[0]
+            self.num_clusters = len(self.clustering)
         else:
             raise ValueError("Invalid clustering algorithm in update_clustering(...)")
     
@@ -576,30 +543,32 @@ class ActiveClustering:
 
         if custom_query is not None:
             query = custom_query
-        elif self.random.rand() <= self.noise_level:
+        elif np.random.rand() <= self.noise_level:
             if self.binary_noise:
-                if self.random.uniform(-1.0, 1.0) > 0:
+                if np.random.uniform(-1.0, 1.0) > 0:
                     query = -self.ground_truth_pairwise_similarities_noisy[ind1, ind2]
                 else:
                     query = self.ground_truth_pairwise_similarities_noisy[ind1, ind2]
             else:
-                if self.regular_noise:
-                    query = self.random.uniform(-1.0, 1.0)
+                #if self.regular_noise:
+                    #query = np.random.uniform(-1.0, 1.0)
+                #else:
+                noisy_val = np.random.uniform(0.15, 0.5)
+                if np.random.uniform(-1.0, 1.0) > 0:
+                    query = -noisy_val
                 else:
-                    noisy_val = self.random.uniform(0.15, 0.5)
-                    if self.random.uniform(-1.0, 1.0) > 0:
-                        query = -noisy_val
-                    else:
-                        query = noisy_val
+                    query = noisy_val
         else:
             query = self.ground_truth_pairwise_similarities_noisy[ind1, ind2]
 
         self.pairwise_similarities[ind1, ind2] = ((feedback_frequency-1) * similarity + query)/(feedback_frequency)
         self.pairwise_similarities[ind2, ind1] = ((feedback_frequency-1) * similarity + query)/(feedback_frequency)
+        #self.pairwise_similarities[ind1, ind2] = query
+        #self.pairwise_similarities[ind2, ind1] = query
 
     def get_similarity(self, ind1, ind2):
-        if self.random.rand() <= self.noise_level:
-            return self.random.uniform(-1.0, 1.0)
+        if np.random.rand() <= self.noise_level:
+            return np.random.uniform(-1.0, 1.0)
         else:
             return self.ground_truth_pairwise_similarities_noisy[ind1, ind2]
 
@@ -631,8 +600,8 @@ class ActiveClustering:
         #ind_neg = self.random.choice(cond_neg, len(ind_pos))
         #print(len(indices1), len(indices2))
 
-        ind_pos = self.random.choice(cond_pos, np.min([len(cond_pos), 4000]), replace=False)
-        ind_neg = self.random.choice(cond_neg, np.min([len(cond_neg), 4000]), replace=False)
+        ind_pos = np.random.choice(cond_pos, np.min([len(cond_pos), 4000]), replace=False)
+        ind_neg = np.random.choice(cond_neg, np.min([len(cond_neg), 4000]), replace=False)
 
         if len(ind_pos) < len(ind_neg):
             indices = np.concatenate([ind_neg, ind_pos])
@@ -791,122 +760,89 @@ class ActiveClustering:
             print("Precision ent: ", precision_score(true_binary_ent, pred_binary_ent))
         print("COUNTT: ", countt)
 
-    def infer_similarities2(self): 
-        num_inferred = 0
-        confidence_limit = 1
-        for i in range(0, self.N):
-            current_indices_pos = []
-            current_indices_neg = []
-            for j in range(0, self.N):
-                if i == j:
-                    continue
-                #if self.similarity_matrix[i, j] > 0.5:
-                if self.feedback_freq[i, j] > confidence_limit:
-                    if self.pairwise_similarities[i, j] >= 0:
-                        current_indices_pos.append(j)
-                    if self.pairwise_similarities[i, j] < 0:
-                        current_indices_neg.append(j)
-            for k in itertools.permutations(current_indices_pos, 2): 
-                if self.feedback_freq[k] <= confidence_limit:
-                    self.update_similarity(k[0], k[1], custom_query=1)
-                    num_inferred += 1
-            for pos_ind in current_indices_pos:
-                for neg_ind in current_indices_neg:
-                    if self.feedback_freq[pos_ind, neg_ind] <= confidence_limit:
-                        self.update_similarity(pos_ind, neg_ind, custom_query=-1)
-                        num_inferred += 1
-        return num_inferred
+    def transitive_closure(self):
+        print("INFERRING @@@@")
+        n = self.pairwise_similarities.shape[0]
+        ml = []  # Must-link pairs
+        cl = []  # Cannot-link pairs
 
-    def infer_similarities(self):
-        for k1 in range(0, self.num_clusters):
-            for k2 in range(0, k1 + 1):
-                c1 = self.clustering[k1]
-                c2 = self.clustering[k2]
+        # Extracting must-link and cannot-link pairs from the similarity matrix
+        for i in range(n):
+            for j in range(i):
+                if self.pairwise_similarities[i][j] > 0.3:
+                    ml.append((i, j))
+                    ml.append((j, i))
+                elif self.pairwise_similarities[i][j] < -0.3:
+                    cl.append((i, j))
+                    cl.append((j, i))
 
-                pairwise_sims = self.parwise_similarities[np.ix_(c1, c2)]
-                pairwise_counts = self.feedback_freq[np.ix_(c1, c2)]
+        # Function to add both directions of a link in a graph
+        def add_both(d, i, j):
+            d[i].add(j)
+            d[j].add(i)
 
-                # If the clusters are the same, only consider the lower triangular part of the matrix, excluding the diagonal
-                if k1 == k2:
-                    mask = np.tril(np.ones_like(pairwise_sims, dtype=bool), k=-1)
-                    pairwise_sims = np.where(mask, pairwise_sims, np.nan)
-                    pairwise_counts = np.where(mask, pairwise_counts, np.nan)
+        # Initialize graphs for must-link and cannot-link
+        ml_graph = {i: set() for i in range(n)}
+        cl_graph = {i: set() for i in range(n)}
 
-                sims_with_counts_gt_1 = pairwise_sims[pairwise_counts > 1]
+        # Add must-link pairs to the graph
+        for (i, j) in ml:
+            add_both(ml_graph, i, j)
 
-                if np.isnan(sims_with_counts_gt_1).all():  # If all elements are NaN, skip this iteration
-                    continue
+        # Depth-first search to find connected components in must-link graph
+        def dfs(i, graph, visited, component):
+            visited[i] = True
+            for j in graph[i]:
+                if not visited[j]:
+                    dfs(j, graph, visited, component)
+            component.append(i)
+        
+        #print(ml_graph)
 
-                mean_sim = np.nanmean(sims_with_counts_gt_1)
+        # Find transitive closure of must-link graph
+        visited = [False] * n
+        for i in range(n):
+            if not visited[i]:
+                component = []
+                dfs(i, ml_graph, visited, component)
+                for x1 in component:
+                    for x2 in component:
+                        if x1 != x2:
+                            ml_graph[x1].add(x2)
+        #print(ml_graph)
 
-                # Identify the pairwise similarities with F <= 1
-                sims_with_counts_le_1_idx = np.where(pairwise_counts <= 1)
+        # Update cannot-link graph based on must-link information
+        for (i, j) in cl:
+            add_both(cl_graph, i, j)
+            for y in ml_graph[j]:
+                add_both(cl_graph, i, y)
+            for x in ml_graph[i]:
+                add_both(cl_graph, x, j)
+                for y in ml_graph[j]:
+                    add_both(cl_graph, x, y)
 
-                # Loop over every index in sims_with_counts_le_1_idx 
-                for idx in zip(*sims_with_counts_le_1_idx):
-                    idx_cluster1 = c1[idx[0]]
-                    idx_cluster2 = c2[idx[1]]
-                    self.pairwise_similarities[idx_cluster1, idx_cluster2] = mean_sim
-                    self.pairwise_similarities[idx_cluster2, idx_cluster1] = mean_sim
-                    #self.update_similarity(idx_cluster1, idx_cluster2, mean_sim)
+        # Check for inconsistencies
+        for i in ml_graph:
+            for j in ml_graph[i]:
+                if j != i and j in cl_graph[i]:
+                    raise Exception('Inconsistent constraints between %d and %d' % (i, j))
+
+        # Update the similarity matrix based on transitive closure
+        for i in range(n):
+            for j in range(n):
+                if i != j:
+                    if j in ml_graph[i]:
+                        self.pairwise_similarities[i][j] = 1
+                        self.pairwise_similarities[j][i] = 1
+                    elif j in cl_graph[i]:
+                        self.pairwise_similarities[i][j] = -1
+                        self.pairwise_similarities[j][i] = -1
+
+
+
 
     def violates_clustering(self, o1, o2): 
         return (not self.in_same_cluster(o1, o2) and self.pairwise_similarities[o1, o2] >= 0) or \
                 (self.in_same_cluster(o1, o2) and self.pairwise_similarities[o1, o2] < 0)
-
-    def infer_similarities3(self): 
-        num_inferred = 0
-        confidence_limit = 1
-        infer_count = np.zeros((self.N, self.N))
-        inferred_values = np.zeros((self.N, self.N))
-        for i in range(0, self.N):
-            current_indices_pos = []
-            current_indices_neg = []
-            for j in range(0, self.N):
-                if i == j:
-                    continue
-                #if self.similarity_matrix[i, j] > 0.5:
-                if self.feedback_freq[i, j] > confidence_limit:
-                    if self.pairwise_similarities[i, j] > 0:
-                        current_indices_pos.append(j)
-                    if self.pairwise_similarities[i, j] < 0:
-                        current_indices_neg.append(j)
-            for k in itertools.permutations(current_indices_pos, 2): 
-                if self.feedback_freq[k] <= confidence_limit:
-                    infer_count[k[0], k[1]] += 1
-                    infer_count[k[1], k[0]] += 1
-                    inferred_values[k[0], k[1]] += 1
-                    inferred_values[k[1], k[0]] += 1
-
-                    #self.update_similarity(k[0], k[1], custom_query=1)
-                    #num_inferred += 1
-            for pos_ind in current_indices_pos:
-                for neg_ind in current_indices_neg:
-                    if self.feedback_freq[pos_ind, neg_ind] <= confidence_limit:
-                        #self.update_similarity(pos_ind, neg_ind, custom_query=-1)
-                        #num_inferred += 1
-                        infer_count[pos_ind, neg_ind] += 1
-                        infer_count[neg_ind, pos_ind] += 1
-                        inferred_values[pos_ind, neg_ind] -= 1
-                        inferred_values[neg_ind, pos_ind] -= 1
-        
-        for i in range(0, self.N):
-            for j in range(0, i):
-                if infer_count[i, j] > 10:
-                    if inferred_values[i, j] > 0:
-                        self.pairwise_similarities[i, j] = 1
-                        self.pairwise_similarities[j, i] = 1
-                        self.pairwise_similarities[j, i] = 1
-                    else:
-                        self.pairwise_similarities[i, j] = -1
-                        self.pairwise_similarities[j, i] = -1
-                    self.feedback_freq[i, j] +=1
-                    self.feedback_freq[j, i] +=1
-        print("HERE: ", np.max((infer_count)))
                         
-
-            
-        return num_inferred
-
-
             

@@ -14,7 +14,8 @@
         "force_global_update": true,
         "save_matrix_data": false,
         "infer_sims": false,
-        "predict_sims": false
+        "predict_sims": false,
+        "clustering_alg": "mean_field"
     },
     "sim_init_options": {
         "K_init": 10,

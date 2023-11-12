@@ -7,6 +7,7 @@ Created on Fri Dec  1 14:13:46 2017
 import numpy as np
 import random 
 import sys
+from scipy.special import softmax
 
 def max_correlation(my_graph, my_K, my_itr_num):
 
@@ -14,6 +15,8 @@ def max_correlation(my_graph, my_K, my_itr_num):
 
     best_Obj = -sys.float_info.max 
     best_Sol = np.zeros((my_N,), dtype = int)
+        
+    N_iter = 30
 
     for itr in range(0,my_itr_num):
   
@@ -32,7 +35,10 @@ def max_correlation(my_graph, my_K, my_itr_num):
 
         old_Obj = cur_Obj - 1
 
-        while cur_Obj-old_Obj > sys.float_info.epsilon:
+        while True:
+            if (cur_Obj-old_Obj) <= sys.float_info.epsilon or N_iter <= 0:
+                break
+            N_iter -= 1
             old_Obj = cur_Obj
 
             order = list(range(0,my_N))
@@ -65,7 +71,59 @@ def max_correlation(my_graph, my_K, my_itr_num):
             
     return best_Sol, best_Obj
 
-def max_correlation_dynamic_K(my_graph, my_K, my_itr_num, rand_state):
+def fast_max_correlation(graph, K, iterations):
+    N = graph.shape[0]  # Number of nodes
+    best_obj = -sys.float_info.max  # Initialize best objective to lowest possible float
+    best_solution = np.zeros((N,), dtype=int)  # Initialize best solution as an array of zeros
+
+    for _ in range(iterations):
+        # Initial solution
+        current_solution = np.random.randint(0, K, size=N)
+        
+        # Calculate initial objective value
+        current_obj = np.sum(graph * (current_solution[:, None] == current_solution))
+
+        while True:
+            improved = False
+            for i in np.random.permutation(N):
+                current_cluster = current_solution[i]
+                # Calculate the objective for the current configuration
+                cluster_obj = np.sum(graph[i] * (current_solution == current_cluster))
+                best_change = 0
+                best_cluster = current_cluster
+                
+                # Try moving node i to a different cluster and calculate new objective
+                for new_cluster in range(K):
+                    if new_cluster == current_cluster:
+                        continue  # Skip if it's the same class
+                    # Calculate the objective if i were in the new class
+                    new_cluster_obj = np.sum(graph[i] * (current_solution == new_cluster))
+                    # Calculate the change in objective
+                    change = new_cluster_obj - cluster_obj
+                    # If the change is positive and better than the best_change, update best_change
+                    if change > best_change:
+                        best_change = change
+                        best_cluster = new_cluster
+                
+                # If best_change is positive, update the solution
+                if best_change > 0:
+                    # Adjust current_obj by subtracting contribution from old cluster and adding contribution to new cluster
+                    current_obj += best_change - cluster_obj
+                    current_solution[i] = best_cluster
+                    improved = True
+            
+            # If no improvement is found, break the while loop
+            if not improved:
+                break
+        
+        # Update best solution
+        if current_obj > best_obj:
+            best_obj = current_obj
+            best_solution = current_solution.copy()
+
+    return best_solution, best_obj
+
+def max_correlation_dynamic_K(my_graph, my_K, my_itr_num):
     my_N = np.size(my_graph, 0)
     #print("SIZE: ", my_N)
     K_dyn = np.minimum(my_K, my_N)
@@ -74,16 +132,16 @@ def max_correlation_dynamic_K(my_graph, my_K, my_itr_num, rand_state):
     best_Obj = -sys.float_info.max 
     best_Sol = np.zeros((my_N,), dtype=int)
 
-    N_iter = 15
+    N_iter = 30
 
     for itr in range(0,my_itr_num):
         cur_Sol = np.zeros((my_N,), dtype=int) 
         
         for i in range(0,my_N):
-            cur_Sol[i] = rand_state.randint(0, K_dyn)
+            cur_Sol[i] = np.random.randint(0, K_dyn)
             
         # to gaurantee non-empty clusters
-        temp_indices = rand_state.choice(range(0, my_N), K_dyn, replace=False)
+        temp_indices = np.random.choice(range(0, my_N), K_dyn, replace=False)
         for k in range(0,K_dyn):
             cur_Sol[temp_indices[k]] = k
 
@@ -96,13 +154,13 @@ def max_correlation_dynamic_K(my_graph, my_K, my_itr_num, rand_state):
         old_Obj = cur_Obj - 1.0
         #print("ENTERED ALG: ", itr)
 
-        while True:
-            if (cur_Obj-old_Obj) <= sys.float_info.epsilon or N_iter <= 0:
+        for _ in range(30): 
+            if (cur_Obj-old_Obj) <= sys.float_info.epsilon:
                 break
             N_iter -= 1
             old_Obj = cur_Obj
             indices = np.arange(0, my_N)
-            rand_state.shuffle(indices)
+            np.random.shuffle(indices)
             for i in indices:
                 temp_Objs = np.zeros(K_dyn)
                 for k in range(0, K_dyn):
@@ -140,6 +198,49 @@ def max_correlation_dynamic_K(my_graph, my_K, my_itr_num, rand_state):
             best_Obj = cur_Obj
             
     return best_Sol, best_Obj
+
+def mean_field_clustering(S, K, betas, max_iter=100, tol=1e-6, noise_level=0.0):
+    np.fill_diagonal(S, 0)
+    N = S.shape[0]
+    predicted_labels, _ = max_correlation_dynamic_K(S, K, 5)
+    beta = betas[0]
+
+    K = len(np.unique(predicted_labels))
+    h = np.zeros((N, K))
+
+    for k in range(K):
+        cluster_indices = np.where(predicted_labels == k)[0]
+        for i in range(N):
+            h[i, k] = S[i, cluster_indices].sum()
+    
+    q = softmax(beta*h, axis=1)
+    #print("INITIAL Q: ", q)
+
+    #n_level = 0.3
+    #noise = n_level * (np.random.rand(N, K) - 0.5)
+    #q += noise
+    #q = np.maximum(q, 0)  # Ensure q stays non-negative
+    #q /= np.sum(q, axis=1, keepdims=True)  # Re-normalize q
+    
+    for beta in betas:
+        for iteration in range(max_iter):
+            h = -np.dot(S, q) # diagonal of S zero so S(i, i) term is zero
+            q_new = softmax(beta*-h, axis=1)
+            
+            # Check for convergence
+            diff = np.linalg.norm(q_new - q)
+            if diff < tol:
+                print(f'Converged after {iteration} iterations')
+                break
+            
+            q = q_new
+
+            # Inject noise
+            #noise = noise_level * (np.random.rand(N, K) - 0.5)
+            #q += noise
+            #q = np.maximum(q, 0)  # Ensure q stays non-negative
+            #q /= np.sum(q, axis=1, keepdims=True)  # Re-normalize q
+    return np.argmax(q, axis=1), q, h
 
 if __name__ == "__main__":
 
