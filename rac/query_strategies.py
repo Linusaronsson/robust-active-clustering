@@ -171,14 +171,13 @@ class QueryStrategy:
                 H_C_e_minus_1 = np.sum(self.compute_entropy(q_e_minus_1))
 
                 # Compute P(e = 1)
-                #h_p_e1 = np.copy(h)
-                #h_p_e1[x, :] += S_xy * q[y, :] - lmbda
-                #h_p_e1[y, :] += S_xy * q[x, :] - lmbda
+                h_p_e1 = np.copy(h)
+                h_p_e1[x, :] += S_xy * q[y, :] - lmbda
+                h_p_e1[y, :] += S_xy * q[x, :] - lmbda
                 #q_p_e1 = self.recompute_q(h_p_e1)
-                #q_p_e1 = softmax(beta*-h_p_e1, axis=1)
-                #q_p_e1 = softmax(beta*-h_p_e1, axis=1)
-                #P_e1 = np.sum(q_p_e1[x, :] * q_p_e1[y, :])
-                P_e1 = np.sum(q[x, :] * q[y, :])
+                q_p_e1 = softmax(beta*-h_p_e1, axis=1)
+                P_e1 = np.sum(q_p_e1[x, :] * q_p_e1[y, :])
+                #P_e1 = np.sum(q[x, :] * q[y, :])
 
                 # Compute P(e = -1)
                 #h_p_e_minus_1 = np.copy(h)
