@@ -144,7 +144,6 @@ class QueryStrategy:
         N, K = q.shape
         I = np.zeros((N, N))
 
-        print("HAASDSAD: ", H_C)
         #beta = self.ac.mean_field_beta
         beta = 1
         lmbda = 1
@@ -153,6 +152,7 @@ class QueryStrategy:
         h = -np.dot(S, q)
 
         H_C = np.sum(self.compute_entropy(q))
+        print("HAASDSAD: ", H_C)
 
         for x in range(N):
             for y in range(x):
