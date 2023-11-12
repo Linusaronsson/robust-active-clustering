@@ -32,7 +32,7 @@
     },
     "dataset_options": {
         "dataset": "synthetic",
-        "n_samples": 150,
+        "n_samples": 250,
         "n_clusters": 10,
         "class_balance": null
     }
