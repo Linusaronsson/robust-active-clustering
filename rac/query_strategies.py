@@ -144,7 +144,6 @@ class QueryStrategy:
         N, K = q.shape
         I = np.zeros((N, N))
 
-        H_C = np.sum(self.compute_entropy(q))
         print("HAASDSAD: ", H_C)
         #beta = self.ac.mean_field_beta
         beta = 1
@@ -153,30 +152,32 @@ class QueryStrategy:
         q = softmax(beta*-h, axis=1)
         h = -np.dot(S, q)
 
+        H_C = np.sum(self.compute_entropy(q))
+
         for x in range(N):
             for y in range(x):
                 S_xy = S[x, y]
 
                 # Compute h for P(C | e = 1)
                 h_e1 = np.copy(h)
-                h_e1[x, :] += S_xy * q[y, :] - lmbda*q[y, :]
-                h_e1[y, :] += S_xy * q[x, :] - lmbda*q[x, :]
+                h_e1[x, :] += S_xy * q[y, :] * lmbda - lmbda*q[y, :]
+                h_e1[y, :] += S_xy * q[x, :] * lmbda - lmbda*q[x, :]
                 #q_e1 = self.recompute_q(h_e1)
                 q_e1 = softmax(beta*-h_e1, axis=1)
                 H_C_e1 = np.sum(self.compute_entropy(q_e1))
 
                 # Compute h for P(C | e = -1)
                 h_e_minus_1 = np.copy(h)
-                h_e_minus_1[x, :] += S_xy * q[y, :] + lmbda*q[y, :]
-                h_e_minus_1[y, :] += S_xy * q[x, :] + lmbda*q[x, :]
+                h_e_minus_1[x, :] += S_xy * q[y, :] * lmbda + lmbda*q[y, :]
+                h_e_minus_1[y, :] += S_xy * q[x, :] * lmbda + lmbda*q[x, :]
                 #q_e_minus_1 = self.recompute_q(h_e_minus_1)
                 q_e_minus_1 = softmax(beta*-h_e_minus_1, axis=1)
                 H_C_e_minus_1 = np.sum(self.compute_entropy(q_e_minus_1))
 
                 # Compute P(e = 1)
                 h_p_e1 = np.copy(h)
-                h_p_e1[x, :] += S_xy * q[y, :] - lmbda
-                h_p_e1[y, :] += S_xy * q[x, :] - lmbda
+                h_p_e1[x, :] += S_xy * q[y, :] * lmbda - lmbda
+                h_p_e1[y, :] += S_xy * q[x, :] * lmbda - lmbda
                 #q_p_e1 = self.recompute_q(h_p_e1)
                 q_p_e1 = softmax(beta*-h_p_e1, axis=1)
                 P_e1 = np.sum(q_p_e1[x, :] * q_p_e1[y, :])
