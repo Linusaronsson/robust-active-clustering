@@ -1,8 +1,8 @@
 {
     "general_options": {
         "experiment_name": "info_gain_exp",
-        "num_repeats": 60,
-        "n_workers": 20,
+        "num_repeats": 14,
+        "n_workers": 60,
         "local": true,
         "verbose": true
     },
@@ -24,7 +24,7 @@
         "sim_init_type": ["zeros"]
     },
     "query_strategy_options": {
-        "acq_fn": ["info_gain"],
+        "acq_fn": ["info_gain", "freq"],
         "eps": 0.3,
         "beta": 1,
         "tau": 7,
