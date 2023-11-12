@@ -150,6 +150,9 @@ class QueryStrategy:
         beta = 1
         lmbda = 1
 
+        q = softmax(beta*-h, axis=1)
+        h = -np.dot(S, q)
+
         for x in range(N):
             for y in range(x):
                 S_xy = S[x, y]
