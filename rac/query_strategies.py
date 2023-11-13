@@ -145,7 +145,7 @@ class QueryStrategy:
         I = np.zeros((N, N))
 
         #beta = self.ac.mean_field_beta
-        beta = 1
+        beta = 5
         lmbda = 1
 
         q = softmax(beta*-h, axis=1)
