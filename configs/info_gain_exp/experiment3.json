@@ -19,8 +19,9 @@
         "mean_field_beta": 5,
         "info_gain_beta": 0.1,
         "info_gain_lambda": -1,
-        "recompute_pe": false,
-        "running_avg": false
+        "recompute_pe": true,
+        "running_avg": true,
+        "iterate_mf": false
     },
     "sim_init_options": {
         "K_init": 10,
