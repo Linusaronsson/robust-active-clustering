@@ -105,7 +105,7 @@ class QueryStrategy:
         N = S.shape[0]
 
         # Create a list of tuples (value, (i, j))
-        value_index_pairs = [(S[i, j], (i, j)) for i in range(N) for j in range(N)]
+        value_index_pairs = [(S[i, j], (i, j)) for i in range(N) for j in range(i)]
 
         # Sort the list in descending order of the values
         sorted_pairs = sorted(value_index_pairs, key=lambda x: x[0], reverse=True)
@@ -145,8 +145,8 @@ class QueryStrategy:
         I = np.zeros((N, N))
 
         #beta = self.ac.mean_field_beta
-        beta = 5
-        lmbda = 1
+        beta = self.ac.info_gain_beta
+        lmbda = self.ac.info_gain_lambda
 
         q = softmax(beta*-h, axis=1)
         h = -np.dot(S, q)
@@ -175,13 +175,15 @@ class QueryStrategy:
                 H_C_e_minus_1 = np.sum(self.compute_entropy(q_e_minus_1))
 
                 # Compute P(e = 1)
-                h_p_e1 = np.copy(h)
-                h_p_e1[x, :] += S_xy * q[y, :] * lmbda - lmbda
-                h_p_e1[y, :] += S_xy * q[x, :] * lmbda - lmbda
-                #q_p_e1 = self.recompute_q(h_p_e1)
-                q_p_e1 = softmax(beta*-h_p_e1, axis=1)
-                P_e1 = np.sum(q_p_e1[x, :] * q_p_e1[y, :])
-                #P_e1 = np.sum(q[x, :] * q[y, :])
+                if self.ac.recompute_pe:
+                    h_p_e1 = np.copy(h)
+                    h_p_e1[x, :] += S_xy * q[y, :] * lmbda - lmbda
+                    h_p_e1[y, :] += S_xy * q[x, :] * lmbda - lmbda
+                    #q_p_e1 = self.recompute_q(h_p_e1)
+                    q_p_e1 = softmax(beta*-h_p_e1, axis=1)
+                    P_e1 = np.sum(q_p_e1[x, :] * q_p_e1[y, :])
+                else:
+                    P_e1 = np.sum(q[x, :] * q[y, :])
 
                 # Compute P(e = -1)
                 #h_p_e_minus_1 = np.copy(h)
@@ -194,8 +196,6 @@ class QueryStrategy:
 
                 #print("P_e1: ", P_e1)
                 #print("P_e_minus_1: ", P_e_minus_1)
-                
-
                 H_C_e = P_e1 * H_C_e1 + P_e_minus_1 * H_C_e_minus_1
                 #print("H_C_e: ", H_C_e)
                 I[x, y] = H_C - H_C_e

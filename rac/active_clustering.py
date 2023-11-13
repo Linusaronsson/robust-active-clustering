@@ -107,7 +107,8 @@ class ActiveClustering:
         else:
             stopping_criteria = self.n_edges
 
-        early_stopping = (self.n_edges/self.query_size)*1
+        #early_stopping = (self.n_edges/self.query_size)*1
+        early_stopping = (self.n_edges/self.query_size)*0.55
         #ii = 0
 
         ii = 1
@@ -561,10 +562,12 @@ class ActiveClustering:
         else:
             query = self.ground_truth_pairwise_similarities_noisy[ind1, ind2]
 
-        self.pairwise_similarities[ind1, ind2] = ((feedback_frequency-1) * similarity + query)/(feedback_frequency)
-        self.pairwise_similarities[ind2, ind1] = ((feedback_frequency-1) * similarity + query)/(feedback_frequency)
-        #self.pairwise_similarities[ind1, ind2] = query
-        #self.pairwise_similarities[ind2, ind1] = query
+        if self.ac.running_avg:
+            self.pairwise_similarities[ind1, ind2] = ((feedback_frequency-1) * similarity + query)/(feedback_frequency)
+            self.pairwise_similarities[ind2, ind1] = ((feedback_frequency-1) * similarity + query)/(feedback_frequency)
+        else:
+            self.pairwise_similarities[ind1, ind2] = query
+            self.pairwise_similarities[ind2, ind1] = query
 
     def get_similarity(self, ind1, ind2):
         if np.random.rand() <= self.noise_level:
