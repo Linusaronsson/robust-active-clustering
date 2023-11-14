@@ -1,6 +1,6 @@
 {
     "general_options": {
-        "experiment_name": "info_gain_exp",
+        "experiment_name": "info_gain_exp2",
         "num_repeats": 14,
         "n_workers": 14,
         "local": true,
