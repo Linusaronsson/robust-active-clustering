@@ -17,8 +17,8 @@
         "predict_sims": false,
         "clustering_alg": "mean_field",
         "mean_field_beta": 5,
-        "info_gain_beta": 5,
-        "info_gain_lambda": 1,
+        "info_gain_beta": 0.1,
+        "info_gain_lambda": 5,
         "recompute_pe": true,
         "running_avg": false,
         "iterate_mf": false
@@ -29,7 +29,7 @@
         "sim_init_type": "zeros"
     },
     "query_strategy_options": {
-        "acq_fn": "info_gain",
+        "acq_fn": "freq",
         "eps": 0.3,
         "beta": 1,
         "tau": 7,

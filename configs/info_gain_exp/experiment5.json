@@ -18,8 +18,8 @@
         "clustering_alg": "mean_field",
         "mean_field_beta": 5,
         "info_gain_beta": 0.1,
-        "info_gain_lambda": -1,
-        "recompute_pe": false,
+        "info_gain_lambda": 1,
+        "recompute_pe": true,
         "running_avg": false,
         "iterate_mf": false
     },
