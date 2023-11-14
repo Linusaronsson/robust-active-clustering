@@ -160,33 +160,32 @@ class QueryStrategy:
 
                 # Compute h for P(C | e = 1)
                 h_e1 = np.copy(h)
+                h_e1[x, :] += S_xy * q[y, :] * lmbda - lmbda*q[y, :]
+                h_e1[y, :] += S_xy * q[x, :] * lmbda - lmbda*q[x, :]
                 if self.ac.iterate_mf: 
                     for i in range(10):
-                        h_e1[x, :] += S_xy * q[y, :] * lmbda - lmbda*q[y, :]
-                        h_e1[y, :] += S_xy * q[x, :] * lmbda - lmbda*q[x, :]
                         #q_e1 = self.recompute_q(h_e1)
                         q_e1 = softmax(beta*-h_e1, axis=1)
                         h_e1 = -np.dot(S, q_e1)
+                        h_e1[x, :] += S_xy * q_e1[y, :] * lmbda - lmbda*q_e1[y, :]
+                        h_e1[y, :] += S_xy * q_e1[x, :] * lmbda - lmbda*q_e1[x, :]
                 else:
-                    h_e1[x, :] += S_xy * q[y, :] * lmbda - lmbda*q[y, :]
-                    h_e1[y, :] += S_xy * q[x, :] * lmbda - lmbda*q[x, :]
                     #q_e1 = self.recompute_q(h_e1)
                     q_e1 = softmax(beta*-h_e1, axis=1)
                 H_C_e1 = np.sum(self.compute_entropy(q_e1))
 
                 # Compute h for P(C | e = -1)
                 h_e_minus_1 = np.copy(h)
+                h_e_minus_1[x, :] += S_xy * q[y, :] * lmbda + lmbda*q[y, :]
+                h_e_minus_1[y, :] += S_xy * q[x, :] * lmbda + lmbda*q[x, :]
                 if self.ac.iterate_mf:
                     for i in range(10):
-                        h_e_minus_1[x, :] += S_xy * q[y, :] * lmbda + lmbda*q[y, :]
-                        h_e_minus_1[y, :] += S_xy * q[x, :] * lmbda + lmbda*q[x, :]
                         #q_e_minus_1 = self.recompute_q(h_e_minus_1)
                         q_e_minus_1 = softmax(beta*-h_e_minus_1, axis=1)
                         h_e_minus_1 = -np.dot(S, q_e_minus_1)
+                        h_e_minus_1[x, :] += S_xy * q_e_minus_1[y, :] * lmbda + lmbda*q_e_minus_1[y, :]
+                        h_e_minus_1[y, :] += S_xy * q_e_minus_1[x, :] * lmbda + lmbda*q_e_minus_1[x, :]
                 else:
-                    h_e_minus_1[x, :] += S_xy * q[y, :] * lmbda + lmbda*q[y, :]
-                    h_e_minus_1[y, :] += S_xy * q[x, :] * lmbda + lmbda*q[x, :]
-                    #q_e_minus_1 = self.recompute_q(h_e_minus_1)
                     q_e_minus_1 = softmax(beta*-h_e_minus_1, axis=1)
                 H_C_e_minus_1 = np.sum(self.compute_entropy(q_e_minus_1))
 
@@ -195,8 +194,14 @@ class QueryStrategy:
                     h_p_e1 = np.copy(h)
                     h_p_e1[x, :] += S_xy * q[y, :] * lmbda - lmbda
                     h_p_e1[y, :] += S_xy * q[x, :] * lmbda - lmbda
-                    #q_p_e1 = self.recompute_q(h_p_e1)
-                    q_p_e1 = softmax(beta*-h_p_e1, axis=1)
+                    if self.ac.iterate_mf:
+                        for i in range(10):
+                            q_p_e1 = softmax(beta*-h_p_e1, axis=1)
+                            h_p_e1 = -np.dot(S, q_p_e1)
+                            h_p_e1[x, :] += S_xy * q_p_e1[y, :] * lmbda - lmbda
+                            h_p_e1[y, :] += S_xy * q_p_e1[x, :] * lmbda - lmbda
+                    else:
+                        q_p_e1 = softmax(beta*-h_p_e1, axis=1)
                     P_e1 = np.sum(q_p_e1[x, :] * q_p_e1[y, :])
                 else:
                     P_e1 = np.sum(q[x, :] * q[y, :])
