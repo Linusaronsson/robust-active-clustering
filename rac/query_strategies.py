@@ -144,8 +144,8 @@ class QueryStrategy:
         N, K = q.shape
         I = np.zeros((N, N))
 
-        #beta = self.ac.mean_field_beta
-        beta = self.ac.info_gain_beta
+        beta = self.ac.mean_field_beta
+        #beta = self.ac.info_gain_beta
         lmbda = self.ac.info_gain_lambda
 
         q = softmax(beta*-h, axis=1)

@@ -1,6 +1,6 @@
 {
     "general_options": {
-        "experiment_name": "info_gain_exp2",
+        "experiment_name": "info_gain_exp",
         "num_repeats": 14,
         "n_workers": 14,
         "local": true,
@@ -16,12 +16,12 @@
         "infer_sims": false,
         "predict_sims": false,
         "clustering_alg": "mean_field",
-        "mean_field_beta": 5,
-        "info_gain_beta": 20,
-        "info_gain_lambda": 5,
+        "mean_field_beta": 0.5,
+        "info_gain_beta": 1,
+        "info_gain_lambda": 10,
         "recompute_pe": false,
         "running_avg": false,
-        "iterate_mf": false
+        "iterate_mf": true
     },
     "sim_init_options": {
         "K_init": 10,
@@ -29,7 +29,7 @@
         "sim_init_type": "zeros"
     },
     "query_strategy_options": {
-        "acq_fn": "freq",
+        "acq_fn": "info_gain",
         "eps": 0.3,
         "beta": 1,
         "tau": 7,
