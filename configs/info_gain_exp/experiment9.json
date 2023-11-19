@@ -16,11 +16,11 @@
         "infer_sims": false,
         "predict_sims": false,
         "clustering_alg": "mean_field",
-        "mean_field_beta": 0.1,
+        "mean_field_beta": 50,
         "info_gain_beta": 1,
-        "info_gain_lambda": -10,
-        "recompute_pe": false,
-        "running_avg": false,
+        "info_gain_lambda": 50,
+        "info_gain_lambda2": 1,
+        "running_avg": true,
         "iterate_mf": false
     },
     "sim_init_options": {
@@ -29,7 +29,7 @@
         "sim_init_type": "zeros"
     },
     "query_strategy_options": {
-        "acq_fn": "info_gain",
+        "acq_fn": "cluster_freq",
         "eps": 0.3,
         "beta": 1,
         "tau": 7,

@@ -1,6 +1,7 @@
 import numpy as np 
 from itertools import combinations, product
-from scipy.special import softmax
+from scipy.special import softmax as scipy_softmax
+from scipy.stats import entropy as scipy_entropy
 
 class QueryStrategy:
     def __init__(self, ac):
@@ -28,7 +29,17 @@ class QueryStrategy:
                 self.info_matrix = self.compute_maxexp()
         elif acq_fn == "info_gain":
             self.info_matrix = self.compute_info_gain(self.ac.h, self.ac.q, self.ac.pairwise_similarities)
-            pass
+        elif acq_fn == "entropy":
+            self.info_matrix = self.compute_entropy(self.ac.h, self.ac.q, self.ac.pairwise_similarities)
+        elif acq_fn == "cluster_freq":
+            self.info_matrix = self.compute_cluster_informativeness(-self.ac.feedback_freq)
+            self.info_matrix = self.info_matrix - self.ac.feedback_freq
+        elif acq_fn == "cluster_uncert":
+            self.info_matrix = self.compute_cluster_informativeness(-np.abs(self.ac.pairwise_similarities))
+            self.info_matrix = self.info_matrix - np.abs(self.ac.pairwise_similarities)
+        elif acq_fn == "cluster_incon":
+            self.info_matrix = self.compute_cluster_informativeness(self.ac.violations) + self.ac.alpha * self.compute_cluster_informativeness(-np.abs(self.ac.pairwise_similarities))
+            self.info_matrix = self.info_matrix - np.abs(self.ac.pairwise_similarities)
         else:
             raise ValueError("Invalid acquisition function: {}".format(acq_fn))
 
@@ -97,9 +108,6 @@ class QueryStrategy:
         
         return top_pairs
 
-    def compute_entropy(self, q):
-        return -np.sum(q * np.log(q + 1e-10), axis=1)  # Add a small constant to prevent log(0)
-
     def sort_similarity_matrix(self, S):
         # Get the size of the matrix
         N = S.shape[0]
@@ -147,86 +155,128 @@ class QueryStrategy:
         beta = self.ac.mean_field_beta
         #beta = self.ac.info_gain_beta
         lmbda = self.ac.info_gain_lambda
+        lmbda2 = self.ac.info_gain_lambda2
+        num_edges = self.ac.num_edges_info_gain if self.ac.num_edges_info_gain > 0 else N
 
-        q = softmax(beta*-h, axis=1)
+        q = scipy_softmax(beta*-h, axis=1)
         h = -np.dot(S, q)
 
-        H_C = np.sum(self.compute_entropy(q))
+        H_C = np.sum(scipy_entropy(q, axis=1))
         print("HAASDSAD: ", H_C)
+        n_iter = 10
+
+        lower_triangle_indices = np.tril_indices(self.ac.N, -1)
+        inds = np.where(self.ac.feedback_freq[lower_triangle_indices] > 0)[0]
+        num_edges = self.ac.num_edges_info_gain if self.ac.num_edges_info_gain > 0 else len(inds)
+        inds = np.random.choice(inds, num_edges, replace=False)
+        a, b = lower_triangle_indices[0][inds], lower_triangle_indices[1][inds]
+
+        print("ASDSD: ", len(a))
+        for x, y in zip(a, b):
+        #for x in range(N):
+            #for y in range(x):
+            S_xy = S[x, y]
+
+            # Compute h for P(C | e = 1)
+            h_e1 = np.copy(h)
+            q_e1 = np.copy(h)
+
+            h_e1[x, :] += q_e1[y, :] * lmbda2 * (S_xy - lmbda)
+            h_e1[y, :] += q_e1[x, :] * lmbda2 * (S_xy - lmbda)
+            q_e1[x, :] = scipy_softmax(beta * -h_e1[x, :])
+            q_e1[y, :] = scipy_softmax(beta * -h_e1[y, :])
+
+            if self.ac.iterate_mf: 
+                for i in range(n_iter):
+                    h_e1 = -np.dot(S, q_e1)
+                    h_e1[x, :] += q_e1[y, :] * lmbda2 * (S_xy - lmbda)
+                    h_e1[y, :] += q_e1[x, :] * lmbda2 * (S_xy - lmbda)
+                    q_e1 = scipy_softmax(beta*-h_e1, axis=1)
+            H_C_e1 = np.sum(scipy_entropy(q_e1, axis=1))
+
+            # Compute h for P(C | e = 1)
+            h_em1 = np.copy(h)
+            q_em1 = np.copy(h)
+
+            h_em1[x, :] += q_em1[y, :] * lmbda2 * (S_xy + lmbda)
+            h_em1[y, :] += q_em1[x, :] * lmbda2 * (S_xy + lmbda)
+            q_em1[x, :] = scipy_softmax(beta * -h_em1[x, :])
+            q_em1[y, :] = scipy_softmax(beta * -h_em1[y, :])
+
+            if self.ac.iterate_mf: 
+                for i in range(n_iter):
+                    h_em1 = -np.dot(S, q_em1)
+                    h_em1[x, :] += q_em1[y, :] * lmbda2 * (S_xy + lmbda)
+                    h_em1[y, :] += q_em1[x, :] * lmbda2 * (S_xy + lmbda)
+                    q_em1 = scipy_softmax(beta*-h_em1, axis=1)
+            H_C_em1 = np.sum(scipy_entropy(q_em1, axis=1))
+
+
+            P_e1 = np.sum(q[x, :] * q[y, :])
+            P_e_minus_1 = 1 - P_e1 
+            
+            H_C_e = P_e1 * H_C_e1 + P_e_minus_1 * H_C_em1
+            #print("H_C_e: ", H_C_e)
+            I[x, y] = H_C - H_C_e
+            I[y, x] = I[x, y]
+            #print("H_C: ", H_C)
+            #print("H_C_e: ", H_C_e)
+            #print("P_e1: ", P_e1)
+            #print("P_e_minus_1: ", P_e_minus_1)
+            #print("H_C_e1: ", H_C_e1)
+            #print("H_C_e_minus_1: ", H_C_e_minus_1)
+            #print("I: ", I[x, y])
+        self.sort_similarity_matrix(I)
+        #self.sort_similarity_matrix(self.ac.pairwise_similarities)
+        return I
+    
+    def compute_entropy(self, h, q, S):
+        if self.ac.clustering_alg != "mean_field":
+            raise ValueError("Entropy only defined for mean field clustering")
+
+        N, K = q.shape
+        I = np.zeros((N, N))
+
+        beta = self.ac.mean_field_beta
+        #beta = self.ac.info_gain_beta
+        #lmbda = self.ac.info_gain_lambda
+
+        q = scipy_softmax(beta*-h, axis=1)
+        h = -np.dot(S, q)
 
         for x in range(N):
             for y in range(x):
-                S_xy = S[x, y]
-
-                # Compute h for P(C | e = 1)
-                h_e1 = np.copy(h)
-                h_e1[x, :] += S_xy * q[y, :] - lmbda*q[y, :]
-                h_e1[y, :] += S_xy * q[x, :] - lmbda*q[x, :]
-                if self.ac.iterate_mf: 
-                    for i in range(10):
-                        #q_e1 = self.recompute_q(h_e1)
-                        q_e1 = softmax(beta*-h_e1, axis=1)
-                        h_e1 = -np.dot(S, q_e1)
-                        h_e1[x, :] += S_xy * q_e1[y, :] - lmbda*q_e1[y, :]
-                        h_e1[y, :] += S_xy * q_e1[x, :] - lmbda*q_e1[x, :]
-                else:
-                    #q_e1 = self.recompute_q(h_e1)
-                    q_e1 = softmax(beta*-h_e1, axis=1)
-                H_C_e1 = np.sum(self.compute_entropy(q_e1))
-
-                # Compute h for P(C | e = -1)
-                h_e_minus_1 = np.copy(h)
-                h_e_minus_1[x, :] += S_xy * q[y, :] + lmbda*q[y, :]
-                h_e_minus_1[y, :] += S_xy * q[x, :] + lmbda*q[x, :]
-                if self.ac.iterate_mf:
-                    for i in range(10):
-                        #q_e_minus_1 = self.recompute_q(h_e_minus_1)
-                        q_e_minus_1 = softmax(beta*-h_e_minus_1, axis=1)
-                        h_e_minus_1 = -np.dot(S, q_e_minus_1)
-                        h_e_minus_1[x, :] += S_xy * q_e_minus_1[y, :] + lmbda*q_e_minus_1[y, :]
-                        h_e_minus_1[y, :] += S_xy * q_e_minus_1[x, :] + lmbda*q_e_minus_1[x, :]
-                else:
-                    q_e_minus_1 = softmax(beta*-h_e_minus_1, axis=1)
-                H_C_e_minus_1 = np.sum(self.compute_entropy(q_e_minus_1))
-
-                # Compute P(e = 1)
-                if self.ac.recompute_pe:
-                    h_p_e1 = np.copy(h)
-                    h_p_e1[x, :] += S_xy * q[y, :] - lmbda
-                    h_p_e1[y, :] += S_xy * q[x, :] - lmbda
-                    if self.ac.iterate_mf:
-                        for i in range(10):
-                            q_p_e1 = softmax(beta*-h_p_e1, axis=1)
-                            h_p_e1 = -np.dot(S, q_p_e1)
-                            h_p_e1[x, :] += S_xy * q_p_e1[y, :] - lmbda
-                            h_p_e1[y, :] += S_xy * q_p_e1[x, :] - lmbda
-                    else:
-                        q_p_e1 = softmax(beta*-h_p_e1, axis=1)
-                    P_e1 = np.sum(q_p_e1[x, :] * q_p_e1[y, :])
-                else:
-                    P_e1 = np.sum(q[x, :] * q[y, :])
-
-                # Compute P(e = -1)
-                #h_p_e_minus_1 = np.copy(h)
-                #h_p_e_minus_1[x, :] += S_xy * q[y, :] + 1
-                #h_p_e_minus_1[y, :] += S_xy * q[x, :] + 1
-                #q_p_e_minus_1 = self.recompute_q(h_p_e_minus_1)
-                #q_p_e_minus_1 = softmax(beta*-h_p_e_minus_1, axis=1)
-                #P_e_minus_1 = np.sum(q_p_e_minus_1[x, :] * (1 - q_p_e_minus_1[y, :]) + q_p_e_minus_1[y, :] * (1 - q_p_e_minus_1[x, :]))
-                P_e_minus_1 = 1 - P_e1 
-
-                #print("P_e1: ", P_e1)
-                #print("P_e_minus_1: ", P_e_minus_1)
-                H_C_e = P_e1 * H_C_e1 + P_e_minus_1 * H_C_e_minus_1
-                #print("H_C_e: ", H_C_e)
-                I[x, y] = H_C - H_C_e
+                P_e1 = np.sum(q[x, :] * q[y, :])
+                P = np.array([P_e1, 1 - P_e1])
+                e_entropy = scipy_entropy(P)
+                I[x, y] = e_entropy
                 I[y, x] = I[x, y]
-
-        #self.sort_similarity_matrix(I)
+        self.sort_similarity_matrix(I)
         #self.sort_similarity_matrix(self.ac.pairwise_similarities)
 
         return I
-                
+
+    def compute_cluster_informativeness(self, info_matrix):
+        local_regions = []
+        for i, cluster_i in enumerate(self.ac.clustering):
+            for j, cluster_j in enumerate(self.ac.clustering):
+                if i != j:
+                    pairwise_indices = list(product(cluster_i, cluster_j))
+                    local_regions.append(pairwise_indices)
+                else:
+                    if len(cluster_i) == 1:
+                        continue
+                    pairwise_indices = list(combinations(cluster_i, 2))
+                    local_regions.append(pairwise_indices)
+
+        I = np.zeros((self.ac.N, self.ac.N))
+        for region in local_regions:
+            if len(region) == 0:
+                continue
+            region_sum = (1/len(region)) * sum(info_matrix[i, j] for i, j in region)
+            I[np.array(region)] = region_sum
+        return I
+
     def compute_maxmin(self):
         max_edges = self.ac.N
         lower_triangle_indices = np.tril_indices(self.ac.N, -1)
