@@ -21,6 +21,7 @@
         "info_gain_lambda": 50,
         "info_gain_lambda2": 1,
         "running_avg": true,
+        "num_edges_info_gain": -1,
         "iterate_mf": false
     },
     "sim_init_options": {

@@ -400,7 +400,7 @@ class QueryStrategy:
             c5 += np.abs(sim_jk)
 
         costs = np.array([c1, c2, c3, c4, c5])
-        probs = softmax(-beta*costs)
+        probs = scipy_softmax(-beta*costs)
         expected_loss = np.sum(costs*probs)
 
         return expected_loss
