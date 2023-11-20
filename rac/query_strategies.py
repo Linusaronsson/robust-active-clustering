@@ -15,8 +15,6 @@ class QueryStrategy:
             self.info_matrix = -self.ac.feedback_freq
         elif acq_fn == "uncert":
             self.info_matrix = -np.abs(self.ac.pairwise_similarities)
-        elif acq_fn == "incon":
-            self.info_matrix = self.ac.violations
         elif acq_fn == "maxmin":
             if np.random.rand() < self.ac.eps:
                 self.info_matrix = -self.ac.feedback_freq
@@ -33,13 +31,13 @@ class QueryStrategy:
             self.info_matrix = self.compute_entropy(self.ac.h, self.ac.q, self.ac.pairwise_similarities)
         elif acq_fn == "cluster_freq":
             self.info_matrix = self.compute_cluster_informativeness(-self.ac.feedback_freq)
-            self.info_matrix = self.info_matrix - self.ac.feedback_freq
+            self.info_matrix = self.info_matrix * (1-(self.ac.feedback_freq/np.max(self.ac.feedback_freq)))
         elif acq_fn == "cluster_uncert":
             self.info_matrix = self.compute_cluster_informativeness(-np.abs(self.ac.pairwise_similarities))
-            self.info_matrix = self.info_matrix - np.abs(self.ac.pairwise_similarities)
+            self.info_matrix = self.info_matrix * (1-np.abs(self.ac.pairwise_similarities))
         elif acq_fn == "cluster_incon":
             self.info_matrix = self.compute_cluster_informativeness(self.ac.violations) + self.ac.alpha * self.compute_cluster_informativeness(-np.abs(self.ac.pairwise_similarities))
-            self.info_matrix = self.info_matrix - np.abs(self.ac.pairwise_similarities)
+            self.info_matrix = self.info_matrix * (1-np.abs(self.ac.pairwise_similarities))
         else:
             raise ValueError("Invalid acquisition function: {}".format(acq_fn))
 
@@ -162,7 +160,7 @@ class QueryStrategy:
         h = -np.dot(S, q)
 
         H_C = np.sum(scipy_entropy(q, axis=1))
-        print("HAASDSAD: ", H_C)
+        #print("HAASDSAD: ", H_C)
         n_iter = 10
 
         lower_triangle_indices = np.tril_indices(self.ac.N, -1)
@@ -171,7 +169,7 @@ class QueryStrategy:
         inds = np.random.choice(inds, num_edges, replace=False)
         a, b = lower_triangle_indices[0][inds], lower_triangle_indices[1][inds]
 
-        print("ASDSD: ", len(a))
+        #print("ASDSD: ", len(a))
         for x, y in zip(a, b):
         #for x in range(N):
             #for y in range(x):
@@ -179,7 +177,7 @@ class QueryStrategy:
 
             # Compute h for P(C | e = 1)
             h_e1 = np.copy(h)
-            q_e1 = np.copy(h)
+            q_e1 = np.copy(q)
 
             h_e1[x, :] += q_e1[y, :] * lmbda2 * (S_xy - lmbda)
             h_e1[y, :] += q_e1[x, :] * lmbda2 * (S_xy - lmbda)
@@ -196,7 +194,7 @@ class QueryStrategy:
 
             # Compute h for P(C | e = 1)
             h_em1 = np.copy(h)
-            q_em1 = np.copy(h)
+            q_em1 = np.copy(q)
 
             h_em1[x, :] += q_em1[y, :] * lmbda2 * (S_xy + lmbda)
             h_em1[y, :] += q_em1[x, :] * lmbda2 * (S_xy + lmbda)
@@ -226,7 +224,7 @@ class QueryStrategy:
             #print("H_C_e1: ", H_C_e1)
             #print("H_C_e_minus_1: ", H_C_e_minus_1)
             #print("I: ", I[x, y])
-        self.sort_similarity_matrix(I)
+        #self.sort_similarity_matrix(I)
         #self.sort_similarity_matrix(self.ac.pairwise_similarities)
         return I
     
@@ -411,14 +409,14 @@ class QueryStrategy:
         sim_jk = self.ac.pairwise_similarities[j, k]
         num_pos = 0
 
-        if sim_ij > 0:
-            num_pos +=1
+        if sim_ij >= 0:
+            num_pos += 1
 
-        if sim_ik > 0:
-            num_pos +=1
+        if sim_ik >= 0:
+            num_pos += 1
 
-        if sim_jk > 0:
-            num_pos +=1
+        if sim_jk >= 0:
+            num_pos += 1
 
         return num_pos == 2
 

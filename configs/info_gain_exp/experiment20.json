@@ -11,7 +11,6 @@
         "num_feedback": 0.001,
         "noise_level": 0.4,
         "persistent_noise_level": 0.0,
-        "force_global_update": true,
         "save_matrix_data": false,
         "infer_sims": false,
         "predict_sims": false,
@@ -30,7 +29,7 @@
         "sim_init_type": "zeros"
     },
     "query_strategy_options": {
-        "acq_fn": "cluster_freq",
+        "acq_fn": "cluster_incon",
         "eps": 0.3,
         "beta": 1,
         "tau": 7,
