@@ -39,7 +39,7 @@ def get_dataset(**options):
             n_clusters_per_class=1,
             weights=weights,
             flip_y=0,
-            class_sep=1.0,
+            class_sep=1.8,
             hypercube=True,
             shift=0.0,
             scale=1.0,

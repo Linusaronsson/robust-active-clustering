@@ -441,7 +441,7 @@ class ExperimentReader:
                 #else:
                 #    raise ValueError("incorrect dataset!")
 
-                df_filtered = df_filtered[df_filtered[vary[0]] < 350]
+                df_filtered = df_filtered[df_filtered[vary[0]] < 1000]
                 metric_map = {"ami": "AMI", "rand": "ARI"}
 
                 if not cut_axis:

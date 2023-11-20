@@ -31,13 +31,13 @@ class QueryStrategy:
             self.info_matrix = self.compute_entropy(self.ac.h, self.ac.q, self.ac.pairwise_similarities)
         elif acq_fn == "cluster_freq":
             self.info_matrix = self.compute_cluster_informativeness(-self.ac.feedback_freq)
-            self.info_matrix = self.info_matrix * (1-(self.ac.feedback_freq/np.max(self.ac.feedback_freq)))
+            self.info_matrix = self.info_matrix * ((self.ac.feedback_freq/np.max(self.ac.feedback_freq)))
         elif acq_fn == "cluster_uncert":
             self.info_matrix = self.compute_cluster_informativeness(-np.abs(self.ac.pairwise_similarities))
-            self.info_matrix = self.info_matrix * (1-np.abs(self.ac.pairwise_similarities))
+            self.info_matrix = self.info_matrix * (np.abs(self.ac.pairwise_similarities))
         elif acq_fn == "cluster_incon":
             self.info_matrix = self.compute_cluster_informativeness(self.ac.violations) + self.ac.alpha * self.compute_cluster_informativeness(-np.abs(self.ac.pairwise_similarities))
-            self.info_matrix = self.info_matrix * (1-np.abs(self.ac.pairwise_similarities))
+            self.info_matrix = self.info_matrix * (np.abs(self.ac.pairwise_similarities))
         else:
             raise ValueError("Invalid acquisition function: {}".format(acq_fn))
 
@@ -249,7 +249,7 @@ class QueryStrategy:
                 e_entropy = scipy_entropy(P)
                 I[x, y] = e_entropy
                 I[y, x] = I[x, y]
-        self.sort_similarity_matrix(I)
+        #self.sort_similarity_matrix(I)
         #self.sort_similarity_matrix(self.ac.pairwise_similarities)
 
         return I
