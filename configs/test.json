@@ -1,6 +1,6 @@
 {
     "general_options": {
-        "experiment_name": "info_gain_exp_new",
+        "experiment_name": "info_gain_exp_new_2",
         "num_repeats": 14,
         "n_workers": 1,
         "local": true,
@@ -26,10 +26,10 @@
     "sim_init_options": {
         "K_init": 10,
         "sim_init": 0.1,
-        "sim_init_type": "zeros"
+        "sim_init_type": "custom"
     },
     "query_strategy_options": {
-        "acq_fn": "cluster_freq",
+        "acq_fn": "cluster_uncert",
         "eps": 0.3,
         "beta": 1,
         "tau": 7,
