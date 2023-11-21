@@ -31,19 +31,18 @@ class QueryStrategy:
             self.info_matrix = self.compute_entropy(self.ac.h, self.ac.q, self.ac.pairwise_similarities)
         elif acq_fn == "cluster_freq":
             self.info_matrix = self.compute_cluster_informativeness(-self.ac.feedback_freq)
-            self.info_matrix = self.info_matrix * ((self.ac.feedback_freq/np.max(self.ac.feedback_freq)))
+            self.info_matrix = self.info_matrix - self.ac.feedback_freq
         elif acq_fn == "cluster_uncert":
             self.info_matrix = self.compute_cluster_informativeness(-np.abs(self.ac.pairwise_similarities))
-            self.info_matrix = self.info_matrix * (np.abs(self.ac.pairwise_similarities))
+            self.info_matrix = self.info_matrix - np.abs(self.ac.pairwise_similarities)
         elif acq_fn == "cluster_incon":
             self.info_matrix = self.compute_cluster_informativeness(self.ac.violations) + self.ac.alpha * self.compute_cluster_informativeness(-np.abs(self.ac.pairwise_similarities))
-            self.info_matrix = self.info_matrix * (np.abs(self.ac.pairwise_similarities))
+            self.info_matrix = self.info_matrix - np.abs(self.ac.pairwise_similarities)
         else:
             raise ValueError("Invalid acquisition function: {}".format(acq_fn))
 
         return self.select_edges(batch_size)
            
-
     def select_edges(self, batch_size):
         I = self.info_matrix
 
@@ -256,8 +255,12 @@ class QueryStrategy:
 
     def compute_cluster_informativeness(self, info_matrix):
         local_regions = []
-        for i, cluster_i in enumerate(self.ac.clustering):
-            for j, cluster_j in enumerate(self.ac.clustering):
+        N = sum(len(cluster) for cluster in self.ac.clustering)
+        
+        for i in range(len(self.ac.clustering)):
+            for j in range(i + 1):
+                cluster_i = self.ac.clustering[i]
+                cluster_j = self.ac.clustering[j]
                 if i != j:
                     pairwise_indices = list(product(cluster_i, cluster_j))
                     local_regions.append(pairwise_indices)
@@ -267,12 +270,14 @@ class QueryStrategy:
                     pairwise_indices = list(combinations(cluster_i, 2))
                     local_regions.append(pairwise_indices)
 
-        I = np.zeros((self.ac.N, self.ac.N))
+        I = np.zeros((N, N))
         for region in local_regions:
             if len(region) == 0:
                 continue
-            region_sum = (1/len(region)) * sum(info_matrix[i, j] for i, j in region)
-            I[np.array(region)] = region_sum
+            row_indices, col_indices = zip(*region)
+            region_elements = info_matrix[row_indices, col_indices]
+            region_sum = np.sum(region_elements) / len(region)
+            I[row_indices, col_indices] = region_sum
         return I
 
     def compute_maxmin(self):
