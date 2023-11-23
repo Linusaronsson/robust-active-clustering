@@ -1,6 +1,6 @@
 {
     "general_options": {
-        "experiment_name": "info_gain_exp_new",
+        "experiment_name": "info_gain_exp_p",
         "num_repeats": 14,
         "n_workers": 14,
         "local": true,
@@ -17,19 +17,19 @@
         "clustering_alg": "mean_field",
         "mean_field_beta": 50,
         "info_gain_beta": 1,
-        "info_gain_lambda": 50,
+        "info_gain_lambda": 1,
         "info_gain_lambda2": 1,
         "running_avg": true,
-        "num_edges_info_gain": -1,
-        "iterate_mf": false
+        "num_edges_info_gain": 250,
+        "iterate_mf": true
     },
     "sim_init_options": {
         "K_init": 10,
         "sim_init": 0.01,
-        "sim_init_type": "uniform_random"
+        "sim_init_type": "zeros"
     },
     "query_strategy_options": {
-        "acq_fn": "entropy",
+        "acq_fn": "info_gain",
         "eps": 0.3,
         "beta": 1,
         "tau": 7,

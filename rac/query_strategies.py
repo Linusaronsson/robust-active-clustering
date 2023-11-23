@@ -160,7 +160,7 @@ class QueryStrategy:
 
         H_C = np.sum(scipy_entropy(q, axis=1))
         #print("HAASDSAD: ", H_C)
-        n_iter = 10
+        n_iter = 20
 
         lower_triangle_indices = np.tril_indices(self.ac.N, -1)
         inds = np.where(self.ac.feedback_freq[lower_triangle_indices] > 0)[0]
