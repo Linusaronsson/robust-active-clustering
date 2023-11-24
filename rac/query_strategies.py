@@ -164,7 +164,7 @@ class QueryStrategy:
 
         lower_triangle_indices = np.tril_indices(self.ac.N, -1)
         inds = np.where(self.ac.feedback_freq[lower_triangle_indices] > 0)[0]
-        num_edges = self.ac.num_edges_info_gain if self.ac.num_edges_info_gain > 0 else len(inds)
+        num_edges = int(self.ac.num_edges_info_gain*self.ac.N) if self.ac.num_edges_info_gain > 0 else len(inds)
         inds = np.random.choice(inds, num_edges, replace=False)
         a, b = lower_triangle_indices[0][inds], lower_triangle_indices[1][inds]
 
