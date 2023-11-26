@@ -24,7 +24,7 @@
         "iterate_mf": true
     },
     "sim_init_options": {
-        "K_init": 2,
+        "K_init": 20,
         "sim_init": 0.1,
         "sim_init_type": "zeros"
     },
@@ -36,6 +36,6 @@
         "alpha": 1
     },
     "dataset_options": {
-        "dataset": "user_knowledge"
+        "dataset": "20newsgroups"
     }
 }
