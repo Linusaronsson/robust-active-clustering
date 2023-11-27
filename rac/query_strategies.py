@@ -291,7 +291,7 @@ class QueryStrategy:
         return I
 
     def compute_maxmin(self):
-        max_edges = self.ac.N
+        max_edges = int(self.ac.num_maxmin_edges * self.ac.N)
         lower_triangle_indices = np.tril_indices(self.ac.N, -1)
         inds = np.where(np.abs(self.ac.violations[lower_triangle_indices]) > 0)[0]
         inds = np.random.choice(inds, np.min([max_edges, len(inds)]), replace=False)
@@ -321,7 +321,7 @@ class QueryStrategy:
         return self.custom_informativeness
 
     def compute_maxexp(self):
-        max_edges = self.ac.N
+        max_edges = int(self.ac.num_maxmin_edges * self.ac.N)
         lower_triangle_indices = np.tril_indices(self.ac.N, -1)
         inds = np.where(np.abs(self.ac.violations[lower_triangle_indices]) > 0)[0]
         inds = np.random.choice(inds, np.min([max_edges, len(inds)]), replace=False)

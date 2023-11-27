@@ -222,7 +222,7 @@ class ActiveClustering:
             else:
                 early_stopping_count = 0
             
-            if current_rand >= 0.99:
+            if current_rand >= 1:
                 perfect_rand_count += 1
             else:
                 perfect_rand_count = 0
