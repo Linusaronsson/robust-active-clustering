@@ -16,11 +16,11 @@
         "predict_sims": false,
         "clustering_alg": "CC",
         "running_avg": true,
-        "num_maxmin_edges": 10
+        "num_maxmin_edges": 0.5
     },
     "sim_init_options": {
         "K_init": 10,
-        "sim_init": 0.01,
+        "sim_init": 0.1,
         "sim_init_type": "custom"
     },
     "query_strategy_options": {

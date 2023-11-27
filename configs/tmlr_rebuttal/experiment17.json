@@ -16,7 +16,7 @@
         "predict_sims": false,
         "clustering_alg": "CC",
         "running_avg": true,
-        "num_maxmin_edges": 20
+        "num_maxmin_edges": 1
     },
     "sim_init_options": {
         "K_init": 10,
