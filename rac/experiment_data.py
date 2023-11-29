@@ -77,11 +77,14 @@ class ExperimentData:
         self.num_clusters = []
 
         # info about bad triangles
-        #self.num_bad_triangles = []
+        self.num_violations = []
 
         # other useful information
         self.num_queries = []
         self.time = []
+
+        # mnist stuff
+        self.avg_cluster_images = []
 
     def is_equal_no_repeat(self, a2):
         params = set(self.experiment_params + a2.experiment_params)

@@ -16,12 +16,12 @@
         "predict_sims": false,
         "clustering_alg": "CC",
         "running_avg": true,
-        "num_maxmin_edges": 5
+        "num_maxmin_edges": 1
     },
     "sim_init_options": {
         "K_init": 10,
         "sim_init": 0.1,
-        "sim_init_type": "custom"
+        "sim_init_type": "random_clustering"
     },
     "query_strategy_options": {
         "acq_fn": "maxexp",
@@ -31,9 +31,6 @@
         "alpha": 1
     },
     "dataset_options": {
-        "dataset": "synthetic",
-        "n_samples": 500,
-        "n_clusters": 10,
-        "class_balance": null
+        "dataset": "mnist"
     }
 }

@@ -280,8 +280,30 @@ class ActiveClustering:
             clusters.append([nd])
         return clusters
 
+    def calculate_cluster_averages(self, clusters, images):
+        # Initialize sum containers for each cluster
+        cluster_sums = [np.zeros_like(images[0]) for _ in clusters]
+        cluster_counts = [0] * len(clusters)
+
+        # Sum the images in each cluster
+        for cluster_idx, cluster in enumerate(clusters):
+            for image_idx in cluster:
+                cluster_sums[cluster_idx] += images[image_idx]
+                cluster_counts[cluster_idx] += 1
+
+        # Calculate the average for each cluster
+        cluster_averages = [cluster_sum / count for cluster_sum, count in zip(cluster_sums, cluster_counts)]
+        
+        return cluster_averages
+
     def store_experiment_data(self, initial=False):
         time_now = time.time() 
+
+        if self.dataset == "mnist":
+            full_data_mnist = np.load("../datasets/mnist_data/full_mnist_data.npy")
+            avg_cluster_images = self.calculate_cluster_averages(self.clustering, full_data_mnist)
+            self.ac_data.avg_cluster_images.append(avg_cluster_images)
+
         if self.dataset == "synthetic":
             lower_triangle_indices = np.tril_indices(self.N, -1)
             estimated_sims = self.pairwise_similarities[lower_triangle_indices]
@@ -310,10 +332,14 @@ class ActiveClustering:
             self.ac_data.f1_score_clustering.append(f1_score(true_sims, estimated_sims_binary, pos_label=1, average="binary"))
             self.ac_data.f1_score_weighted_clustering.append(f1_score(true_sims, estimated_sims_binary, pos_label=1, average="weighted"))
 
+            count_non_zero_lower = np.count_nonzero(np.tril(self.violations, k=-1))
+            self.ac_data.num_violations.append(count_non_zero_lower)
+
         self.ac_data.rand.append(adjusted_rand_score(self.Y, self.clustering_solution))
         self.ac_data.ami.append(adjusted_mutual_info_score(self.Y, self.clustering_solution))
         self.ac_data.v_measure.append(v_measure_score(self.Y, self.clustering_solution))
         self.ac_data.num_clusters.append(self.num_clusters)
+        
         
         if initial:
             self.ac_data.Y = self.Y
