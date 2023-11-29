@@ -327,6 +327,7 @@ class QueryStrategy:
     def compute_maxexp(self):
         #max_edges = int(self.ac.num_maxmin_edges * self.ac.N)
         lower_triangle_indices = np.tril_indices(self.ac.N, -1)
+        inds = np.where(np.abs(self.ac.violations[lower_triangle_indices]) > 0)[0]
         
         num_violations = len(inds)
         max_edges = int(num_violations * self.ac.num_maxmin_edges)
