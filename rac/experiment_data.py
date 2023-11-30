@@ -445,7 +445,7 @@ class ExperimentReader:
                 #    raise ValueError("incorrect dataset!")
 
                 df_filtered = df_filtered[df_filtered[vary[0]] < 1000]
-                metric_map = {"ami": "AMI", "rand": "ARI"}
+                metric_map = {"ami": "AMI", "rand": "ARI", "time": "Time (s)", "num_violations": "Num. violations"}
 
                 if not cut_axis:
                     ax = sns.lineplot(

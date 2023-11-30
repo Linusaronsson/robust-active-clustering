@@ -287,10 +287,12 @@ class QueryStrategy:
             I[row_indices, col_indices] = region_sum - decrement
             I[col_indices, row_indices] = region_sum - decrement
             decrement += 10000
-
         return I
 
     def compute_maxmin(self):
+        self.custom_informativeness = np.zeros((self.ac.N, self.ac.N), dtype=np.float32) 
+        if self.ac.num_maxmin_edges == 0:
+            return self.custom_informativeness
         #max_edges = int(self.ac.num_maxmin_edges * self.ac.N)
         lower_triangle_indices = np.tril_indices(self.ac.N, -1)
         inds = np.where(np.abs(self.ac.violations[lower_triangle_indices]) > 0)[0]
@@ -300,7 +302,6 @@ class QueryStrategy:
 
         inds = np.random.choice(inds, np.min([max_edges, len(inds)]), replace=False)
         a, b = lower_triangle_indices[0][inds], lower_triangle_indices[1][inds]
-        self.custom_informativeness = np.zeros((self.ac.N, self.ac.N), dtype=np.float32) 
         N = self.ac.N
         for i, j in zip(a, b):
             if self.violates_clustering(i, j):
@@ -326,6 +327,9 @@ class QueryStrategy:
 
     def compute_maxexp(self):
         #max_edges = int(self.ac.num_maxmin_edges * self.ac.N)
+        self.custom_informativeness = np.zeros((self.ac.N, self.ac.N), dtype=np.float32) 
+        if self.ac.num_maxmin_edges == 0:
+            return self.custom_informativeness
         lower_triangle_indices = np.tril_indices(self.ac.N, -1)
         inds = np.where(np.abs(self.ac.violations[lower_triangle_indices]) > 0)[0]
         
@@ -335,7 +339,6 @@ class QueryStrategy:
         inds = np.where(np.abs(self.ac.violations[lower_triangle_indices]) > 0)[0]
         inds = np.random.choice(inds, np.min([max_edges, len(inds)]), replace=False)
         a, b = lower_triangle_indices[0][inds], lower_triangle_indices[1][inds]
-        self.custom_informativeness = np.zeros((self.ac.N, self.ac.N), dtype=np.float32) 
         N = self.ac.N
         for i, j in zip(a, b):
             if self.violates_clustering(i, j):
