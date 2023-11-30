@@ -300,7 +300,7 @@ class ActiveClustering:
         time_now = time.time() 
 
         if self.dataset == "mnist":
-            full_data_mnist = np.load("../datasets/mnist_data/full_mnist_data.npy")
+            full_data_mnist = np.load("datasets/mnist_data/full_mnist_data.npy")
             avg_cluster_images = self.calculate_cluster_averages(self.clustering, full_data_mnist)
             self.ac_data.avg_cluster_images.append(avg_cluster_images)
 
