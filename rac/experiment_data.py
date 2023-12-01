@@ -540,7 +540,8 @@ class ExperimentReader:
                 #ax.set_xticks(range(n_iterations), labels=tick_labels)
                 #plt.xlabel(str(vary))
                 plt.xlabel("Proportion of edges queried")
-                ax.legend(loc='lower right')
+                #ax.legend(loc='lower right')
+                ax.legend(loc='best')
 
                 #legs = ax.get_legend().get_texts()
                 ##legs = [l.get_text() for l in legs]
