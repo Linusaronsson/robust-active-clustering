@@ -381,7 +381,6 @@ class ActiveClustering:
                 self.ac_data.num_neg.append(num_neg)
                 self.ac_data.num_pos_ground_truth.append(num_pos_ground_truth)
                 self.ac_data.num_neg_ground_truth.append(num_neg_ground_truth)
-                self.ac
 
         time_after_init = time.time() - time_now
         print("TIME AFTER INIT: ", time_after_init)
