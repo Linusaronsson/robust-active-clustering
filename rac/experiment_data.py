@@ -82,6 +82,8 @@ class ExperimentData:
         # other useful information
         self.num_queries = []
         self.time = []
+        self.time_select_batch = []
+        self.time_update_clustering = []
 
         # mnist stuff
         self.avg_cluster_images = []
@@ -444,7 +446,7 @@ class ExperimentReader:
                 #else:
                 #    raise ValueError("incorrect dataset!")
 
-                df_filtered = df_filtered[df_filtered[vary[0]] < 1000]
+                df_filtered = df_filtered[df_filtered[vary[0]] < 600]
                 metric_map = {"ami": "AMI", "rand": "ARI", "time": "Time (s)", "num_violations": "Num. violations"}
 
                 if not cut_axis:

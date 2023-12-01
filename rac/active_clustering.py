@@ -158,10 +158,13 @@ class ActiveClustering:
                     self.clustering, num_clusters = self.clustering_from_clustering_solution(self.clustering_solution)
                     self.pairwise_similarities = self.sim_matrix_from_clustering(self.clustering)
             else:
+                start_selct_batch = time.time()
                 self.edges = self.qs.select_batch(
                     acq_fn=self.acq_fn,
                     batch_size=self.query_size
                 )
+                self.time_select_batch = time.time() - start_selct_batch
+                #print("TIME SELECT BATCH: ", self.time_select_batch)
 
                 #if len(objects) == 1:
                     #raise ValueError("Singleton cluster in run_AL_procedure(...)")
@@ -178,9 +181,11 @@ class ActiveClustering:
                 if self.infer_sims:
                     self.transitive_closure()
 
-                time_nn = time.time()
+                time_clustering = time.time()
                 self.update_clustering() 
-                print("time_nn: ", time.time() - time_nn)
+                self.time_clustering = time.time() - time_clustering
+                #print("TIME CLUSTERING: ", self.time_clustering)
+                #print("time_nn: ", time.time() - time_clustering)
 
                 for i in range(self.N):
                     for j in range(i):
@@ -208,6 +213,8 @@ class ActiveClustering:
                 print("time: ", time.time()-self.start)
                 if self.acq_fn not in ["QECC", "COBRAS", "nCOBRAS"]:
                     print("num queries: ", len(self.edges))
+                    print("TIME SELECT BATCH: ", self.time_select_batch)
+                    print("TIME CLUSTERING: ", self.time_clustering)
                 print("num clusters: ", self.num_clusters)
                 #print("-----------------")
                 
@@ -344,7 +351,11 @@ class ActiveClustering:
         if initial:
             self.ac_data.Y = self.Y
             self.ac_data.num_queries.append(0)
+
             self.ac_data.time.append(0.0)
+            self.ac_data.time_select_batch.append(0.0)
+            self.ac_data.time_update_clustering.append(0.0)
+
             num_pos = 0
             num_neg = 0
             num_pos_ground_truth = 0
@@ -358,6 +369,9 @@ class ActiveClustering:
             print("TIME AFTER RUN: ", time_now - self.start)
             self.ac_data.time.append(time_now - self.start)
             if self.acq_fn not in ["QECC", "COBRAS", "nCOBRAS"]:
+                self.ac_data.time_select_batch.append(self.time_select_batch)
+                self.ac_data.time_update_clustering.append(self.time_clustering)
+
                 inds = self.edges[:, 0], self.edges[:, 1]
                 num_pos = np.sum(self.pairwise_similarities[inds] >= 0, axis=0)
                 num_neg = np.sum(self.pairwise_similarities[inds] < 0, axis=0)
@@ -367,6 +381,7 @@ class ActiveClustering:
                 self.ac_data.num_neg.append(num_neg)
                 self.ac_data.num_pos_ground_truth.append(num_pos_ground_truth)
                 self.ac_data.num_neg_ground_truth.append(num_neg_ground_truth)
+                self.ac
 
         time_after_init = time.time() - time_now
         print("TIME AFTER INIT: ", time_after_init)
