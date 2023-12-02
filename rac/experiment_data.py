@@ -452,14 +452,16 @@ class ExperimentReader:
                 metric_map = {"ami": "AMI", "rand": "ARI", "time": "Time (s)", "num_violations": "Num. violations", "time_select_batch": "Time (s)", "time_update_clustering": "Time (s)"}
 
                 df_filtered['num_maxmin_edges'] = df_filtered['num_maxmin_edges'].astype(str)
-
                 if not cut_axis:
                     ax = sns.lineplot(
                         x=vary[0],
                         y="y",
                         hue=df_filtered[hues].apply(tuple, axis=1),
                         #hue=["acq_fn", "num_maxmin_edges"],
-                        #hue_order=["(0.0", "0.005", "0.05", "0.2", "0.6", "1.0"],
+                        #hue_order=[("maxexp", "0.0"), ("maxexp", "0.005"), ("maxexp", "0.05"), ("maxexp", "0.2"), ("maxexp", "0.6"), ("maxexp", "1.0")],
+                        #hue_order=[("maxexp", "0.0"), ("maxexp", "0.005"), ("maxexp", "0.05"), ("maxexp", "0.2"), ("maxexp", "0.6"), ("maxexp", "1.0"), ("QECC", "1.0")],
+                        #hue_order=[("maxmin", "0.0"), ("maxmin", "0.005"), ("maxmin", "0.05"), ("maxmin", "0.2"), ("maxmin", "0.6"), ("maxmin", "1.0"), ("QECC", "1.0")],
+                        hue_order=[("maxmin", "0.0"), ("maxmin", "0.005"), ("maxmin", "0.05"), ("maxmin", "0.2"), ("maxmin", "0.6"), ("maxmin", "1.0")],
                         errorbar=errorbar,
                         err_style=err_style,
                         data=df_filtered,
@@ -589,9 +591,20 @@ class ExperimentReader:
                     #new_legends = []
                     ax.get_legend().set_title(None)
                     for ll in legs:
+                        #print(type(ll).get_text())
+                        #print(ll.get_text())
                         l = ll.get_text()
-                        xi = l
-                        ll.set_text(r"$\xi$ = " + xi)
+                        acqfn = l.split(",")[0]
+                        xi = l.split(",")[1][2:-2]
+                        #print(xi)
+                        if "QECC" in acqfn:
+                            ll.set_text("QECC")
+                        elif "maxexp" in acqfn:
+                            ll.set_text(r"$\xi$ = " + xi)
+                        else:
+                            ll.set_text(r"$\xi$ = " + xi)
+
+
 
                 legend = ax.get_legend()
                 plt.savefig(file_path, bbox_extra_artists=(legend,), dpi=200, bbox_inches='tight')

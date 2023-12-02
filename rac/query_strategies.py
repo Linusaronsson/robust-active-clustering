@@ -297,8 +297,11 @@ class QueryStrategy:
         lower_triangle_indices = np.tril_indices(self.ac.N, -1)
         inds = np.where(np.abs(self.ac.violations[lower_triangle_indices]) > 0)[0]
 
-        num_violations = len(inds)
-        max_edges = int(num_violations * self.ac.num_maxmin_edges)
+        if self.ac.num_maxmin_edges == -1:
+            max_edges = self.ac.N
+        else:
+            num_violations = len(inds)
+            max_edges = int(num_violations * self.ac.num_maxmin_edges)
 
         inds = np.random.choice(inds, np.min([max_edges, len(inds)]), replace=False)
         a, b = lower_triangle_indices[0][inds], lower_triangle_indices[1][inds]
@@ -332,10 +335,13 @@ class QueryStrategy:
             return self.custom_informativeness
         lower_triangle_indices = np.tril_indices(self.ac.N, -1)
         inds = np.where(np.abs(self.ac.violations[lower_triangle_indices]) > 0)[0]
-        
-        num_violations = len(inds)
-        max_edges = int(num_violations * self.ac.num_maxmin_edges)
 
+        if self.ac.num_maxmin_edges == -1:
+            max_edges = self.ac.N
+        else:
+            num_violations = len(inds)
+            max_edges = int(num_violations * self.ac.num_maxmin_edges)
+        
         inds = np.where(np.abs(self.ac.violations[lower_triangle_indices]) > 0)[0]
         inds = np.random.choice(inds, np.min([max_edges, len(inds)]), replace=False)
         a, b = lower_triangle_indices[0][inds], lower_triangle_indices[1][inds]
