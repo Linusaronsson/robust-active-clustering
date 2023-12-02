@@ -306,10 +306,13 @@ class ActiveClustering:
     def store_experiment_data(self, initial=False):
         time_now = time.time() 
 
-        if self.dataset == "mnist":
-            full_data_mnist = np.load("datasets/mnist_data/full_mnist_data.npy")
-            avg_cluster_images = self.calculate_cluster_averages(self.clustering, full_data_mnist)
-            self.ac_data.avg_cluster_images.append(avg_cluster_images)
+        #if self.dataset == "mnist":
+        #    #full_data_mnist = np.load("datasets/mnist_data/full_mnist_data.npy")
+        #    #avg_cluster_images = self.calculate_cluster_averages(self.clustering, full_data_mnist)
+        #    mnist_datt = []
+        #    for cluster in self.clustering:
+        #        mnist_datt.append(self.Y[cluster])
+        #    self.ac_data.avg_cluster_images.append(mnist_datt)
 
         if self.dataset == "synthetic":
             lower_triangle_indices = np.tril_indices(self.N, -1)

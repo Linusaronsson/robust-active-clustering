@@ -457,9 +457,9 @@ class ExperimentReader:
                     ax = sns.lineplot(
                         x=vary[0],
                         y="y",
-                        #hue=df_filtered[hues].apply(tuple, axis=1),
-                        hue="num_maxmin_edges",
-                        hue_order=["0.0", "0.005", "0.05", "0.2", "0.6", "1.0"],
+                        hue=df_filtered[hues].apply(tuple, axis=1),
+                        #hue=["acq_fn", "num_maxmin_edges"],
+                        #hue_order=["(0.0", "0.005", "0.05", "0.2", "0.6", "1.0"],
                         errorbar=errorbar,
                         err_style=err_style,
                         data=df_filtered,
@@ -763,7 +763,7 @@ class ExperimentReader:
                         ll.set_text("Maxexp")
                     if "QECC" in l:
                         #new_legends.append("QECC")
-                        ll.set_text("QECC-heur")
+                        ll.set_text("QECC")
                 #ax.legend(labels=new_legends)
                 legend = ax.get_legend()
                 plt.savefig(file_path, bbox_extra_artists=(legend,), bbox_inches='tight')
