@@ -346,6 +346,8 @@ class ExperimentReader:
         
         # extending
         for metric in self.metrics:
+            if metric in ["time_select_batch", "time_update_clustering", "time", "num_violations"]:
+                continue
             col = "mean_" + metric
             data[col] = data[metric].apply(lambda x: np.mean(x, axis=0)) # axis 1 since we transpose in read_all_data (i.e., shape is (num_iterations, num_repeats))
             data['array_lengths'] = data[col].apply(lambda x: len(x))
@@ -447,15 +449,17 @@ class ExperimentReader:
                 #    raise ValueError("incorrect dataset!")
 
                 df_filtered = df_filtered[df_filtered[vary[0]] < 600]
-                metric_map = {"ami": "AMI", "rand": "ARI", "time": "Time (s)", "num_violations": "Num. violations"}
+                metric_map = {"ami": "AMI", "rand": "ARI", "time": "Time (s)", "num_violations": "Num. violations", "time_select_batch": "Time (s)", "time_update_clustering": "Time (s)"}
+
+                df_filtered['num_maxmin_edges'] = df_filtered['num_maxmin_edges'].astype(str)
 
                 if not cut_axis:
                     ax = sns.lineplot(
                         x=vary[0],
                         y="y",
-                        hue=df_filtered[hues].apply(tuple, axis=1),
-                        #hue="acq_fn",
-                        #hue_order=["maxexp2", "maxmin2", "uncert", "freq", "unif", "nCOBRAS", "COBRAS", "QECC"],
+                        #hue=df_filtered[hues].apply(tuple, axis=1),
+                        hue="num_maxmin_edges",
+                        hue_order=["0.0", "0.005", "0.05", "0.2", "0.6", "1.0"],
                         errorbar=errorbar,
                         err_style=err_style,
                         data=df_filtered,
@@ -576,9 +580,22 @@ class ExperimentReader:
                 #            #new_legends.append("QECC")
                 #            ll.set_text("QECC")
                 #    #ax.legend(labels=new_legends)
+
+
+                legs = ax.get_legend().get_texts()
+                ##legs = [l.get_text() for l in legs]
+                fix_legends = True
+                if fix_legends:
+                    #new_legends = []
+                    ax.get_legend().set_title(None)
+                    for ll in legs:
+                        l = ll.get_text()
+                        xi = l
+                        ll.set_text(r"$\xi$ = " + xi)
+
                 legend = ax.get_legend()
-                plt.savefig(file_path, bbox_extra_artists=(legend,), bbox_inches='tight')
-                plt.savefig(file_path, dpi=200, bbox_inches='tight')
+                plt.savefig(file_path, bbox_extra_artists=(legend,), dpi=200, bbox_inches='tight')
+                #plt.savefig(file_path, dpi=200, bbox_inches='tight')
                 plt.clf()
 
     def generate_AL_curves2(
