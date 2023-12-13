@@ -8,6 +8,7 @@ import numpy as np
 import random 
 import sys
 from scipy.special import softmax
+from scipy import sparse
 
 def max_correlation(my_graph, my_K, my_itr_num):
 
@@ -199,7 +200,7 @@ def max_correlation_dynamic_K(my_graph, my_K, my_itr_num):
             
     return best_Sol, best_Obj
 
-def mean_field_clustering(S, K, betas, max_iter=100, tol=1e-6, noise_level=0.0):
+def mean_field_clustering(S, K, betas, max_iter=100, tol=1e-6, noise_level=0.0, is_sparse=False):
     np.fill_diagonal(S, 0)
     N = S.shape[0]
     predicted_labels, _ = max_correlation_dynamic_K(S, K, 5)
@@ -221,10 +222,13 @@ def mean_field_clustering(S, K, betas, max_iter=100, tol=1e-6, noise_level=0.0):
     #q += noise
     #q = np.maximum(q, 0)  # Ensure q stays non-negative
     #q /= np.sum(q, axis=1, keepdims=True)  # Re-normalize q
+
+    if is_sparse and not sparse.issparse(S):
+        S = sparse.csr_matrix(S)
     
     for beta in betas:
         for iteration in range(max_iter):
-            h = -np.dot(S, q) # diagonal of S zero so S(i, i) term is zero
+            h = -S.dot(q)
             q_new = softmax(beta*-h, axis=1)
             
             # Check for convergence

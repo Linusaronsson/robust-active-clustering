@@ -29,6 +29,8 @@ from rac.experiment_data import ExperimentData
 from rac.correlation_clustering import max_correlation, max_correlation_dynamic_K, mean_field_clustering
 from rac.query_strategies import QueryStrategy
 
+from scipy import sparse
+
 import warnings
 warnings.filterwarnings("once") 
 
@@ -400,6 +402,9 @@ class ActiveClustering:
         self.construct_ground_truth_sim_matrix()
         self.construct_initial_sim_matrix()
 
+        #if self.sparse_sim_matrix:
+            #self.pairwise_similarities = sparse.csr_matrix(self.pairwise_similarities)
+
         if self.init_noise_level > 0 and self.sim_init_type == "custom":
             total_noisy_edges = int(self.n_edges * self.init_noise_level)
             edges, objects = self.qs.select_batch("unif", "pairs", total_noisy_edges)
@@ -572,7 +577,10 @@ class ActiveClustering:
             self.clustering_solution = clusterer.labels_
             self.clustering = self.clustering_from_clustering_solution(self.clustering_solution)[0]
         elif self.clustering_alg == "mean_field":
-            self.clustering_solution, self.q, self.h = mean_field_clustering(self.pairwise_similarities, self.num_clusters, betas=[self.mean_field_beta], max_iter=100, tol=1e-10, noise_level=0.0) 
+            self.clustering_solution, self.q, self.h = mean_field_clustering(
+                self.pairwise_similarities, self.num_clusters, betas=[self.mean_field_beta], max_iter=100, tol=1e-10, noise_level=0.0, is_sparse=self.sparse_sim_matrix
+            )
+            
             self.clustering = self.clustering_from_clustering_solution(self.clustering_solution)[0]
             self.num_clusters = len(self.clustering)
         else:

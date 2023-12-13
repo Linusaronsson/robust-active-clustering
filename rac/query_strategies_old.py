@@ -174,6 +174,92 @@ class QueryStrategy:
                 info_gain_matrix[j, i] = info_gain
                 
         return info_gain_matrix
+        
+    
+    def compute_info_gain(self, h, q, S):
+        if self.ac.clustering_alg != "mean_field":
+            raise ValueError("Info gain is only defined for mean field clustering")
+
+        N, K = q.shape
+        I = np.zeros((N, N))
+
+        beta = self.ac.mean_field_beta
+        #beta = self.ac.info_gain_beta
+        lmbda = self.ac.info_gain_lambda
+        lmbda2 = self.ac.info_gain_lambda2
+        num_edges = self.ac.num_edges_info_gain if self.ac.num_edges_info_gain > 0 else N
+
+        q = scipy_softmax(beta*-h, axis=1)
+        h = -np.dot(S, q)
+
+        H_C = np.sum(scipy_entropy(q, axis=1))
+        #print("HAASDSAD: ", H_C)
+        n_iter = 20
+
+        lower_triangle_indices = np.tril_indices(self.ac.N, -1)
+        inds = np.where(self.ac.feedback_freq[lower_triangle_indices] > 0)[0]
+        num_edges = int(self.ac.num_edges_info_gain*self.ac.N) if self.ac.num_edges_info_gain > 0 else len(inds)
+        inds = np.random.choice(inds, num_edges, replace=False)
+        a, b = lower_triangle_indices[0][inds], lower_triangle_indices[1][inds]
+
+        #print("ASDSD: ", len(a))
+        for x, y in zip(a, b):
+        #for x in range(N):
+            #for y in range(x):
+            S_xy = S[x, y]
+
+            # Compute h for P(C | e = 1)
+            h_e1 = np.copy(h)
+            q_e1 = np.copy(q)
+
+            h_e1[x, :] += q_e1[y, :] * lmbda2 * (S_xy - lmbda)
+            h_e1[y, :] += q_e1[x, :] * lmbda2 * (S_xy - lmbda)
+            q_e1[x, :] = scipy_softmax(beta * -h_e1[x, :])
+            q_e1[y, :] = scipy_softmax(beta * -h_e1[y, :])
+
+            if self.ac.iterate_mf: 
+                for i in range(n_iter):
+                    h_e1 = -np.dot(S, q_e1)
+                    h_e1[x, :] += q_e1[y, :] * lmbda2 * (S_xy - lmbda)
+                    h_e1[y, :] += q_e1[x, :] * lmbda2 * (S_xy - lmbda)
+                    q_e1 = scipy_softmax(beta*-h_e1, axis=1)
+            H_C_e1 = np.sum(scipy_entropy(q_e1, axis=1))
+
+            # Compute h for P(C | e = 1)
+            h_em1 = np.copy(h)
+            q_em1 = np.copy(q)
+
+            h_em1[x, :] += q_em1[y, :] * lmbda2 * (S_xy + lmbda)
+            h_em1[y, :] += q_em1[x, :] * lmbda2 * (S_xy + lmbda)
+            q_em1[x, :] = scipy_softmax(beta * -h_em1[x, :])
+            q_em1[y, :] = scipy_softmax(beta * -h_em1[y, :])
+
+            if self.ac.iterate_mf: 
+                for i in range(n_iter):
+                    h_em1 = -np.dot(S, q_em1)
+                    h_em1[x, :] += q_em1[y, :] * lmbda2 * (S_xy + lmbda)
+                    h_em1[y, :] += q_em1[x, :] * lmbda2 * (S_xy + lmbda)
+                    q_em1 = scipy_softmax(beta*-h_em1, axis=1)
+            H_C_em1 = np.sum(scipy_entropy(q_em1, axis=1))
+
+
+            P_e1 = np.sum(q[x, :] * q[y, :])
+            P_e_minus_1 = 1 - P_e1 
+            
+            H_C_e = P_e1 * H_C_e1 + P_e_minus_1 * H_C_em1
+            #print("H_C_e: ", H_C_e)
+            I[x, y] = H_C - H_C_e
+            I[y, x] = I[x, y]
+            #print("H_C: ", H_C)
+            #print("H_C_e: ", H_C_e)
+            #print("P_e1: ", P_e1)
+            #print("P_e_minus_1: ", P_e_minus_1)
+            #print("H_C_e1: ", H_C_e1)
+            #print("H_C_e_minus_1: ", H_C_e_minus_1)
+            #print("I: ", I[x, y])
+        #self.sort_similarity_matrix(I)
+        #self.sort_similarity_matrix(self.ac.pairwise_similarities)
+        return I
 
 
     def clusters(self):
