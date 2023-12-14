@@ -222,7 +222,8 @@ class QueryStrategy:
         q_prev = np.copy(q_0)
 
         U_size = int(U_size * self.ac.N)
-        G_size = int(G_size * self.ac.N)
+        #G_size = int(G_size * self.ac.N)
+        G_size = U_size
 
         # Initialize U^0 as an empty set
         U_prev = np.array([])
