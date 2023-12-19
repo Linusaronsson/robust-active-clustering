@@ -228,7 +228,7 @@ class QueryStrategy:
         # Initialize U^0 as an empty set
         U_prev = np.array([])
 
-        U_all = np.array([])
+        U_all = np.array([x, y])
         U_t = self.select_objects_info_gain(mode=self.ac.info_gain_object_mode, q=q, U_size=U_size, x=x, y=y)
         for t in range(1, L + 1):
             if t == 1:
