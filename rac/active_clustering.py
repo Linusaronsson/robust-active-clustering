@@ -315,32 +315,32 @@ class ActiveClustering:
             self.ac_data.avg_cluster_images.append(self.clustering)
 
         if self.dataset == "synthetic":
-            lower_triangle_indices = np.tril_indices(self.N, -1)
-            estimated_sims = self.pairwise_similarities[lower_triangle_indices]
-            estimated_sims_binary = estimated_sims.copy()
-            estimated_sims_binary[np.where(estimated_sims >= 0)] = 1
-            estimated_sims_binary[np.where(estimated_sims < 0)] = -1
-            true_sims = self.ground_truth_pairwise_similarities[lower_triangle_indices]
+            #lower_triangle_indices = np.tril_indices(self.N, -1)
+            #estimated_sims = self.pairwise_similarities[lower_triangle_indices]
+            #estimated_sims_binary = estimated_sims.copy()
+            #estimated_sims_binary[np.where(estimated_sims >= 0)] = 1
+            #estimated_sims_binary[np.where(estimated_sims < 0)] = -1
+            #true_sims = self.ground_truth_pairwise_similarities[lower_triangle_indices]
 
-            self.ac_data.accuracy.append(accuracy_score(true_sims, estimated_sims_binary))
-            self.ac_data.precision.append(precision_score(true_sims, estimated_sims_binary, pos_label=1))
-            self.ac_data.recall.append(recall_score(true_sims, estimated_sims_binary, pos_label=1))
-            self.ac_data.precision_neg.append(precision_score(true_sims, estimated_sims_binary, pos_label=-1))
-            self.ac_data.recall_neg.append(recall_score(true_sims, estimated_sims_binary, pos_label=-1))
-            self.ac_data.f1_score.append(f1_score(true_sims, estimated_sims_binary, pos_label=1, average="binary"))
-            self.ac_data.f1_score_weighted.append(f1_score(true_sims, estimated_sims_binary, pos_label=1, average="weighted"))
+            #self.ac_data.accuracy.append(accuracy_score(true_sims, estimated_sims_binary))
+            #self.ac_data.precision.append(precision_score(true_sims, estimated_sims_binary, pos_label=1))
+            #self.ac_data.recall.append(recall_score(true_sims, estimated_sims_binary, pos_label=1))
+            #self.ac_data.precision_neg.append(precision_score(true_sims, estimated_sims_binary, pos_label=-1))
+            #self.ac_data.recall_neg.append(recall_score(true_sims, estimated_sims_binary, pos_label=-1))
+            #self.ac_data.f1_score.append(f1_score(true_sims, estimated_sims_binary, pos_label=1, average="binary"))
+            #self.ac_data.f1_score_weighted.append(f1_score(true_sims, estimated_sims_binary, pos_label=1, average="weighted"))
 
-            estimated_sims_binary = self.sim_matrix_from_clustering(self.clustering)[lower_triangle_indices]
-            estimated_sims_binary[np.where(estimated_sims_binary >= 0)] = 1
-            estimated_sims_binary[np.where(estimated_sims_binary < 0)] = -1
+            #estimated_sims_binary = self.sim_matrix_from_clustering(self.clustering)[lower_triangle_indices]
+            #estimated_sims_binary[np.where(estimated_sims_binary >= 0)] = 1
+            #estimated_sims_binary[np.where(estimated_sims_binary < 0)] = -1
 
-            self.ac_data.accuracy_clustering.append(accuracy_score(true_sims, estimated_sims_binary))
-            self.ac_data.precision_clustering.append(precision_score(true_sims, estimated_sims_binary, pos_label=1))
-            self.ac_data.recall_clustering.append(recall_score(true_sims, estimated_sims_binary, pos_label=1))
-            self.ac_data.precision_neg_clustering.append(precision_score(true_sims, estimated_sims_binary, pos_label=-1))
-            self.ac_data.recall_neg_clustering.append(recall_score(true_sims, estimated_sims_binary, pos_label=-1))
-            self.ac_data.f1_score_clustering.append(f1_score(true_sims, estimated_sims_binary, pos_label=1, average="binary"))
-            self.ac_data.f1_score_weighted_clustering.append(f1_score(true_sims, estimated_sims_binary, pos_label=1, average="weighted"))
+            #self.ac_data.accuracy_clustering.append(accuracy_score(true_sims, estimated_sims_binary))
+            #self.ac_data.precision_clustering.append(precision_score(true_sims, estimated_sims_binary, pos_label=1))
+            #self.ac_data.recall_clustering.append(recall_score(true_sims, estimated_sims_binary, pos_label=1))
+            #self.ac_data.precision_neg_clustering.append(precision_score(true_sims, estimated_sims_binary, pos_label=-1))
+            #self.ac_data.recall_neg_clustering.append(recall_score(true_sims, estimated_sims_binary, pos_label=-1))
+            #self.ac_data.f1_score_clustering.append(f1_score(true_sims, estimated_sims_binary, pos_label=1, average="binary"))
+            #self.ac_data.f1_score_weighted_clustering.append(f1_score(true_sims, estimated_sims_binary, pos_label=1, average="weighted"))
 
             count_non_zero_lower = np.count_nonzero(np.tril(self.violations, k=-1))
             self.ac_data.num_violations.append(count_non_zero_lower)

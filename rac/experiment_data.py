@@ -451,7 +451,7 @@ class ExperimentReader:
                 df_filtered = df_filtered[df_filtered[vary[0]] < 600]
                 metric_map = {"ami": "AMI", "rand": "ARI", "time": "Time (s)", "num_violations": "Num. violations", "time_select_batch": "Time (s)", "time_update_clustering": "Time (s)"}
 
-                df_filtered['num_maxmin_edges'] = df_filtered['num_maxmin_edges'].astype(str)
+                #df_filtered['num_maxmin_edges'] = df_filtered['num_maxmin_edges'].astype(str)
                 if not cut_axis:
                     ax = sns.lineplot(
                         x=vary[0],
@@ -461,7 +461,7 @@ class ExperimentReader:
                         #hue_order=[("maxexp", "0.0"), ("maxexp", "0.005"), ("maxexp", "0.05"), ("maxexp", "0.2"), ("maxexp", "0.6"), ("maxexp", "1.0")],
                         #hue_order=[("maxexp", "0.0"), ("maxexp", "0.005"), ("maxexp", "0.05"), ("maxexp", "0.2"), ("maxexp", "0.6"), ("maxexp", "1.0"), ("QECC", "1.0")],
                         #hue_order=[("maxmin", "0.0"), ("maxmin", "0.005"), ("maxmin", "0.05"), ("maxmin", "0.2"), ("maxmin", "0.6"), ("maxmin", "1.0"), ("QECC", "1.0")],
-                        hue_order=[("maxmin", "0.0"), ("maxmin", "0.005"), ("maxmin", "0.05"), ("maxmin", "0.2"), ("maxmin", "0.6"), ("maxmin", "1.0")],
+                        #hue_order=[("maxmin", "0.0"), ("maxmin", "0.005"), ("maxmin", "0.05"), ("maxmin", "0.2"), ("maxmin", "0.6"), ("maxmin", "1.0")],
                         errorbar=errorbar,
                         err_style=err_style,
                         data=df_filtered,
@@ -586,7 +586,7 @@ class ExperimentReader:
 
                 legs = ax.get_legend().get_texts()
                 ##legs = [l.get_text() for l in legs]
-                fix_legends = True
+                fix_legends = False
                 if fix_legends:
                     #new_legends = []
                     ax.get_legend().set_title(None)
