@@ -258,8 +258,8 @@ class QueryStrategy:
                 q_prev = np.copy(q)
                 U_prev = U_t
 
-        q_final = scipy_softmax(-self.ac.mean_field_beta*h[U_all], axis=1)
-        return q_final, U_all
+        q[U_all] = scipy_softmax(-self.ac.mean_field_beta*h[U_all], axis=1)
+        return q, U_all
 
     def compute_info_gain(self, h, q, S, mode="edge"):
         if self.ac.clustering_alg != "mean_field":
@@ -276,6 +276,16 @@ class QueryStrategy:
         W = self.select_pairs_info_gain(mode=self.ac.info_gain_pair_mode)
         #print("len W: {}".format(len(W)))
         I = np.zeros((self.ac.N, self.ac.N))
+        
+        if mode == "object":
+            self.initial_entropies = scipy_entropy(q, axis=1)
+            self.H_0 = np.sum(self.initial_entropies)
+        elif mode == "edge":
+            pairwise_probs = np.tril(q @ q.T, k=-1)
+            self.initial_entropies = scipy_entropy(np.stack((pairwise_probs, 1 - pairwise_probs), axis=-1), base=np.e, axis=-1)
+            self.H_0 = np.sum(self.initial_entropies)
+        else:
+            raise ValueError("Invalid mode (compute_info_gain): {}".format(mode))
 
         # For each pair (x, y) in W
         for x, y in W:
@@ -292,12 +302,10 @@ class QueryStrategy:
                 P_e1 = np.sum(q[x, :] * q[y, :])
                 P_e_minus_1 = 1 - P_e1 
                 #print("U: {}".format(U))
-                #q_lambda_U = q_lambda[U, :]
-                #q_minus_lambda_U = q_minus_lambda[U, :]
-                q_lambda_U = q_lambda
-                q_minus_lambda_U = q_minus_lambda
-                H_C_1 = np.sum(scipy_entropy(q_lambda_U, axis=1))
-                H_C_2 = np.sum(scipy_entropy(q_minus_lambda_U, axis=1))
+                q_lambda_U = q_lambda[U, :]
+                q_minus_lambda_U = q_minus_lambda[U, :]
+                H_C_1 = self.H_0 - np.sum(self.initial_entropies[U]) + np.sum(scipy_entropy(q_lambda_U, axis=1))
+                H_C_2 = self.H_0 - np.sum(self.initial_entropies[U]) + np.sum(scipy_entropy(q_minus_lambda_U, axis=1))
                 H_C_e = P_e1 * H_C_1 + P_e_minus_1 * H_C_2
                 #H_0 = np.sum(scipy_entropy(q, axis=1))
                 #print("P_e1: {}".format(P_e1))
@@ -313,6 +321,7 @@ class QueryStrategy:
             elif mode == "edge":
                 I[x, y] = self.compute_info_gain_edge(q, q_lambda, q_minus_lambda, U, x, y)
                 I[y, x] = I[x, y]
+                pass
             else:
                 raise ValueError("Invalid mode (compute_info_gain): {}".format(mode))
                 
@@ -320,19 +329,20 @@ class QueryStrategy:
 
     def compute_info_gain_edge(self, q, q_lambda, q_minus_lambda, U, x, y):
         #U = np.array(list(U))
-
         p1 = np.sum(q[x, :] * q[y, :])
         p2 = 1 - p1
 
-        lower_triangular = np.tril(np.einsum('ik,jk->ij', q_lambda[U, :], q_lambda[U, :]), k=-1)
-        pair_probabilities = lower_triangular[lower_triangular != 0]
-        pair_entropies_vectorized = scipy_entropy(np.vstack((pair_probabilities, 1 - pair_probabilities)), base=np.e, axis=0)
-        H1 = np.sum(pair_entropies_vectorized)
+        q_updated = q_lambda[U, :]
+        pairwise_probs_updated = q_updated @ q_updated.T
+        updated_entropies = scipy_entropy(np.stack((pairwise_probs_updated, 1 - pairwise_probs_updated), axis=-1), base=np.e, axis=-1)
+        old_entropies = self.initial_entropies[np.ix_(U, U)]
+        H1 = self.H_0 - np.sum(np.tril(old_entropies, k=-1)) + np.sum(np.tril(updated_entropies, k=-1)) 
 
-        lower_triangular = np.tril(np.einsum('ik,jk->ij', q_minus_lambda[U, :], q_minus_lambda[U, :]), k=-1)
-        pair_probabilities = lower_triangular[lower_triangular != 0]
-        pair_entropies_vectorized = scipy_entropy(np.vstack((pair_probabilities, 1 - pair_probabilities)), base=np.e, axis=0)
-        H2 = np.sum(pair_entropies_vectorized)
+        q_updated = q_minus_lambda[U, :]
+        pairwise_probs_updated = q_updated @ q_updated.T
+        updated_entropies = scipy_entropy(np.stack((pairwise_probs_updated, 1 - pairwise_probs_updated), axis=-1), base=np.e, axis=-1)
+        old_entropies = self.initial_entropies[np.ix_(U, U)]
+        H2 = self.H_0 - np.sum(np.tril(old_entropies, k=-1)) + np.sum(np.tril(updated_entropies, k=-1)) 
 
         I_U = p1 * H1 + p2 * H2
 

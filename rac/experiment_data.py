@@ -448,7 +448,7 @@ class ExperimentReader:
                 #else:
                 #    raise ValueError("incorrect dataset!")
 
-                df_filtered = df_filtered[df_filtered[vary[0]] < 600]
+                df_filtered = df_filtered[df_filtered[vary[0]] < 400]
                 metric_map = {"ami": "AMI", "rand": "ARI", "time": "Time (s)", "num_violations": "Num. violations", "time_select_batch": "Time (s)", "time_update_clustering": "Time (s)"}
 
                 #df_filtered['num_maxmin_edges'] = df_filtered['num_maxmin_edges'].astype(str)
