@@ -226,17 +226,26 @@ def mean_field_clustering(S, K, betas, max_iter=100, tol=1e-6, noise_level=0.0, 
     if is_sparse and not sparse.issparse(S):
         S = sparse.csr_matrix(S)
     
+    #max_iter = 1000
+    #betas = [beta]
+    #tol = 1e-10
+    #old_diff = np.inf
     for beta in betas:
         for iteration in range(max_iter):
             h = -S.dot(q)
+            #h = -np.dot(S, q)
             q_new = softmax(beta*-h, axis=1)
+            #print("--------")
             
             # Check for convergence
             diff = np.linalg.norm(q_new - q)
+            #print("iteration: ", iteration, " diff: ", diff, " beta: ", beta)
+            #if np.abs(diff - old_diff) < tol:
             if diff < tol:
                 print(f'Converged after {iteration} iterations')
                 break
-            
+
+            #old_diff = diff
             q = q_new
 
             # Inject noise

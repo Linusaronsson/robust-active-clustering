@@ -232,8 +232,8 @@ class QueryStrategy:
         U_t = self.select_objects_info_gain(mode=self.ac.info_gain_object_mode, q=q, U_size=U_size, x=x, y=y)
         for t in range(1, L + 1):
             if t == 1:
-                h[x, :] = h_0[x, :] + S[x, y] * q_0[y, :] - lmbda * q_0[y, :]
-                h[y, :] = h_0[y, :] + S[y, x] * q_0[x, :] - lmbda * q_0[x, :]
+                h[x, :] += S[x, y] * q_0[y, :] - lmbda * q_0[y, :]
+                h[y, :] += S[y, x] * q_0[x, :] - lmbda * q_0[x, :]
             else:
                 if self.ac.info_gain_object_mode == "uniform_varying":
                     U_t = np.setdiff1d(np.random.choice(self.ac.N, U_size, replace=False), [x, y])
@@ -258,7 +258,7 @@ class QueryStrategy:
                 q_prev = np.copy(q)
                 U_prev = U_t
 
-        q_final = scipy_softmax(-self.ac.mean_field_beta*h, axis=1)
+        q_final = scipy_softmax(-self.ac.mean_field_beta*h[U_all], axis=1)
         return q_final, U_all
 
     def compute_info_gain(self, h, q, S, mode="edge"):
@@ -268,37 +268,45 @@ class QueryStrategy:
         if self.ac.sparse_sim_matrix and not sparse.issparse(S):
             S = sparse.csr_matrix(S)
 
-        q = scipy_softmax(-self.ac.mean_field_beta*h, axis=1)
-        h = -S.dot(q)
+        #q = scipy_softmax(-self.ac.mean_field_beta*h, axis=1)
+        #h = -S.dot(q)
 
         #H_C = np.sum(scipy_entropy(q, axis=1))
         #H_e = np.sum(scipy_entropy(q, axis=1))
         W = self.select_pairs_info_gain(mode=self.ac.info_gain_pair_mode)
+        #print("len W: {}".format(len(W)))
         I = np.zeros((self.ac.N, self.ac.N))
 
         # For each pair (x, y) in W
         for x, y in W:
+            #print("x, y: {}, {}".format(x, y))
             q_lambda, U_pos = self.update_mean_fields(
-                q, h, S, x, y, self.ac.info_gain_lambda, L=self.ac.mf_iterations, U_size=self.ac.U_size, G_size=self.ac.G_size
+                q, h, S, x, y, lmbda=self.ac.info_gain_lambda, L=self.ac.mf_iterations, U_size=self.ac.U_size, G_size=self.ac.G_size
             )
             q_minus_lambda, U_neg = self.update_mean_fields(
-                q, h, S, x, y, -self.ac.info_gain_lambda, L=self.ac.mf_iterations, U_size=self.ac.U_size, G_size=self.ac.G_size
+                q, h, S, x, y, lmbda=-self.ac.info_gain_lambda, L=self.ac.mf_iterations, U_size=self.ac.U_size, G_size=self.ac.G_size
             )
             U = np.union1d(U_pos, U_neg)
 
             if mode == "object":
                 P_e1 = np.sum(q[x, :] * q[y, :])
                 P_e_minus_1 = 1 - P_e1 
-                q_lambda_U = q_lambda[U, :]
-                q_minus_lambda_U = q_minus_lambda[U, :]
+                #print("U: {}".format(U))
+                #q_lambda_U = q_lambda[U, :]
+                #q_minus_lambda_U = q_minus_lambda[U, :]
+                q_lambda_U = q_lambda
+                q_minus_lambda_U = q_minus_lambda
                 H_C_1 = np.sum(scipy_entropy(q_lambda_U, axis=1))
                 H_C_2 = np.sum(scipy_entropy(q_minus_lambda_U, axis=1))
                 H_C_e = P_e1 * H_C_1 + P_e_minus_1 * H_C_2
+                #H_0 = np.sum(scipy_entropy(q, axis=1))
                 #print("P_e1: {}".format(P_e1))
                 #print("P_e_minus_1: {}".format(P_e_minus_1))
                 #print("H_C_1: {}".format(H_C_1))
                 #print("H_C_2: {}".format(H_C_2))
                 #print("H_C_e: {}".format(H_C_e))
+                #print("H_0: {}".format(H_0))
+                #print("H_0 - H_C_e: {}".format(H_0 - H_C_e))
                 #print("@@@@@@@@")
                 I[x, y] = H_C_e
                 I[y, x] = I[x, y]
@@ -311,9 +319,9 @@ class QueryStrategy:
         return -I
 
     def compute_info_gain_edge(self, q, q_lambda, q_minus_lambda, U, x, y):
-        U = np.array(list(U))
+        #U = np.array(list(U))
 
-        p1 = np.sum(q[x] * q[y])
+        p1 = np.sum(q[x, :] * q[y, :])
         p2 = 1 - p1
 
         lower_triangular = np.tril(np.einsum('ik,jk->ij', q_lambda[U, :], q_lambda[U, :]), k=-1)
