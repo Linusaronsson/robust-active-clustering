@@ -22,7 +22,7 @@
         "sim_init_type": "zeros"
     },
     "query_strategy_options": {
-        "acq_fn": "info_gain_edge",
+        "acq_fn": "info_gain_object",
         "eps": 0.3,
         "beta": 1,
         "tau": 7,
@@ -31,11 +31,11 @@
         "mean_field_beta": 50,
         "info_gain_lambda": 50,
         "running_avg": true,
-        "num_edges_info_gain": -1,
+        "num_edges_info_gain": 5,
         "U_size": 1,
         "G_size": 0,
         "info_gain_object_mode": "uniform",
-        "info_gain_pair_mode": "uniform",
+        "info_gain_pair_mode": "entropy",
         "mf_iterations": 10
     },
     "dataset_options": {

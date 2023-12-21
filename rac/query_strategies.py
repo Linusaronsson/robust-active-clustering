@@ -223,7 +223,7 @@ class QueryStrategy:
 
         U_size = int(U_size * self.ac.N)
         #G_size = int(G_size * self.ac.N)
-        G_size = U_size
+        #G_size = U_size
 
         # Initialize U^0 as an empty set
         U_prev = np.array([])
@@ -237,14 +237,16 @@ class QueryStrategy:
             else:
                 if self.ac.info_gain_object_mode == "uniform_varying":
                     U_t = np.setdiff1d(np.random.choice(self.ac.N, U_size, replace=False), [x, y])
-                G = np.setdiff1d(np.random.choice(U_prev, np.minimum(G_size, len(U_prev)), replace=False), [x, y]).astype(int)
+                #G = np.setdiff1d(np.random.choice(U_prev, np.minimum(G_size, len(U_prev)), replace=False), [x, y]).astype(int)
+                G = U_prev
 
                 U_all = np.union1d(U_all, U_t).astype(int)
-                q[G] = scipy_softmax(-self.ac.mean_field_beta*h[G], axis=1)
-                q[[x, y]] = scipy_softmax(-self.ac.mean_field_beta*h[[x, y]], axis=1)
+
+                G_xy = np.append(G, [x, y]).astype(int)
+                q[G_xy] = scipy_softmax(-self.ac.mean_field_beta*h[G_xy], axis=1)
+                #q[[x, y]] = scipy_softmax(-self.ac.mean_field_beta*h[[x, y]], axis=1)
 
                 # update for objects in U_t
-                G_xy = np.append(G, [x, y])
                 delta_q_xy = (q_prev[G_xy, :] - q[G_xy, :])
                 h[U_t, :] += S[U_t][:, G_xy].dot(delta_q_xy)
 
@@ -345,6 +347,14 @@ class QueryStrategy:
         H2 = self.H_0 - np.sum(np.tril(old_entropies, k=-1)) + np.sum(np.tril(updated_entropies, k=-1)) 
 
         I_U = p1 * H1 + p2 * H2
+        #print("p1: {}".format(p1))
+        #print("p2: {}".format(p2))
+        #print("H1: {}".format(H1))
+        #print("H2: {}".format(H2))
+        #print("I_U: {}".format(I_U))
+        #print("H_0: {}".format(self.H_0))
+        #print("H_0-I_U: {}".format(self.H_0 - I_U))
+        #print("@@@@@@@@@@@@@@@")
 
         return I_U
 
