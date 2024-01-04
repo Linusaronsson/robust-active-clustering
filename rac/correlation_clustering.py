@@ -200,7 +200,9 @@ def max_correlation_dynamic_K(my_graph, my_K, my_itr_num):
             
     return best_Sol, best_Obj
 
-def mean_field_clustering(S, K, betas, max_iter=100, tol=1e-6, noise_level=0.0, is_sparse=False):
+from sklearn.metrics import adjusted_rand_score
+
+def mean_field_clustering(S, K, betas, true_labels, max_iter=100, tol=1e-6, noise_level=0.0, is_sparse=False):
     np.fill_diagonal(S, 0)
     N = S.shape[0]
     predicted_labels, _ = max_correlation_dynamic_K(S, K, 5)
@@ -214,6 +216,7 @@ def mean_field_clustering(S, K, betas, max_iter=100, tol=1e-6, noise_level=0.0, 
         for i in range(N):
             h[i, k] = S[i, cluster_indices].sum()
     
+    #beta = 50
     q = softmax(beta*h, axis=1)
     #print("INITIAL Q: ", q)
 
@@ -227,7 +230,7 @@ def mean_field_clustering(S, K, betas, max_iter=100, tol=1e-6, noise_level=0.0, 
         S = sparse.csr_matrix(S)
     
     #max_iter = 1000
-    #betas = [beta]
+    #betas = [1]
     #tol = 1e-10
     #old_diff = np.inf
     for beta in betas:
@@ -237,9 +240,13 @@ def mean_field_clustering(S, K, betas, max_iter=100, tol=1e-6, noise_level=0.0, 
             q_new = softmax(beta*-h, axis=1)
             #print("--------")
             
+            #current_solution = np.argmax(q_new, axis=1)
+            #current_ari = adjusted_rand_score(current_solution, predicted_labels)
+            #current_ari2 = adjusted_rand_score(current_solution, true_labels)
+            #current_ari3 = adjusted_rand_score(predicted_labels, true_labels)
             # Check for convergence
             diff = np.linalg.norm(q_new - q)
-            #print("iteration: ", iteration, " diff: ", diff, " beta: ", beta)
+            #print("iteration: ", iteration, " diff: ", diff, " beta: ", beta, " ari: ", current_ari, "mf: ", current_ari2, "local search: ", current_ari3)
             #if np.abs(diff - old_diff) < tol:
             if diff < tol:
                 print(f'Converged after {iteration} iterations')

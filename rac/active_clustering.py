@@ -578,7 +578,7 @@ class ActiveClustering:
             self.clustering = self.clustering_from_clustering_solution(self.clustering_solution)[0]
         elif self.clustering_alg == "mean_field":
             self.clustering_solution, self.q, self.h = mean_field_clustering(
-                self.pairwise_similarities, self.num_clusters, betas=[self.mean_field_beta], max_iter=100, tol=1e-10, noise_level=0.0, is_sparse=self.sparse_sim_matrix
+                self.pairwise_similarities, self.num_clusters, betas=[self.mean_field_beta], true_labels=self.Y, max_iter=100, tol=1e-10, noise_level=0.0, is_sparse=self.sparse_sim_matrix
             )
             
             self.clustering = self.clustering_from_clustering_solution(self.clustering_solution)[0]
