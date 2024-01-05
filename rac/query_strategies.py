@@ -61,6 +61,7 @@ class QueryStrategy:
 
         if self.ac.acq_fn in ["info_gain_object", "info_gain_edge", "entropy"]:
             num_pairs = len(informative_scores)
+            informative_scores[informative_scores < 0] = 0
             informative_scores = np.log(informative_scores)
             informative_scores = informative_scores + scipy.stats.gumbel_r.rvs(loc=0, scale=1/self.ac.power_beta, size=num_pairs, random_state=None)
             #print("asd@@@@@@@@")
