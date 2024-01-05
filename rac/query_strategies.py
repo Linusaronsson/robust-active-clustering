@@ -173,8 +173,8 @@ class QueryStrategy:
                 break
 
     def compute_entropy(self, S, h=None, q=None):
-        if self.ac.clustering_alg != "mean_field":
-            raise ValueError("Entropy only defined for mean field clustering")
+        #if self.ac.clustering_alg != "mean_field":
+            #raise ValueError("Entropy only defined for mean field clustering")
 
         if h is None:
             clust_sol, q, h = mean_field_clustering(
@@ -299,8 +299,8 @@ class QueryStrategy:
         return q, U_all
 
     def compute_info_gain(self, S, mode="edge", h=None, q=None):
-        if self.ac.clustering_alg != "mean_field":
-            raise ValueError("Info gain is only defined for mean field clustering")
+        #if self.ac.clustering_alg != "mean_field":
+            #raise ValueError("Info gain is only defined for mean field clustering")
 
 
         if h is None:
