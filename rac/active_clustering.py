@@ -399,6 +399,8 @@ class ActiveClustering:
                 (self.in_same_cluster(o1, o2) and self.pairwise_similarities[o1, o2] < 0)
 
     def initialize_ac_procedure(self):
+        self.feedback_freq = np.zeros((self.N, self.N)) + 1
+
         self.construct_ground_truth_sim_matrix()
         self.construct_initial_sim_matrix()
 
@@ -414,7 +416,6 @@ class ActiveClustering:
                 self.pairwise_similarities[ind2, ind1] *= -1
 
         self.init_persistent_noise()
-        self.feedback_freq = np.zeros((self.N, self.N)) + 1
         self.violations = np.zeros((self.N, self.N))
         for i in range(self.N):
             for j in range(i):
@@ -493,7 +494,7 @@ class ActiveClustering:
         if self.sim_init_type == "zeros":
             self.pairwise_similarities = np.zeros((self.N, self.N))
             self.num_clusters = 1
-            self.update_clustering() 
+            #self.update_clustering() 
         elif self.sim_init_type == "uniform_random":
             self.pairwise_similarities = np.random.uniform(
                 low=-self.sim_init,
@@ -501,7 +502,7 @@ class ActiveClustering:
                 size=(self.N, self.N)
             )
             self.num_clusters = 1
-            self.update_clustering() 
+            #self.update_clustering() 
         elif self.sim_init_type == "uniform_random2":
             self.pairwise_similarities = np.random.uniform(
                 low=-self.sim_init,
@@ -511,28 +512,29 @@ class ActiveClustering:
             self.pairwise_similarities[np.where(self.pairwise_similarities >= 0)] = self.sim_init
             self.pairwise_similarities[np.where(self.pairwise_similarities < 0)] = -self.sim_init
             self.num_clusters = 1
-            self.update_clustering() 
+            #self.update_clustering() 
         elif self.sim_init_type == "uniform_random_clustering":
-            self.pairwise_similarities = np.random.uniform(
-                low=-self.sim_init,
-                high=self.sim_init, 
-                size=(self.N, self.N)
-            )
-            self.num_clusters = 1
-            self.update_clustering() 
-            self.pairwise_similarities = self.sim_matrix_from_clustering(self.clustering)
+            raise ValueError("not usable")
+            #self.pairwise_similarities = np.random.uniform(
+            #    low=-self.sim_init,
+            #    high=self.sim_init, 
+            #    size=(self.N, self.N)
+            #)
+            #self.num_clusters = 1
+            #self.update_clustering() 
+            #self.pairwise_similarities = self.sim_matrix_from_clustering(self.clustering)
         elif self.sim_init_type == "inverse_dist":
             D = distance.cdist(self.X, self.X, 'euclidean')
             sim_matrix = np.max(D) - D + np.min(D)
             self.pairwise_similarities = self.sim_init * (2 * sim_matrix - np.max(sim_matrix) -  np.min(sim_matrix)) / (np.max(sim_matrix) - np.min(sim_matrix))
             np.fill_diagonal(self.pairwise_similarities, 0.0)
             self.num_clusters = 1
-            self.update_clustering() 
+            #self.update_clustering() 
         elif self.sim_init_type == "custom":
             self.clustering_solution = np.array(self.initial_clustering_solution)
             self.clustering, self.num_clusters = self.clustering_from_clustering_solution(self.clustering_solution)
             self.pairwise_similarities = self.sim_matrix_from_clustering(self.clustering)
-            self.update_clustering() 
+            #self.update_clustering() 
         elif self.sim_init_type == "random_clustering":
             objects = np.arange(self.N)
             np.random.shuffle(objects)
@@ -551,10 +553,21 @@ class ActiveClustering:
                 i += 1
             self.clustering, self.num_clusters = self.clustering_from_clustering_solution(self.clustering_solution)
             self.pairwise_similarities = self.sim_matrix_from_clustering(self.clustering)
-            self.update_clustering() 
         else:
             raise ValueError("Invalid sim init type in construct_initial_sim_matrix(...)")
         np.fill_diagonal(self.pairwise_similarities, 0.0)
+
+        if self.warm_start > 0:
+            total_flips = int(self.n_edges * self.warm_start)
+            pairs = self.qs.select_batch("unif", total_flips)
+
+            for ind1, ind2 in pairs:
+                self.pairwise_similarities[ind1, ind2] = self.ground_truth_pairwise_similarities_noisy[ind1, ind2]
+                self.pairwise_similarities[ind2, ind1] = self.ground_truth_pairwise_similarities_noisy[ind1, ind2]
+                self.feedback_freq[ind1, ind2] += 1
+                self.feedback_freq[ind2, ind1] += 1
+
+        self.update_clustering() 
 
     # Input: list of objects to update clustering w.r.t. (subset of all objects)
     def update_clustering(self):

@@ -188,7 +188,7 @@ class QueryStrategy:
         if self.ac.sparse_sim_matrix and not sparse.issparse(S):
             S = sparse.csr_matrix(S)
 
-        beta = self.ac.mean_field_beta
+        #beta = self.ac.mean_field_beta
         #beta = self.ac.info_gain_beta
         #lmbda = self.ac.info_gain_lambda
 
@@ -234,7 +234,7 @@ class QueryStrategy:
         else:
             raise ValueError("Invalid mode (objects): {}".format(mode))
 
-    def select_pairs_info_gain(self, mode):
+    def select_pairs_info_gain(self, mode, q, h):
         if mode == "uniform":
             lower_triangle_indices = np.tril_indices(self.ac.N, -1)
             inds = np.where(self.ac.feedback_freq[lower_triangle_indices] > 0)[0]
@@ -242,7 +242,7 @@ class QueryStrategy:
             inds = np.random.choice(inds, num_edges, replace=False)
             return np.stack((lower_triangle_indices[0][inds], lower_triangle_indices[1][inds]), axis=-1)
         elif mode == "entropy":
-            self.info_matrix = self.compute_entropy(self.ac.h, self.ac.q, self.ac.pairwise_similarities)
+            self.info_matrix = self.compute_entropy(S=self.ac.pairwise_similarities, h=h, q=q)
             lower_triangle_indices = np.tril_indices(self.ac.N, -1)
             inds = np.where(self.ac.feedback_freq[lower_triangle_indices] > 0)[0]
             num_edges = int(self.ac.num_edges_info_gain*self.ac.N) if self.ac.num_edges_info_gain > 0 else len(inds)
@@ -318,7 +318,7 @@ class QueryStrategy:
 
         #H_C = np.sum(scipy_entropy(q, axis=1))
         #H_e = np.sum(scipy_entropy(q, axis=1))
-        W = self.select_pairs_info_gain(mode=self.ac.info_gain_pair_mode)
+        W = self.select_pairs_info_gain(mode=self.ac.info_gain_pair_mode, q=q, h=h)
         #print("len W: {}".format(len(W)))
         I = np.zeros((self.ac.N, self.ac.N))
         
