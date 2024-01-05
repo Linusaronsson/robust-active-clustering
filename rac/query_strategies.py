@@ -3,7 +3,7 @@ from itertools import combinations, product
 from scipy.special import softmax as scipy_softmax
 from scipy.stats import entropy as scipy_entropy
 from scipy import sparse
-
+from rac.correlation_clustering import mean_field_clustering
 
 class QueryStrategy:
     def __init__(self, ac):
@@ -28,11 +28,11 @@ class QueryStrategy:
             else:
                 self.info_matrix = self.compute_maxexp()
         elif acq_fn == "info_gain_object":
-            self.info_matrix = self.compute_info_gain(self.ac.h, self.ac.q, self.ac.pairwise_similarities, mode="object")
+            self.info_matrix = self.compute_info_gain(S=self.ac.pairwise_similarities, mode="object")
         elif acq_fn == "info_gain_edge":
-            self.info_matrix = self.compute_info_gain(self.ac.h, self.ac.q, self.ac.pairwise_similarities, mode="edge")
+            self.info_matrix = self.compute_info_gain(S=self.ac.pairwise_similarities, mode="edge")
         elif acq_fn == "entropy":
-            self.info_matrix = self.compute_entropy(self.ac.h, self.ac.q, self.ac.pairwise_similarities)
+            self.info_matrix = self.compute_entropy(S=self.ac.pairwise_similarities)
         elif acq_fn == "cluster_freq":
             self.info_matrix = self.compute_cluster_informativeness(-self.ac.feedback_freq)
             self.info_matrix = self.info_matrix - self.ac.feedback_freq
@@ -149,6 +149,13 @@ class QueryStrategy:
         if self.ac.clustering_alg != "mean_field":
             raise ValueError("Entropy only defined for mean field clustering")
 
+        if h is None:
+            clust_sol, q, h = mean_field_clustering(
+                S, self.ac.num_clusters, betas=[self.ac.mean_field_beta],
+                true_labels=self.Y, max_iter=100, tol=1e-10, noise_level=0.0, 
+                is_sparse=self.ac.sparse_sim_matrix, predicted_labels=self.ac.clustering_solution
+            )
+
         I = np.zeros((self.ac.N, self.ac.N))
 
         if self.ac.sparse_sim_matrix and not sparse.issparse(S):
@@ -158,8 +165,8 @@ class QueryStrategy:
         #beta = self.ac.info_gain_beta
         #lmbda = self.ac.info_gain_lambda
 
-        q = scipy_softmax(beta*-h, axis=1)
-        h = -S.dot(q)
+        #q = scipy_softmax(beta*-h, axis=1)
+        #h = -S.dot(q)
 
         P_e1_full = np.einsum('ik,jk->ij', q, q)
         P_e1 = P_e1_full[np.tril_indices(self.ac.N, k=-1)]
@@ -221,7 +228,7 @@ class QueryStrategy:
         q = np.copy(q_0)
         q_prev = np.copy(q_0)
 
-        U_size = int(U_size * self.ac.N)
+        #U_size = int(U_size * self.ac.N)
         #G_size = int(G_size * self.ac.N)
         #G_size = U_size
 
@@ -229,33 +236,34 @@ class QueryStrategy:
         U_prev = np.array([])
 
         U_all = np.array([x, y])
-        U_t = self.select_objects_info_gain(mode=self.ac.info_gain_object_mode, q=q, U_size=U_size, x=x, y=y)
+        #U_t = self.select_objects_info_gain(mode=self.ac.info_gain_object_mode, q=q, U_size=U_size, x=x, y=y)
+        U_t = np.setdiff1d(np.arange(self.ac.N), [x, y])
+        delta_q = np.zeros(h.shape)
         for t in range(1, L + 1):
             if t == 1:
                 h[x, :] += S[x, y] * q_0[y, :] - lmbda * q_0[y, :]
                 h[y, :] += S[y, x] * q_0[x, :] - lmbda * q_0[x, :]
             else:
-                if self.ac.info_gain_object_mode == "uniform_varying":
-                    U_t = np.setdiff1d(np.random.choice(self.ac.N, U_size, replace=False), [x, y])
+                #if self.ac.info_gain_object_mode == "uniform_varying":
+                    #U_t = np.setdiff1d(np.random.choice(self.ac.N, U_size, replace=False), [x, y])
                 #G = np.setdiff1d(np.random.choice(U_prev, np.minimum(G_size, len(U_prev)), replace=False), [x, y]).astype(int)
                 G = U_prev
+                G = G.astype(int)
 
                 U_all = np.union1d(U_all, U_t).astype(int)
 
                 G_xy = np.append(G, [x, y]).astype(int)
                 q[G_xy] = scipy_softmax(-self.ac.mean_field_beta*h[G_xy], axis=1)
-                #q[[x, y]] = scipy_softmax(-self.ac.mean_field_beta*h[[x, y]], axis=1)
-
-                # update for objects in U_t
-                delta_q_xy = (q_prev[G_xy, :] - q[G_xy, :])
-                h[U_t, :] += S[U_t][:, G_xy].dot(delta_q_xy)
+                delta_q[G_xy, :] = (q_prev[G_xy, :] - q[G_xy, :])
 
                 # update for x and y
-                delta_q = delta_q_xy[:-2, :] # remove last 2 elements (i.e. x and y)
-                h[x, :] += S[x, G].dot(delta_q).reshape(h[x, :].shape)
-                h[y, :] += S[y, G].dot(delta_q).reshape(h[y, :].shape)
+                h[x, :] += S[x, G].dot(delta_q[G]).reshape(h[x, :].shape)
+                h[y, :] += S[y, G].dot(delta_q[G]).reshape(h[y, :].shape)
                 h[x, :] += lmbda * (q_prev[y, :] - q[y, :])
                 h[y, :] += lmbda * (q_prev[x, :] - q[x, :])
+
+                # update for objects in U_t
+                h[U_t, :] += S[U_t][:, G_xy].dot(delta_q[G_xy])
 
                 q_prev = np.copy(q)
                 U_prev = U_t
@@ -263,12 +271,19 @@ class QueryStrategy:
         q[U_all] = scipy_softmax(-self.ac.mean_field_beta*h[U_all], axis=1)
         return q, U_all
 
-    def compute_info_gain(self, h, q, S, mode="edge"):
+    def compute_info_gain(self, S, mode="edge", h=None, q=None):
         if self.ac.clustering_alg != "mean_field":
             raise ValueError("Info gain is only defined for mean field clustering")
 
         if self.ac.sparse_sim_matrix and not sparse.issparse(S):
             S = sparse.csr_matrix(S)
+
+        if h is None:
+            clust_sol, q, h = mean_field_clustering(
+                S, self.ac.num_clusters, betas=[self.ac.mean_field_beta],
+                true_labels=self.Y, max_iter=100, tol=1e-10, noise_level=0.0, 
+                is_sparse=self.ac.sparse_sim_matrix, predicted_labels=self.ac.clustering_solution
+            )
 
         #q = scipy_softmax(-self.ac.mean_field_beta*h, axis=1)
         #h = -S.dot(q)
