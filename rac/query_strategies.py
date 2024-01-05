@@ -145,7 +145,7 @@ class QueryStrategy:
             if kk > 10:
                 break
 
-    def compute_entropy(self, h, q, S):
+    def compute_entropy(self, S, h=None, q=None):
         if self.ac.clustering_alg != "mean_field":
             raise ValueError("Entropy only defined for mean field clustering")
 
