@@ -4,6 +4,7 @@ from scipy.special import softmax as scipy_softmax
 from scipy.stats import entropy as scipy_entropy
 from scipy import sparse
 from rac.correlation_clustering import mean_field_clustering
+import scipy
 
 class QueryStrategy:
     def __init__(self, ac):
@@ -57,19 +58,44 @@ class QueryStrategy:
         
         # Get the informativeness scores for the lower triangular part
         informative_scores = I[tri_rows, tri_cols]
+
+        if self.ac.acq_fn in ["info_gain_object", "info_gain_edge", "entropy"]:
+            num_pairs = len(informative_scores)
+            informative_scores = np.log(informative_scores)
+            informative_scores = informative_scores + scipy.stats.gumbel_r.rvs(loc=0, scale=1/self.ac.power_beta, size=num_pairs, random_state=None)
+            #print("asd@@@@@@@@")
+        else:
+            # Add a small amount of random noise to break ties
+            # The noise level should be smaller than the smallest difference between any two non-equal elements
+            #print("HERE: ", len(informative_scores))
+            #noise_level = np.abs(np.min(np.diff(np.unique(informative_scores)))) / 10
+            unique_diffs = np.diff(np.unique(informative_scores))
+            if unique_diffs.size > 0:
+                noise_level = np.abs(np.min(unique_diffs)) / 10
+            else:
+                # Set a default small noise level if the array has no unique differences
+                noise_level = 1e-10
+            informative_scores = informative_scores + np.random.uniform(-noise_level, noise_level, informative_scores.shape)
+
+            # Use argpartition to partition the array around the kth largest value
+            # Then, use argsort to sort only the top k elements (more efficient than sorting the entire array)
+            #top_B_indices = indices[np.argsort(-noisy_array[indices])]
+
+
         
-        # Generate a random array to break ties randomly
-        random_tiebreaker = np.random.rand(informative_scores.shape[0])
+        ## Generate a random array to break ties randomly
+        #random_tiebreaker = np.random.rand(informative_scores.shape[0])
         
-        # Use lexsort to sort by informativeness first, then by the random tiebreaker
-        sorted_indices = np.lexsort((random_tiebreaker, -informative_scores))
+        ## Use lexsort to sort by informativeness first, then by the random tiebreaker
+        #sorted_indices = np.lexsort((random_tiebreaker, -informative_scores))
         
-        # Select the top B indices
-        top_indices = sorted_indices[:batch_size]
+        ## Select the top B indices
+        #top_indices = sorted_indices[:batch_size]
+        top_B_indices = np.argpartition(informative_scores, -batch_size)[-batch_size:]
         
         # Get the corresponding row and column indices
-        top_row_indices = tri_rows[top_indices]
-        top_col_indices = tri_cols[top_indices]
+        top_row_indices = tri_rows[top_B_indices]
+        top_col_indices = tri_cols[top_B_indices]
         
         # Stack the row and column indices to get the desired output format
         top_pairs = np.stack((top_row_indices, top_col_indices), axis=-1)
@@ -152,7 +178,7 @@ class QueryStrategy:
         if h is None:
             clust_sol, q, h = mean_field_clustering(
                 S, self.ac.num_clusters, betas=[self.ac.mean_field_beta],
-                true_labels=self.Y, max_iter=100, tol=1e-10, noise_level=0.0, 
+                true_labels=None, max_iter=100, tol=1e-10, noise_level=0.0, 
                 is_sparse=self.ac.sparse_sim_matrix, predicted_labels=self.ac.clustering_solution
             )
 
@@ -275,16 +301,17 @@ class QueryStrategy:
         if self.ac.clustering_alg != "mean_field":
             raise ValueError("Info gain is only defined for mean field clustering")
 
-        if self.ac.sparse_sim_matrix and not sparse.issparse(S):
-            S = sparse.csr_matrix(S)
 
         if h is None:
             clust_sol, q, h = mean_field_clustering(
                 S, self.ac.num_clusters, betas=[self.ac.mean_field_beta],
-                true_labels=self.Y, max_iter=100, tol=1e-10, noise_level=0.0, 
+                true_labels=None, max_iter=100, tol=1e-10, noise_level=0.0, 
                 is_sparse=self.ac.sparse_sim_matrix, predicted_labels=self.ac.clustering_solution
             )
 
+        if self.ac.sparse_sim_matrix and not sparse.issparse(S):
+            S = sparse.csr_matrix(S)
+            
         #q = scipy_softmax(-self.ac.mean_field_beta*h, axis=1)
         #h = -S.dot(q)
 
