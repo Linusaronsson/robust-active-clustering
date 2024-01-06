@@ -73,7 +73,7 @@ class QueryStrategy:
             # Add a small amount of random noise to break ties
             # The noise level should be smaller than the smallest difference between any two non-equal elements
             #print("HERE: ", len(informative_scores))
-            noise_level = np.abs(np.min(np.diff(np.unique(informative_scores)))) / 10
+            #noise_level = np.abs(np.min(np.diff(np.unique(informative_scores)))) / 10
             unique_diffs = np.diff(np.unique(informative_scores))
             if unique_diffs.size > 0:
                 noise_level = np.abs(np.min(unique_diffs)) / 10
