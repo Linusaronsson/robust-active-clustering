@@ -8,7 +8,7 @@
     },
     "experiment_options": {
         "seed": 33,
-        "num_feedback": 0.001,
+        "num_feedback": 0.01,
         "noise_level": 0.4,
         "persistent_noise_level": 0.0,
         "save_matrix_data": false,
@@ -23,22 +23,22 @@
         "sim_init_type": "zeros"
     },
     "query_strategy_options": {
-        "acq_fn": "entropy",
+        "acq_fn": "freq",
         "eps": 0.3,
         "beta": 1,
         "tau": 7,
         "alpha": 1,
-        "power_beta": 5,
+        "power_beta": 1,
         "sparse_sim_matrix": true,
-        "mean_field_beta": 50,
+        "mean_field_beta": 10,
         "info_gain_lambda": 10,
         "running_avg": true,
-        "num_edges_info_gain": -1,
-        "U_size": 1,
+        "num_edges_info_gain": 5,
+        "U_size": 0.5,
         "G_size": 1,
-        "info_gain_object_mode": "uniform",
+        "info_gain_object_mode": "entropy",
         "info_gain_pair_mode": "entropy",
-        "mf_iterations": 1
+        "mf_iterations": 10
     },
     "dataset_options": {
         "dataset": "synthetic",

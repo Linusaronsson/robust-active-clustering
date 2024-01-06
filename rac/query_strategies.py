@@ -12,6 +12,7 @@ class QueryStrategy:
         self.info_matrix = None
 
     def select_batch(self, acq_fn, batch_size):
+        use_grumble = False
         if acq_fn == "unif":
             self.info_matrix = np.random.rand(self.ac.N, self.ac.N)
         elif acq_fn == "freq":
@@ -29,11 +30,13 @@ class QueryStrategy:
             else:
                 self.info_matrix = self.compute_maxexp()
         elif acq_fn == "info_gain_object":
+            use_grumble = True
             self.info_matrix = self.compute_info_gain(S=self.ac.pairwise_similarities, mode="object")
         elif acq_fn == "info_gain_edge":
             self.info_matrix = self.compute_info_gain(S=self.ac.pairwise_similarities, mode="edge")
         elif acq_fn == "entropy":
             self.info_matrix = self.compute_entropy(S=self.ac.pairwise_similarities)
+            use_grumble = True
         elif acq_fn == "cluster_freq":
             self.info_matrix = self.compute_cluster_informativeness(-self.ac.feedback_freq)
             self.info_matrix = self.info_matrix - self.ac.feedback_freq
@@ -46,9 +49,9 @@ class QueryStrategy:
         else:
             raise ValueError("Invalid acquisition function: {}".format(acq_fn))
 
-        return self.select_edges(batch_size, self.info_matrix)
+        return self.select_edges(batch_size, self.info_matrix, use_grumbel=use_grumble)
            
-    def select_edges(self, batch_size, I):
+    def select_edges(self, batch_size, I, use_grumbel=False):
 
         inds_max_query = np.where(self.ac.feedback_freq > self.ac.tau)
         I[inds_max_query] = -np.inf
@@ -59,9 +62,10 @@ class QueryStrategy:
         # Get the informativeness scores for the lower triangular part
         informative_scores = I[tri_rows, tri_cols]
 
-        if self.ac.acq_fn in ["info_gain_object", "info_gain_edge", "entropy"]:
+        if use_grumbel:
             num_pairs = len(informative_scores)
-            informative_scores[informative_scores < 0] = 0
+            #informative_scores[informative_scores < 0] = 0
+            informative_scores += np.abs(np.min(informative_scores))
             informative_scores = np.log(informative_scores)
             informative_scores = informative_scores + scipy.stats.gumbel_r.rvs(loc=0, scale=1/self.ac.power_beta, size=num_pairs, random_state=None)
             #print("asd@@@@@@@@")
@@ -246,11 +250,11 @@ class QueryStrategy:
             lower_triangle_indices = np.tril_indices(self.ac.N, -1)
             inds = np.where(self.ac.feedback_freq[lower_triangle_indices] > 0)[0]
             num_edges = int(self.ac.num_edges_info_gain*self.ac.N) if self.ac.num_edges_info_gain > 0 else len(inds)
-            return self.select_edges(num_edges, self.info_matrix)
+            return self.select_edges(num_edges, self.info_matrix, use_grumbel=True)
         else:
             raise ValueError("Invalid mode: {}".format(mode))
 
-    def update_mean_fields(self, q_0, h_0, S, x, y, lmbda, L, U_size, G_size):
+    def update_mean_fields(self, q_0, h_0, S, x, y, lmbda, L, U_size, G_size, U_initial):
         h = np.copy(h_0)
         q = np.copy(q_0)
         q_prev = np.copy(q_0)
@@ -264,7 +268,8 @@ class QueryStrategy:
 
         U_all = np.array([x, y])
         #U_t = self.select_objects_info_gain(mode=self.ac.info_gain_object_mode, q=q, U_size=U_size, x=x, y=y)
-        U_t = np.setdiff1d(np.arange(self.ac.N), [x, y])
+        U_t = np.setdiff1d(U_initial, [x, y])
+        #U_t = np.setdiff1d(np.arange(self.ac.N), [x, y])
         delta_q = np.zeros(h.shape)
         for t in range(1, L + 1):
             if t == 1:
@@ -332,14 +337,16 @@ class QueryStrategy:
         else:
             raise ValueError("Invalid mode (compute_info_gain): {}".format(mode))
 
+        U_size = int(self.ac.U_size * self.ac.N)
         # For each pair (x, y) in W
         for x, y in W:
             #print("x, y: {}, {}".format(x, y))
+            U_initial = self.select_objects_info_gain(mode=self.ac.info_gain_object_mode, q=q, U_size=U_size, x=x, y=y)
             q_lambda, U_pos = self.update_mean_fields(
-                q, h, S, x, y, lmbda=self.ac.info_gain_lambda, L=self.ac.mf_iterations, U_size=self.ac.U_size, G_size=self.ac.G_size
+                q, h, S, x, y, lmbda=self.ac.info_gain_lambda, L=self.ac.mf_iterations, U_size=self.ac.U_size, G_size=self.ac.G_size, U_initial=U_initial
             )
             q_minus_lambda, U_neg = self.update_mean_fields(
-                q, h, S, x, y, lmbda=-self.ac.info_gain_lambda, L=self.ac.mf_iterations, U_size=self.ac.U_size, G_size=self.ac.G_size
+                q, h, S, x, y, lmbda=-self.ac.info_gain_lambda, L=self.ac.mf_iterations, U_size=self.ac.U_size, G_size=self.ac.G_size, U_initial=U_initial
             )
             U = np.union1d(U_pos, U_neg)
 
@@ -351,6 +358,8 @@ class QueryStrategy:
                 q_minus_lambda_U = q_minus_lambda[U, :]
                 H_C_1 = self.H_0 - np.sum(self.initial_entropies[U]) + np.sum(scipy_entropy(q_lambda_U, axis=1))
                 H_C_2 = self.H_0 - np.sum(self.initial_entropies[U]) + np.sum(scipy_entropy(q_minus_lambda_U, axis=1))
+                #H_C_1 = np.sum(scipy_entropy(q_lambda, axis=1))
+                #H_C_2 = np.sum(scipy_entropy(q_minus_lambda, axis=1))
                 H_C_e = P_e1 * H_C_1 + P_e_minus_1 * H_C_2
                 #H_0 = np.sum(scipy_entropy(q, axis=1))
                 #print("P_e1: {}".format(P_e1))
@@ -358,8 +367,8 @@ class QueryStrategy:
                 #print("H_C_1: {}".format(H_C_1))
                 #print("H_C_2: {}".format(H_C_2))
                 #print("H_C_e: {}".format(H_C_e))
-                #print("H_0: {}".format(H_0))
-                #print("H_0 - H_C_e: {}".format(H_0 - H_C_e))
+                #print("H_0: {}".format(self.H_0))
+                #print("H_0 - H_C_e: {}".format(self.H_0 - H_C_e))
                 #print("@@@@@@@@")
                 I[x, y] = H_C_e
                 I[y, x] = I[x, y]
