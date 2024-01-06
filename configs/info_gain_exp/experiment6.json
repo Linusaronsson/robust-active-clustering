@@ -14,7 +14,7 @@
         "save_matrix_data": false,
         "infer_sims": false,
         "predict_sims": false,
-        "clustering_alg": "CC",
+        "clustering_alg": "mean_field",
         "warm_start": 0
     },
     "sim_init_options": {
@@ -30,7 +30,7 @@
         "alpha": 1,
         "power_beta": 1,
         "sparse_sim_matrix": true,
-        "mean_field_beta": 20,
+        "mean_field_beta": 10,
         "info_gain_lambda": 20,
         "running_avg": true,
         "num_edges_info_gain": -1,
