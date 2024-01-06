@@ -30,7 +30,7 @@ class QueryStrategy:
             else:
                 self.info_matrix = self.compute_maxexp()
         elif acq_fn == "info_gain_object":
-            #use_grumble = True
+            use_grumble = True
             self.info_matrix = self.compute_info_gain(S=self.ac.pairwise_similarities, mode="object")
         elif acq_fn == "info_gain_edge":
             self.info_matrix = self.compute_info_gain(S=self.ac.pairwise_similarities, mode="edge")
@@ -52,200 +52,46 @@ class QueryStrategy:
         return self.select_edges(batch_size, self.info_matrix, use_grumbel=use_grumble)
            
     def select_edges(self, batch_size, I, use_grumbel=False):
-
         inds_max_query = np.where(self.ac.feedback_freq > self.ac.tau)
         I[inds_max_query] = -np.inf
-
-        # Get the lower triangular indices, excluding the diagonal
         tri_rows, tri_cols = np.tril_indices(n=I.shape[0], k=-1)
-        
-        # Get the informativeness scores for the lower triangular part
         informative_scores = I[tri_rows, tri_cols]
-
         if use_grumbel:
             num_pairs = len(informative_scores)
-            #informative_scores[informative_scores < 0] = 0
             informative_scores += np.abs(np.min(informative_scores))
             informative_scores = np.log(informative_scores)
             informative_scores = informative_scores + scipy.stats.gumbel_r.rvs(loc=0, scale=1/self.ac.power_beta, size=num_pairs, random_state=None)
-            #print("asd@@@@@@@@")
         else:
-            # Add a small amount of random noise to break ties
-            # The noise level should be smaller than the smallest difference between any two non-equal elements
-            #print("HERE: ", len(informative_scores))
-            #noise_level = np.abs(np.min(np.diff(np.unique(informative_scores)))) / 10
             unique_diffs = np.diff(np.unique(informative_scores))
             if unique_diffs.size > 0:
                 noise_level = np.abs(np.min(unique_diffs)) / 10
             else:
-                # Set a default small noise level if the array has no unique differences
                 noise_level = 1e-10
             informative_scores = informative_scores + np.random.uniform(-noise_level, noise_level, informative_scores.shape)
 
-            # Use argpartition to partition the array around the kth largest value
-            # Then, use argsort to sort only the top k elements (more efficient than sorting the entire array)
-            #top_B_indices = indices[np.argsort(-noisy_array[indices])]
-            # Generate a random array to break ties randomly
-            #random_tiebreaker = np.random.rand(informative_scores.shape[0])
-            
-            # Use lexsort to sort by informativeness first, then by the random tiebreaker
-            #sorted_indices = np.lexsort((random_tiebreaker, -informative_scores))
-            
-            # Select the top B indices
-            #top_B_indices = sorted_indices[:batch_size]
-
-
-        
-        ## Generate a random array to break ties randomly
-        #random_tiebreaker = np.random.rand(informative_scores.shape[0])
-        
-        ## Use lexsort to sort by informativeness first, then by the random tiebreaker
-        #sorted_indices = np.lexsort((random_tiebreaker, -informative_scores))
-        
-        ## Select the top B indices
-        #top_indices = sorted_indices[:batch_size]
-
         top_B_indices = np.argpartition(informative_scores, -batch_size)[-batch_size:]
-        
-        # Get the corresponding row and column indices
         top_row_indices = tri_rows[top_B_indices]
         top_col_indices = tri_cols[top_B_indices]
-        
-        # Stack the row and column indices to get the desired output format
         top_pairs = np.stack((top_row_indices, top_col_indices), axis=-1)
-        
-        # Return the top pairs in descending order of their informativeness
         return top_pairs
         
-    def select_edges2(self, I, B):
-        # Ensure the input is a numpy array
-        I = self.info_matrix
-
-        # Add small noise to the entire matrix to handle ties randomly
-        noise = np.random.uniform(0, 1e-12, I.shape)
-        I_noise = I + noise
-        
-        # Get the indices of the lower triangular part of the matrix, excluding the diagonal
-        lower_tri_indices = np.tril_indices_from(I, k=-1)
-        
-        # Flatten the informative matrix and take only the lower triangular part, excluding the diagonal
-        flat_I_noise = I_noise[lower_tri_indices]
-        
-        # Use argpartition to find the indices of the top B informative pairs
-        partitioned_indices = np.argpartition(-flat_I_noise, B-1)[:B]
-        
-        # Sort only the top B elements to get them in exact order
-        top_indices_sorted = np.argsort(-flat_I_noise[partitioned_indices])
-
-        # Get the sorted indices for the top pairs
-        top_pairs_indices = (
-            lower_tri_indices[0][partitioned_indices][top_indices_sorted],
-            lower_tri_indices[1][partitioned_indices][top_indices_sorted]
-        )
-        
-        # Form the array of pairs to return
-        top_pairs = np.vstack(top_pairs_indices).T
-        
-        return top_pairs
-
-    def sort_similarity_matrix(self, S):
-        # Get the size of the matrix
-        N = S.shape[0]
-
-        # Create a list of tuples (value, (i, j))
-        value_index_pairs = [(S[i, j], (i, j)) for i in range(N) for j in range(i)]
-
-        # Sort the list in descending order of the values
-        sorted_pairs = sorted(value_index_pairs, key=lambda x: x[0], reverse=True)
-
-        # Print the sorted pairs and their values
-        kk = 0
-        for value, (i, j) in sorted_pairs:
-            if i == j:
-                continue
-            #if value == 0:
-                #continue
-            print(f"Pair: ({i}, {j}), Value: {value}")
-            kk += 1
-            if kk > 10:
-                break
-
-        # Sort the list in descending order of the values
-        sorted_pairs = sorted(value_index_pairs, key=lambda x: x[0], reverse=False)
-        
-        print("---------------------")
-
-        # Print the sorted pairs and their values
-        kk = 0
-        for value, (i, j) in sorted_pairs:
-            if i == j:
-                continue
-            print(f"Pair: ({i}, {j}), Value: {value}")
-            kk += 1
-            if kk > 10:
-                break
-
     def compute_entropy(self, S, h=None, q=None):
-        #if self.ac.clustering_alg != "mean_field":
-            #raise ValueError("Entropy only defined for mean field clustering")
-
+        if self.ac.sparse_sim_matrix and not sparse.issparse(S):
+            S = sparse.csr_matrix(S)
         if h is None:
             clust_sol, q, h = mean_field_clustering(
-                S, self.ac.num_clusters, betas=[self.ac.mean_field_beta],
-                true_labels=None, max_iter=100, tol=1e-10, noise_level=0.0, 
-                is_sparse=self.ac.sparse_sim_matrix, predicted_labels=self.ac.clustering_solution
+                S=S, K=self.ac.num_clusters, betas=[self.ac.mean_field_beta], max_iter=100, tol=1e-10, 
+                predicted_labels=self.ac.clustering_solution
             )
 
         I = np.zeros((self.ac.N, self.ac.N))
-
-        if self.ac.sparse_sim_matrix and not sparse.issparse(S):
-            S = sparse.csr_matrix(S)
-
-        #beta = self.ac.mean_field_beta
-        #beta = self.ac.info_gain_beta
-        #lmbda = self.ac.info_gain_lambda
-
-        #q = scipy_softmax(beta*-h, axis=1)
-        #h = -S.dot(q)
-
         P_e1_full = np.einsum('ik,jk->ij', q, q)
         P_e1 = P_e1_full[np.tril_indices(self.ac.N, k=-1)]
         P_e2 = 1 - P_e1
         entropies = scipy_entropy(np.vstack((P_e1, P_e2)), base=np.e, axis=0)
         I[np.tril_indices(self.ac.N, k=-1)] = entropies
         I += I.T
-
         return I
-
-    def select_objects_info_gain(self, q, U_size, x, y, mode="uniform"):
-        if mode == "uniform":
-            return np.setdiff1d(np.random.choice(self.ac.N, U_size, replace=False), [x, y])
-        elif mode == "entropy":
-            # Exclude x and y from the computation
-            indices = np.arange(self.ac.N) != x
-            indices &= np.arange(self.ac.N) != y
-
-            # Compute P(e_ix | Q) and P(e_iy | Q) for all i (except x and y)
-            P_e_ix_Q = np.sum(q[indices, :] * q[x, :], axis=1)
-            P_e_iy_Q = np.sum(q[indices, :] * q[y, :], axis=1)
-
-            # Compute entropy of P(e_ix | Q) and P(e_iy | Q)
-            entropy_e_ix_Q = scipy_entropy(np.stack((P_e_ix_Q, 1 - P_e_ix_Q), axis=1))
-            entropy_e_iy_Q = scipy_entropy(np.stack((P_e_iy_Q, 1 - P_e_iy_Q), axis=1))
-
-            # Compute the average entropy
-            avg_entropy = (entropy_e_ix_Q + entropy_e_iy_Q) / 2
-
-            # Rank objects based on average entropy and select top U_size objects
-            ranked_indices = np.argsort(avg_entropy)[::-1][:U_size]
-
-            # Extract the top U_size indices, excluding x and y
-            top_U_indices = np.arange(self.ac.N)[indices][ranked_indices]
-            return np.setdiff1d(top_U_indices, [x, y])
-        elif mode == "uniform_varying":
-            return np.array([])
-        else:
-            raise ValueError("Invalid mode (objects): {}".format(mode))
 
     def select_pairs_info_gain(self, mode, q, h):
         if mode == "uniform":
@@ -263,90 +109,38 @@ class QueryStrategy:
         else:
             raise ValueError("Invalid mode: {}".format(mode))
 
-    def update_mean_fields(self, q_0, h_0, S, x, y, lmbda, L, U_size, G_size, U_initial):
-        h = np.copy(h_0)
-        q = np.copy(q_0)
-        q_prev = np.copy(q_0)
-
-        #U_size = int(U_size * self.ac.N)
-        #G_size = int(G_size * self.ac.N)
-        #G_size = U_size
-
-        # Initialize U^0 as an empty set
-        U_prev = np.array([])
-
-        U_all = np.array([x, y])
-        #U_t = self.select_objects_info_gain(mode=self.ac.info_gain_object_mode, q=q, U_size=U_size, x=x, y=y)
-        U_t = np.setdiff1d(U_initial, [x, y])
-        #U_t = np.setdiff1d(np.arange(self.ac.N), [x, y])
-        delta_q = np.zeros(h.shape)
-        for t in range(1, L + 1):
-            if t == 1:
-                h[x, :] += S[x, y] * q_0[y, :] - lmbda * q_0[y, :]
-                h[y, :] += S[y, x] * q_0[x, :] - lmbda * q_0[x, :]
-            else:
-                #if self.ac.info_gain_object_mode == "uniform_varying":
-                    #U_t = np.setdiff1d(np.random.choice(self.ac.N, U_size, replace=False), [x, y])
-                #G = np.setdiff1d(np.random.choice(U_prev, np.minimum(G_size, len(U_prev)), replace=False), [x, y]).astype(int)
-                G = U_prev
-                G = G.astype(int)
-
-                U_all = np.union1d(U_all, U_t).astype(int)
-
-                G_xy = np.append(G, [x, y]).astype(int)
-                q[G_xy] = scipy_softmax(-self.ac.mean_field_beta*h[G_xy], axis=1)
-                delta_q[G_xy, :] = (q_prev[G_xy, :] - q[G_xy, :])
-
-                # update for x and y
-                h[x, :] += S[x, G].dot(delta_q[G]).reshape(h[x, :].shape)
-                h[y, :] += S[y, G].dot(delta_q[G]).reshape(h[y, :].shape)
-                h[x, :] += lmbda * (q_prev[y, :] - q[y, :])
-                h[y, :] += lmbda * (q_prev[x, :] - q[x, :])
-
-                # update for objects in U_t
-                h[U_t, :] += S[U_t][:, G_xy].dot(delta_q[G_xy])
-
-                q_prev = np.copy(q)
-                U_prev = U_t
-
-        q[U_all] = scipy_softmax(-self.ac.mean_field_beta*h[U_all], axis=1)
-        return q, U_all
-
-    def compute_info_gain(self, S, mode="edge", h=None, q=None):
-        S = np.copy(S)
+    def compute_info_gain(self, S, mode="object", h=None, q=None):
         if self.ac.sparse_sim_matrix and not sparse.issparse(S):
             S = sparse.csr_matrix(S)
 
         if h is None:
             clust_sol, q, h = mean_field_clustering(
-                S, self.ac.num_clusters, betas=[self.ac.mean_field_beta],
-                true_labels=None, max_iter=100, tol=1e-10, noise_level=0.0, 
-                is_sparse=self.ac.sparse_sim_matrix, predicted_labels=self.ac.clustering_solution
+                S=S, K=self.ac.num_clusters, betas=[self.ac.mean_field_beta], max_iter=100, tol=1e-10, 
+                predicted_labels=self.ac.clustering_solution
             )
-
             
         W = self.select_pairs_info_gain(mode=self.ac.info_gain_pair_mode, q=q, h=h)
         I = np.zeros((self.ac.N, self.ac.N))
+        H_0 = np.sum(scipy_entropy(q, axis=1))
+        lmbda = self.ac.info_gain_lambda
         
         # For each pair (x, y) in W
         for x, y in W:
-            old_val = S[x, y]
-            S[x, y] = self.ac.info_gain_lambda
-            S[y, x] = self.ac.info_gain_lambda
-            _, q_lambda, _ = mean_field_clustering(
-                S, self.ac.num_clusters, betas=[self.ac.mean_field_beta],
-                true_labels=None, max_iter=self.ac.mf_iterations, tol=1e-10, noise_level=0.0, 
-                is_sparse=self.ac.sparse_sim_matrix, q=q, h=h
-            )
-            S[x, y] = -self.ac.info_gain_lambda
-            S[y, x] = -self.ac.info_gain_lambda
-            _, q_minus_lambda, _ = mean_field_clustering(
-                S, self.ac.num_clusters, betas=[self.ac.mean_field_beta],
-                true_labels=None, max_iter=self.ac.mf_iterations, tol=1e-10, noise_level=0.0, 
-                is_sparse=self.ac.sparse_sim_matrix, q=q, h=h
-            )
-            S[x, y] = old_val
-            S[y, x] = old_val
+            h_plus = np.copy(h)
+            q_plus = np.copy(q)
+            h_minus = np.copy(h)
+            q_minus = np.copy(q)
+            S_xy = S[x, y]
+            for ii in range(self.ac.mf_iterations):
+                h_plus = -S.dot(q_plus)
+                h_plus[x, :] += q_plus[y, :] * (S_xy - lmbda)
+                h_plus[y, :] += q_plus[x, :] * (S_xy - lmbda)
+                q_plus = scipy_softmax(-self.ac.mean_field_beta*h_plus, axis=1)
+
+                h_minus = -S.dot(q_minus)
+                h_minus[x, :] += q_minus[y, :] * (S_xy + lmbda)
+                h_minus[y, :] += q_minus[x, :] * (S_xy + lmbda)
+                q_minus = scipy_softmax(-self.ac.mean_field_beta*h_minus, axis=1)
 
             if mode == "object":
                 P_e1 = np.sum(q[x, :] * q[y, :])
@@ -356,8 +150,8 @@ class QueryStrategy:
                 #q_minus_lambda_U = q_minus_lambda[U, :]
                 #H_C_1 = self.H_0 - np.sum(self.initial_entropies[U]) + np.sum(scipy_entropy(q_lambda_U, axis=1))
                 #H_C_2 = self.H_0 - np.sum(self.initial_entropies[U]) + np.sum(scipy_entropy(q_minus_lambda_U, axis=1))
-                H_C_1 = np.sum(scipy_entropy(q_lambda, axis=1))
-                H_C_2 = np.sum(scipy_entropy(q_minus_lambda, axis=1))
+                H_C_1 = np.sum(scipy_entropy(q_plus, axis=1))
+                H_C_2 = np.sum(scipy_entropy(q_minus, axis=1))
                 H_C_e = P_e1 * H_C_1 + P_e_minus_1 * H_C_2
                 #H_0 = np.sum(scipy_entropy(q, axis=1))
                 #print("P_e1: {}".format(P_e1))
@@ -368,7 +162,7 @@ class QueryStrategy:
                 #print("H_0: {}".format(self.H_0))
                 #print("H_0 - H_C_e: {}".format(self.H_0 - H_C_e))
                 #print("@@@@@@@@")
-                I[x, y] = -H_C_e
+                I[x, y] = H_0-H_C_e
                 I[y, x] = I[x, y]
             elif mode == "edge":
                 #I[x, y] = self.compute_info_gain_edge(q, q_lambda, q_minus_lambda, U, x, y)
@@ -376,7 +170,6 @@ class QueryStrategy:
                 pass
             else:
                 raise ValueError("Invalid mode (compute_info_gain): {}".format(mode))
-                
         return I
 
     def compute_info_gain_edge(self, q, q_lambda, q_minus_lambda, U, x, y):

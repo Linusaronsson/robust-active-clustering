@@ -202,7 +202,7 @@ def max_correlation_dynamic_K(my_graph, my_K, my_itr_num):
 
 from sklearn.metrics import adjusted_rand_score
 
-def mean_field_clustering(S, K, betas, true_labels, max_iter=100, tol=1e-6, noise_level=0.0, is_sparse=False, predicted_labels=None, q=None, h=None):
+def mean_field_clustering(S, K, betas, true_labels=None, max_iter=100, tol=1e-6, noise_level=0.0, predicted_labels=None, q=None, h=None):
     #np.fill_diagonal(S, 0)
     N = S.shape[0]
 
@@ -221,6 +221,9 @@ def mean_field_clustering(S, K, betas, true_labels, max_iter=100, tol=1e-6, nois
         
         #beta = 50
         q = softmax(beta*h, axis=1)
+    else:
+        q = np.copy(q)
+        h = np.copy(h)
 
     #print("INITIAL Q: ", q)
 
@@ -230,8 +233,8 @@ def mean_field_clustering(S, K, betas, true_labels, max_iter=100, tol=1e-6, nois
     #q = np.maximum(q, 0)  # Ensure q stays non-negative
     #q /= np.sum(q, axis=1, keepdims=True)  # Re-normalize q
 
-    if is_sparse and not sparse.issparse(S):
-        S = sparse.csr_matrix(S)
+    #if is_sparse and not sparse.issparse(S):
+        #S = sparse.csr_matrix(S)
     
     #max_iter = 1000
     #betas = [1]
