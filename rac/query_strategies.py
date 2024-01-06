@@ -69,22 +69,31 @@ class QueryStrategy:
             informative_scores = np.log(informative_scores)
             informative_scores = informative_scores + scipy.stats.gumbel_r.rvs(loc=0, scale=1/self.ac.power_beta, size=num_pairs, random_state=None)
             #print("asd@@@@@@@@")
+            top_B_indices = np.argpartition(informative_scores, -batch_size)[-batch_size:]
         else:
             # Add a small amount of random noise to break ties
             # The noise level should be smaller than the smallest difference between any two non-equal elements
             #print("HERE: ", len(informative_scores))
             #noise_level = np.abs(np.min(np.diff(np.unique(informative_scores)))) / 10
-            unique_diffs = np.diff(np.unique(informative_scores))
-            if unique_diffs.size > 0:
-                noise_level = np.abs(np.min(unique_diffs)) / 10
-            else:
-                # Set a default small noise level if the array has no unique differences
-                noise_level = 1e-10
-            informative_scores = informative_scores + np.random.uniform(-noise_level, noise_level, informative_scores.shape)
+            #unique_diffs = np.diff(np.unique(informative_scores))
+            #if unique_diffs.size > 0:
+            #    noise_level = np.abs(np.min(unique_diffs)) / 10
+            #else:
+            #    # Set a default small noise level if the array has no unique differences
+            #    noise_level = 1e-10
+            #informative_scores = informative_scores + np.random.uniform(-noise_level, noise_level, informative_scores.shape)
 
             # Use argpartition to partition the array around the kth largest value
             # Then, use argsort to sort only the top k elements (more efficient than sorting the entire array)
             #top_B_indices = indices[np.argsort(-noisy_array[indices])]
+            # Generate a random array to break ties randomly
+            random_tiebreaker = np.random.rand(informative_scores.shape[0])
+            
+            # Use lexsort to sort by informativeness first, then by the random tiebreaker
+            sorted_indices = np.lexsort((random_tiebreaker, -informative_scores))
+            
+            # Select the top B indices
+            top_B_indices = sorted_indices[:batch_size]
 
 
         
@@ -96,7 +105,6 @@ class QueryStrategy:
         
         ## Select the top B indices
         #top_indices = sorted_indices[:batch_size]
-        top_B_indices = np.argpartition(informative_scores, -batch_size)[-batch_size:]
         
         # Get the corresponding row and column indices
         top_row_indices = tri_rows[top_B_indices]
@@ -354,12 +362,12 @@ class QueryStrategy:
                 P_e1 = np.sum(q[x, :] * q[y, :])
                 P_e_minus_1 = 1 - P_e1 
                 #print("U: {}".format(U))
-                q_lambda_U = q_lambda[U, :]
-                q_minus_lambda_U = q_minus_lambda[U, :]
-                H_C_1 = self.H_0 - np.sum(self.initial_entropies[U]) + np.sum(scipy_entropy(q_lambda_U, axis=1))
-                H_C_2 = self.H_0 - np.sum(self.initial_entropies[U]) + np.sum(scipy_entropy(q_minus_lambda_U, axis=1))
-                #H_C_1 = np.sum(scipy_entropy(q_lambda, axis=1))
-                #H_C_2 = np.sum(scipy_entropy(q_minus_lambda, axis=1))
+                #q_lambda_U = q_lambda[U, :]
+                #q_minus_lambda_U = q_minus_lambda[U, :]
+                #H_C_1 = self.H_0 - np.sum(self.initial_entropies[U]) + np.sum(scipy_entropy(q_lambda_U, axis=1))
+                #H_C_2 = self.H_0 - np.sum(self.initial_entropies[U]) + np.sum(scipy_entropy(q_minus_lambda_U, axis=1))
+                H_C_1 = np.sum(scipy_entropy(q_lambda, axis=1))
+                H_C_2 = np.sum(scipy_entropy(q_minus_lambda, axis=1))
                 H_C_e = P_e1 * H_C_1 + P_e_minus_1 * H_C_2
                 #H_0 = np.sum(scipy_entropy(q, axis=1))
                 #print("P_e1: {}".format(P_e1))
@@ -368,9 +376,9 @@ class QueryStrategy:
                 #print("H_C_2: {}".format(H_C_2))
                 #print("H_C_e: {}".format(H_C_e))
                 #print("H_0: {}".format(self.H_0))
-                #print("H_0 - H_C_e: {}".format(self.H_0 - H_C_e))
-                #print("@@@@@@@@")
-                I[x, y] = H_C_e
+                print("H_0 - H_C_e: {}".format(self.H_0 - H_C_e))
+                print("@@@@@@@@")
+                I[x, y] = self.H_0 - H_C_e
                 I[y, x] = I[x, y]
             elif mode == "edge":
                 I[x, y] = self.compute_info_gain_edge(q, q_lambda, q_minus_lambda, U, x, y)
@@ -379,7 +387,7 @@ class QueryStrategy:
             else:
                 raise ValueError("Invalid mode (compute_info_gain): {}".format(mode))
                 
-        return -I
+        return I
 
     def compute_info_gain_edge(self, q, q_lambda, q_minus_lambda, U, x, y):
         #U = np.array(list(U))
