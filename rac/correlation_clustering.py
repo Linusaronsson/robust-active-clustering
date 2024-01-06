@@ -202,23 +202,26 @@ def max_correlation_dynamic_K(my_graph, my_K, my_itr_num):
 
 from sklearn.metrics import adjusted_rand_score
 
-def mean_field_clustering(S, K, betas, true_labels, max_iter=100, tol=1e-6, noise_level=0.0, is_sparse=False, predicted_labels=None):
-    np.fill_diagonal(S, 0)
+def mean_field_clustering(S, K, betas, true_labels, max_iter=100, tol=1e-6, noise_level=0.0, is_sparse=False, predicted_labels=None, q=None, h=None):
+    #np.fill_diagonal(S, 0)
     N = S.shape[0]
-    if predicted_labels is None:
-        predicted_labels, _ = max_correlation_dynamic_K(S, K, 5)
-    beta = betas[0]
 
-    K = len(np.unique(predicted_labels))
-    h = np.zeros((N, K))
+    if q is None:
+        if predicted_labels is None:
+            predicted_labels, _ = max_correlation_dynamic_K(S, K, 5)
+        beta = betas[0]
 
-    for k in range(K):
-        cluster_indices = np.where(predicted_labels == k)[0]
-        for i in range(N):
-            h[i, k] = S[i, cluster_indices].sum()
-    
-    #beta = 50
-    q = softmax(beta*h, axis=1)
+        K = len(np.unique(predicted_labels))
+        h = np.zeros((N, K))
+
+        for k in range(K):
+            cluster_indices = np.where(predicted_labels == k)[0]
+            for i in range(N):
+                h[i, k] = S[i, cluster_indices].sum()
+        
+        #beta = 50
+        q = softmax(beta*h, axis=1)
+
     #print("INITIAL Q: ", q)
 
     #n_level = 0.3

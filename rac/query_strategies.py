@@ -313,9 +313,9 @@ class QueryStrategy:
         return q, U_all
 
     def compute_info_gain(self, S, mode="edge", h=None, q=None):
-        #if self.ac.clustering_alg != "mean_field":
-            #raise ValueError("Info gain is only defined for mean field clustering")
-
+        S = np.copy(S)
+        if self.ac.sparse_sim_matrix and not sparse.issparse(S):
+            S = sparse.csr_matrix(S)
 
         if h is None:
             clust_sol, q, h = mean_field_clustering(
@@ -324,40 +324,29 @@ class QueryStrategy:
                 is_sparse=self.ac.sparse_sim_matrix, predicted_labels=self.ac.clustering_solution
             )
 
-        if self.ac.sparse_sim_matrix and not sparse.issparse(S):
-            S = sparse.csr_matrix(S)
             
-        #q = scipy_softmax(-self.ac.mean_field_beta*h, axis=1)
-        #h = -S.dot(q)
-
-        #H_C = np.sum(scipy_entropy(q, axis=1))
-        #H_e = np.sum(scipy_entropy(q, axis=1))
         W = self.select_pairs_info_gain(mode=self.ac.info_gain_pair_mode, q=q, h=h)
-        #print("len W: {}".format(len(W)))
         I = np.zeros((self.ac.N, self.ac.N))
         
-        if mode == "object":
-            self.initial_entropies = scipy_entropy(q, axis=1)
-            self.H_0 = np.sum(self.initial_entropies)
-        elif mode == "edge":
-            pairwise_probs = np.tril(q @ q.T, k=-1)
-            self.initial_entropies = scipy_entropy(np.stack((pairwise_probs, 1 - pairwise_probs), axis=-1), base=np.e, axis=-1)
-            self.H_0 = np.sum(self.initial_entropies)
-        else:
-            raise ValueError("Invalid mode (compute_info_gain): {}".format(mode))
-
-        U_size = int(self.ac.U_size * self.ac.N)
         # For each pair (x, y) in W
         for x, y in W:
-            #print("x, y: {}, {}".format(x, y))
-            U_initial = self.select_objects_info_gain(mode=self.ac.info_gain_object_mode, q=q, U_size=U_size, x=x, y=y)
-            q_lambda, U_pos = self.update_mean_fields(
-                q, h, S, x, y, lmbda=self.ac.info_gain_lambda, L=self.ac.mf_iterations, U_size=self.ac.U_size, G_size=self.ac.G_size, U_initial=U_initial
+            old_val = S[x, y]
+            S[x, y] = self.ac.info_gain_lambda
+            S[y, x] = self.ac.info_gain_lambda
+            _, q_lambda, _ = mean_field_clustering(
+                S, self.ac.num_clusters, betas=[self.ac.mean_field_beta],
+                true_labels=None, max_iter=self.ac.mf_iterations, tol=1e-10, noise_level=0.0, 
+                is_sparse=self.ac.sparse_sim_matrix, q=q, h=h
             )
-            q_minus_lambda, U_neg = self.update_mean_fields(
-                q, h, S, x, y, lmbda=-self.ac.info_gain_lambda, L=self.ac.mf_iterations, U_size=self.ac.U_size, G_size=self.ac.G_size, U_initial=U_initial
+            S[x, y] = -self.ac.info_gain_lambda
+            S[y, x] = -self.ac.info_gain_lambda
+            _, q_minus_lambda, _ = mean_field_clustering(
+                S, self.ac.num_clusters, betas=[self.ac.mean_field_beta],
+                true_labels=None, max_iter=self.ac.mf_iterations, tol=1e-10, noise_level=0.0, 
+                is_sparse=self.ac.sparse_sim_matrix, q=q, h=h
             )
-            U = np.union1d(U_pos, U_neg)
+            S[x, y] = old_val
+            S[y, x] = old_val
 
             if mode == "object":
                 P_e1 = np.sum(q[x, :] * q[y, :])
@@ -377,13 +366,13 @@ class QueryStrategy:
                 #print("H_C_2: {}".format(H_C_2))
                 #print("H_C_e: {}".format(H_C_e))
                 #print("H_0: {}".format(self.H_0))
-                print("H_0 - H_C_e: {}".format(self.H_0 - H_C_e))
-                print("@@@@@@@@")
-                I[x, y] = self.H_0 - H_C_e
+                #print("H_0 - H_C_e: {}".format(self.H_0 - H_C_e))
+                #print("@@@@@@@@")
+                I[x, y] = -H_C_e
                 I[y, x] = I[x, y]
             elif mode == "edge":
-                I[x, y] = self.compute_info_gain_edge(q, q_lambda, q_minus_lambda, U, x, y)
-                I[y, x] = I[x, y]
+                #I[x, y] = self.compute_info_gain_edge(q, q_lambda, q_minus_lambda, U, x, y)
+                #I[y, x] = I[x, y]
                 pass
             else:
                 raise ValueError("Invalid mode (compute_info_gain): {}".format(mode))
