@@ -30,7 +30,7 @@ class QueryStrategy:
             else:
                 self.info_matrix = self.compute_maxexp()
         elif acq_fn == "info_gain_object":
-            use_grumble = True
+            #use_grumble = True
             self.info_matrix = self.compute_info_gain(S=self.ac.pairwise_similarities, mode="object")
         elif acq_fn == "info_gain_edge":
             self.info_matrix = self.compute_info_gain(S=self.ac.pairwise_similarities, mode="edge")
