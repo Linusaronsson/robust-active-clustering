@@ -409,7 +409,7 @@ class ExperimentReader:
                         "markersize": markersize,
                     }
                 else:
-                    err_kws={}
+                    err_kws = {}
 
                 #cut_threshold = 0
                 cut_axis = False
@@ -448,7 +448,7 @@ class ExperimentReader:
                 #else:
                 #    raise ValueError("incorrect dataset!")
 
-                df_filtered = df_filtered[df_filtered[vary[0]] < 400]
+                df_filtered = df_filtered[df_filtered[vary[0]] < 15]
                 metric_map = {"ami": "AMI", "rand": "ARI", "time": "Time (s)", "num_violations": "Num. violations", "time_select_batch": "Time (s)", "time_update_clustering": "Time (s)"}
 
                 #df_filtered['num_maxmin_edges'] = df_filtered['num_maxmin_edges'].astype(str)
@@ -463,6 +463,7 @@ class ExperimentReader:
                         #hue_order=[("maxmin", "0.0"), ("maxmin", "0.005"), ("maxmin", "0.05"), ("maxmin", "0.2"), ("maxmin", "0.6"), ("maxmin", "1.0"), ("QECC", "1.0")],
                         #hue_order=[("maxmin", "0.0"), ("maxmin", "0.005"), ("maxmin", "0.05"), ("maxmin", "0.2"), ("maxmin", "0.6"), ("maxmin", "1.0")],
                         errorbar=errorbar,
+                        marker="o",
                         err_style=err_style,
                         data=df_filtered,
                         linestyle=linestyle,

@@ -12,7 +12,7 @@ class QueryStrategy:
         self.info_matrix = None
 
     def select_batch(self, acq_fn, batch_size):
-        use_grumble = False
+        #use_grumble = False
         if acq_fn == "unif":
             self.info_matrix = np.random.rand(self.ac.N, self.ac.N)
         elif acq_fn == "freq":
@@ -49,7 +49,7 @@ class QueryStrategy:
         else:
             raise ValueError("Invalid acquisition function: {}".format(acq_fn))
 
-        return self.select_edges(batch_size, self.info_matrix, use_grumbel=use_grumble)
+        return self.select_edges(batch_size, self.info_matrix, use_grumbel=self.ac.use_grumbel)
            
     def select_edges(self, batch_size, I, use_grumbel=False):
         inds_max_query = np.where(self.ac.feedback_freq > self.ac.tau)
@@ -165,29 +165,25 @@ class QueryStrategy:
                 I[x, y] = H_0-H_C_e
                 I[y, x] = I[x, y]
             elif mode == "edge":
-                #I[x, y] = self.compute_info_gain_edge(q, q_lambda, q_minus_lambda, U, x, y)
-                #I[y, x] = I[x, y]
-                pass
+                #U = np.arange(self.ac.N)
+                I[x, y] = -self.compute_info_gain_edge(q, q_plus, q_minus, x, y)
+                I[y, x] = I[x, y]
+                #pass
             else:
                 raise ValueError("Invalid mode (compute_info_gain): {}".format(mode))
         return I
 
-    def compute_info_gain_edge(self, q, q_lambda, q_minus_lambda, U, x, y):
-        #U = np.array(list(U))
+    def compute_info_gain_edge(self, q, q_plus, q_minus, x, y):
         p1 = np.sum(q[x, :] * q[y, :])
         p2 = 1 - p1
 
-        q_updated = q_lambda[U, :]
-        pairwise_probs_updated = q_updated @ q_updated.T
+        pairwise_probs_updated = q_plus @ q_plus.T
         updated_entropies = scipy_entropy(np.stack((pairwise_probs_updated, 1 - pairwise_probs_updated), axis=-1), base=np.e, axis=-1)
-        old_entropies = self.initial_entropies[np.ix_(U, U)]
-        H1 = self.H_0 - np.sum(np.tril(old_entropies, k=-1)) + np.sum(np.tril(updated_entropies, k=-1)) 
+        H1 = np.sum(np.tril(updated_entropies, k=-1))  
 
-        q_updated = q_minus_lambda[U, :]
-        pairwise_probs_updated = q_updated @ q_updated.T
+        pairwise_probs_updated = q_minus @ q_minus.T
         updated_entropies = scipy_entropy(np.stack((pairwise_probs_updated, 1 - pairwise_probs_updated), axis=-1), base=np.e, axis=-1)
-        old_entropies = self.initial_entropies[np.ix_(U, U)]
-        H2 = self.H_0 - np.sum(np.tril(old_entropies, k=-1)) + np.sum(np.tril(updated_entropies, k=-1)) 
+        H2 = np.sum(np.tril(updated_entropies, k=-1))  
 
         I_U = p1 * H1 + p2 * H2
         #print("p1: {}".format(p1))
@@ -198,7 +194,6 @@ class QueryStrategy:
         #print("H_0: {}".format(self.H_0))
         #print("H_0-I_U: {}".format(self.H_0 - I_U))
         #print("@@@@@@@@@@@@@@@")
-
         return I_U
 
     def compute_cluster_informativeness(self, info_matrix):
