@@ -36,7 +36,7 @@ class QueryStrategy:
             self.info_matrix = self.compute_info_gain(S=self.ac.pairwise_similarities, mode="edge")
         elif acq_fn == "entropy":
             self.info_matrix = self.compute_entropy(S=self.ac.pairwise_similarities)
-            use_grumble = True
+            #use_grumble = True
         elif acq_fn == "cluster_freq":
             self.info_matrix = self.compute_cluster_informativeness(-self.ac.feedback_freq)
             self.info_matrix = self.info_matrix - self.ac.feedback_freq
@@ -101,11 +101,11 @@ class QueryStrategy:
             inds = np.random.choice(inds, num_edges, replace=False)
             return np.stack((lower_triangle_indices[0][inds], lower_triangle_indices[1][inds]), axis=-1)
         elif mode == "entropy":
-            self.info_matrix = self.compute_entropy(S=self.ac.pairwise_similarities, h=h, q=q)
+            info_matrix = self.compute_entropy(S=self.ac.pairwise_similarities, h=h, q=q)
             lower_triangle_indices = np.tril_indices(self.ac.N, -1)
             inds = np.where(self.ac.feedback_freq[lower_triangle_indices] > 0)[0]
             num_edges = int(self.ac.num_edges_info_gain*self.ac.N) if self.ac.num_edges_info_gain > 0 else len(inds)
-            return self.select_edges(num_edges, self.info_matrix, use_grumbel=True)
+            return self.select_edges(num_edges, info_matrix, use_grumbel=False)
         else:
             raise ValueError("Invalid mode: {}".format(mode))
 
