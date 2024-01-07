@@ -15,7 +15,7 @@
         "infer_sims": false,
         "predict_sims": false,
         "clustering_alg": "CC",
-        "warm_start": 0.05
+        "warm_start": 0
     },
     "sim_init_options": {
         "K_init": 10,
@@ -23,12 +23,13 @@
         "sim_init_type": "zeros"
     },
     "query_strategy_options": {
-        "acq_fn": "freq",
+        "acq_fn": "info_gain_edge",
         "eps": 0.3,
         "beta": 1,
         "tau": 7,
         "alpha": 1,
-        "use_grumbel": true,
+        "use_power": true,
+        "use_grumbel": false,
         "power_beta": 1,
         "sparse_sim_matrix": true,
         "mean_field_beta": 10,
@@ -38,8 +39,8 @@
         "U_size": 1,
         "G_size": 1,
         "info_gain_object_mode": "uniform",
-        "info_gain_pair_mode": "entropy",
-        "mf_iterations": 10
+        "info_gain_pair_mode": "uniform",
+        "mf_iterations": 40
     },
     "dataset_options": {
         "dataset": "synthetic",

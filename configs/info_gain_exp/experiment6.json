@@ -28,18 +28,19 @@
         "beta": 1,
         "tau": 7,
         "alpha": 1,
-        "use_grumbel": false,
+        "use_power": false,
+        "use_grumbel": true,
         "power_beta": 1,
         "sparse_sim_matrix": true,
         "mean_field_beta": 10,
         "info_gain_lambda": 20,
         "running_avg": true,
-        "num_edges_info_gain": 50,
+        "num_edges_info_gain": 10,
         "U_size": 1,
         "G_size": 1,
         "info_gain_object_mode": "uniform",
         "info_gain_pair_mode": "entropy",
-        "mf_iterations": 30
+        "mf_iterations": 40
     },
     "dataset_options": {
         "dataset": "synthetic",

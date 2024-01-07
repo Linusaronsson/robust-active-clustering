@@ -58,8 +58,15 @@ class QueryStrategy:
         informative_scores = I[tri_rows, tri_cols]
         if use_grumbel:
             num_pairs = len(informative_scores)
-            informative_scores += np.abs(np.min(informative_scores))
-            informative_scores = np.log(informative_scores)
+            #informative_scores += np.abs(np.min(informative_scores))
+            informative_scores[informative_scores < 0] = 0
+            #print("max: ", np.max(informative_scores))
+            #print("min: ", np.min(informative_scores))
+            #informative_scores = np.abs(informative_scores)
+            if self.ac.use_power:
+                informative_scores = np.log(informative_scores)
+            #print("max log: ", np.max(informative_scores))
+            #print("min log: ", np.min(informative_scores))
             informative_scores = informative_scores + scipy.stats.gumbel_r.rvs(loc=0, scale=1/self.ac.power_beta, size=num_pairs, random_state=None)
         else:
             unique_diffs = np.diff(np.unique(informative_scores))
@@ -123,6 +130,11 @@ class QueryStrategy:
         I = np.zeros((self.ac.N, self.ac.N))
         H_0 = np.sum(scipy_entropy(q, axis=1))
         lmbda = self.ac.info_gain_lambda
+        w1 = W[:, 0]
+        w2 = W[:, 1]
+
+        #print(W.shape)
+        #print(W)
         
         # For each pair (x, y) in W
         for x, y in W:
@@ -143,8 +155,8 @@ class QueryStrategy:
                 q_minus = scipy_softmax(-self.ac.mean_field_beta*h_minus, axis=1)
 
             if mode == "object":
-                P_e1 = np.sum(q[x, :] * q[y, :])
-                P_e_minus_1 = 1 - P_e1 
+                p_plus = np.sum(q[x, :] * q[y, :])
+                p_minus = 1 - p_plus
                 #print("U: {}".format(U))
                 #q_lambda_U = q_lambda[U, :]
                 #q_minus_lambda_U = q_minus_lambda[U, :]
@@ -152,7 +164,7 @@ class QueryStrategy:
                 #H_C_2 = self.H_0 - np.sum(self.initial_entropies[U]) + np.sum(scipy_entropy(q_minus_lambda_U, axis=1))
                 H_C_1 = np.sum(scipy_entropy(q_plus, axis=1))
                 H_C_2 = np.sum(scipy_entropy(q_minus, axis=1))
-                H_C_e = P_e1 * H_C_1 + P_e_minus_1 * H_C_2
+                H_C_e = p_plus * H_C_1 + p_minus * H_C_2
                 #H_0 = np.sum(scipy_entropy(q, axis=1))
                 #print("P_e1: {}".format(P_e1))
                 #print("P_e_minus_1: {}".format(P_e_minus_1))
@@ -166,26 +178,34 @@ class QueryStrategy:
                 I[y, x] = I[x, y]
             elif mode == "edge":
                 #U = np.arange(self.ac.N)
-                I[x, y] = -self.compute_info_gain_edge(q, q_plus, q_minus, x, y)
+                I[x, y] = -self.compute_info_gain_edge(q, q_plus, q_minus, x, y, w1, w2)
                 I[y, x] = I[x, y]
                 #pass
             else:
                 raise ValueError("Invalid mode (compute_info_gain): {}".format(mode))
         return I
 
-    def compute_info_gain_edge(self, q, q_plus, q_minus, x, y):
+    def compute_info_gain_edge(self, q, q_plus, q_minus, x, y, w1, w2):
         p1 = np.sum(q[x, :] * q[y, :])
         p2 = 1 - p1
 
-        pairwise_probs_updated = q_plus @ q_plus.T
-        updated_entropies = scipy_entropy(np.stack((pairwise_probs_updated, 1 - pairwise_probs_updated), axis=-1), base=np.e, axis=-1)
-        H1 = np.sum(np.tril(updated_entropies, k=-1))  
 
-        pairwise_probs_updated = q_minus @ q_minus.T
-        updated_entropies = scipy_entropy(np.stack((pairwise_probs_updated, 1 - pairwise_probs_updated), axis=-1), base=np.e, axis=-1)
-        H2 = np.sum(np.tril(updated_entropies, k=-1))  
+        pairwise_probs = np.sum(q_plus[w1, :] * q_plus[w2, :], axis=1)
+        probs_stacked = np.column_stack((pairwise_probs, 1 - pairwise_probs))
+        H_plus = np.sum(scipy_entropy(probs_stacked, base=np.e, axis=1))
 
-        I_U = p1 * H1 + p2 * H2
+        pairwise_probs = np.sum(q_minus[w1, :] * q_minus[w2, :], axis=1)
+        probs_stacked = np.column_stack((pairwise_probs, 1 - pairwise_probs))
+        H_minus = np.sum(scipy_entropy(probs_stacked, base=np.e, axis=1))
+       #pairwise_probs_updated = q_plus @ q_plus.T
+       #updated_entropies = scipy_entropy(np.stack((pairwise_probs_updated, 1 - pairwise_probs_updated), axis=-1), base=np.e, axis=-1)
+       #H1 = np.sum(np.tril(updated_entropies, k=-1))  
+
+       #pairwise_probs_updated = q_minus @ q_minus.T
+       #updated_entropies = scipy_entropy(np.stack((pairwise_probs_updated, 1 - pairwise_probs_updated), axis=-1), base=np.e, axis=-1)
+       #H2 = np.sum(np.tril(updated_entropies, k=-1))  
+
+        I_U = p1 * H_plus + p2 * H_minus
         #print("p1: {}".format(p1))
         #print("p2: {}".format(p2))
         #print("H1: {}".format(H1))
