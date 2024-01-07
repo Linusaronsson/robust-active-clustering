@@ -33,7 +33,7 @@
         "mean_field_beta": 10,
         "info_gain_lambda": 20,
         "running_avg": true,
-        "num_edges_info_gain": 5,
+        "num_edges_info_gain": 20,
         "U_size": 1,
         "G_size": 1,
         "info_gain_object_mode": "uniform",
