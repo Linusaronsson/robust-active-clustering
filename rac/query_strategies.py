@@ -51,12 +51,12 @@ class QueryStrategy:
 
         return self.select_edges(batch_size, self.info_matrix, use_grumbel=self.ac.use_grumbel)
            
-    def select_edges(self, batch_size, I, use_grumbel=False):
+    def select_edges(self, batch_size, I, use_grumbel=False, special_c=True):
         inds_max_query = np.where(self.ac.feedback_freq > self.ac.tau)
         I[inds_max_query] = -np.inf
         tri_rows, tri_cols = np.tril_indices(n=I.shape[0], k=-1)
         informative_scores = I[tri_rows, tri_cols]
-        if use_grumbel:
+        if use_grumbel and self.ac.acq_fn in ["entropy", "info_gain_object", "maxexp", "cluster_incon"] and special_c:
             num_pairs = len(informative_scores)
             #informative_scores += np.abs(np.min(informative_scores))
             informative_scores[informative_scores < 0] = 0
@@ -112,7 +112,7 @@ class QueryStrategy:
             lower_triangle_indices = np.tril_indices(self.ac.N, -1)
             inds = np.where(self.ac.feedback_freq[lower_triangle_indices] > 0)[0]
             num_edges = int(self.ac.num_edges_info_gain*self.ac.N) if self.ac.num_edges_info_gain > 0 else len(inds)
-            return self.select_edges(num_edges, info_matrix, use_grumbel=self.ac.use_grumbel)
+            return self.select_edges(num_edges, info_matrix, use_grumbel=self.ac.use_grumbel, special_c=False)
         else:
             raise ValueError("Invalid mode: {}".format(mode))
 
