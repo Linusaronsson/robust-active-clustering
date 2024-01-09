@@ -56,7 +56,7 @@ class QueryStrategy:
         I[inds_max_query] = -np.inf
         tri_rows, tri_cols = np.tril_indices(n=I.shape[0], k=-1)
         informative_scores = I[tri_rows, tri_cols]
-        if use_grumbel and self.ac.acq_fn in ["entropy", "info_gain_object", "maxexp", "cluster_incon"] and special_c:
+        if use_grumbel and self.ac.acq_fn in ["entropy"] and special_c:
             num_pairs = len(informative_scores)
             #informative_scores += np.abs(np.min(informative_scores))
             informative_scores[informative_scores < 0] = 0
