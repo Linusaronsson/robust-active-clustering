@@ -463,12 +463,17 @@ class ExperimentReader:
                         #hue_order=[("maxmin", "0.0"), ("maxmin", "0.005"), ("maxmin", "0.05"), ("maxmin", "0.2"), ("maxmin", "0.6"), ("maxmin", "1.0"), ("QECC", "1.0")],
                         #hue_order=[("maxmin", "0.0"), ("maxmin", "0.005"), ("maxmin", "0.05"), ("maxmin", "0.2"), ("maxmin", "0.6"), ("maxmin", "1.0")],
                         errorbar=errorbar,
-                        marker="o",
+                        marker=".",
                         err_style=err_style,
                         data=df_filtered,
                         linestyle=linestyle,
                         err_kws=err_kws,
                     )
+                    #plt.setp(ax.lines, markeredgecolor='none')  # Removes the border of the markers
+                    #plt.setp(ax.lines, alpha=0.7)  # Adjusts the transparency of the markers
+                    plt.setp(ax.lines, markeredgewidth=0.5)  # Adjusts the transparency of the markers
+                    plt.setp(ax.lines, markersize=7)  # Adjusts the transparency of the markers
+
                     plt.ylabel(metric_map[metric])
                 else:
                     f, (ax1, ax2) = plt.subplots(ncols=1, nrows=2, sharex=True, sharey=False, gridspec_kw={'height_ratios': [3, 1]})

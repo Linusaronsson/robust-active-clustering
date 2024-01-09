@@ -238,7 +238,7 @@ class ActiveClustering:
             
             old_rand = current_rand
 
-            if early_stopping_count > early_stopping or perfect_rand_count > 3:
+            if early_stopping_count > early_stopping or perfect_rand_count > 2:
                 break
         
         if self.save_matrix_data:
