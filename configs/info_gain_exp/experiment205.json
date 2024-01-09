@@ -23,7 +23,7 @@
         "sim_init_type": "zeros"
     },
     "query_strategy_options": {
-        "acq_fn": "freq",
+        "acq_fn": "entropy",
         "eps": 0.3,
         "beta": 8,
         "tau": 7,

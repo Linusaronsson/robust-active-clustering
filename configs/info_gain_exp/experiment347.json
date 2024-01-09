@@ -23,11 +23,11 @@
         "sim_init_type": "zeros"
     },
     "query_strategy_options": {
-        "acq_fn": "info_gain_object",
+        "acq_fn": "freq",
         "eps": 0.3,
         "beta": 8,
         "tau": 7,
-        "alpha": 0.5,
+        "alpha": 1,
         "num_maxmin_edges": -1,
         "use_power": true,
         "use_grumbel": true,
