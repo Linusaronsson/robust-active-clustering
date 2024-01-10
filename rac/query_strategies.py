@@ -44,7 +44,9 @@ class QueryStrategy:
             self.info_matrix = self.compute_cluster_informativeness(-np.abs(self.ac.pairwise_similarities))
             self.info_matrix = self.info_matrix - np.abs(self.ac.pairwise_similarities)
         elif acq_fn == "cluster_incon":
-            self.info_matrix = self.compute_cluster_informativeness(self.ac.violations - self.ac.alpha*np.abs(self.ac.pairwise_similarities))
+            self.info_matrix1 = self.compute_cluster_informativeness(self.ac.violations)# - self.ac.alpha*np.abs(self.ac.pairwise_similarities))
+            self.info_matrix2 = self.compute_cluster_informativeness(np.abs(self.ac.pairwise_similarities))
+            self.info_matrix = self.info_matrix1 - self.ac.alpha*self.info_matrix2
             self.info_matrix = self.info_matrix - np.abs(self.ac.pairwise_similarities)
         else:
             raise ValueError("Invalid acquisition function: {}".format(acq_fn))
@@ -242,14 +244,17 @@ class QueryStrategy:
             region_elements = info_matrix[row_indices, col_indices]
             region_sum = np.sum(region_elements) / len(region)
             region_sums.append((region_sum, region))
+            I[row_indices, col_indices] = region_sum
+            I[col_indices, row_indices] = region_sum
 
-        sorted_regions = sorted(region_sums, key=lambda x: x[0], reverse=True)
-        decrement = 0
-        for region_sum, region in sorted_regions:
-            row_indices, col_indices = zip(*region)
-            I[row_indices, col_indices] = region_sum - decrement
-            I[col_indices, row_indices] = region_sum - decrement
-            decrement += 10000
+
+        #sorted_regions = sorted(region_sums, key=lambda x: x[0], reverse=True)
+        #decrement = 0
+        #for region_sum, region in sorted_regions:
+        #    row_indices, col_indices = zip(*region)
+        #    I[row_indices, col_indices] = region_sum #- decrement
+        #    I[col_indices, row_indices] = region_sum #- decrement
+        #    decrement += 10000
         return I
 
     def compute_maxmin(self):
