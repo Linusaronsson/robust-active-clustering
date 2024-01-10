@@ -20,10 +20,10 @@
     "sim_init_options": {
         "K_init": 10,
         "sim_init": 0.01,
-        "sim_init_type": "uniform_random"
+        "sim_init_type": "zeros"
     },
     "query_strategy_options": {
-        "acq_fn": "freq",
+        "acq_fn": "info_gain_object",
         "eps": 0.3,
         "beta": 8,
         "tau": 7,
@@ -41,7 +41,7 @@
         "G_size": 1,
         "info_gain_object_mode": "uniform",
         "info_gain_pair_mode": "uniform",
-        "mf_iterations": 30
+        "mf_iterations": 50
     },
     "dataset_options": {
         "dataset": "cardiotocography"

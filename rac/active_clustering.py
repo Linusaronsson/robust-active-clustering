@@ -491,6 +491,9 @@ class ActiveClustering:
         if self.acq_fn in ["QECC", "COBRAS", "nCOBRAS"]:
             self.sim_init_type = "random_clustering"
 
+        if self.acq_fn == "cluster_incon":
+            self.sim_init_type = "uniform_random"
+
         if self.sim_init_type == "zeros":
             self.pairwise_similarities = np.zeros((self.N, self.N))
             self.num_clusters = 1
