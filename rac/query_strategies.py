@@ -68,14 +68,13 @@ class QueryStrategy:
             #print("max log: ", np.max(informative_scores))
             #print("min log: ", np.min(informative_scores))
             informative_scores = informative_scores + scipy.stats.gumbel_r.rvs(loc=0, scale=1/self.ac.power_beta, size=num_pairs, random_state=None)
-        #else:
-            #pass
-            #unique_diffs = np.diff(np.unique(informative_scores))
-            #if unique_diffs.size > 0:
-            #    noise_level = np.abs(np.min(unique_diffs)) / 10
-            #else:
-            #    noise_level = 1e-10
-            #informative_scores = informative_scores + np.random.uniform(-noise_level, noise_level, informative_scores.shape)
+        else:
+            unique_diffs = np.diff(np.unique(informative_scores))
+            if unique_diffs.size > 0:
+                noise_level = np.abs(np.min(unique_diffs)) / 10
+            else:
+                noise_level = 1e-10
+            informative_scores = informative_scores + np.random.uniform(-noise_level, noise_level, informative_scores.shape)
 
         top_B_indices = np.argpartition(informative_scores, -batch_size)[-batch_size:]
         top_row_indices = tri_rows[top_B_indices]

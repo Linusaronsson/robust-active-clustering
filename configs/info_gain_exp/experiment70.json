@@ -20,10 +20,10 @@
     "sim_init_options": {
         "K_init": 10,
         "sim_init": 0.01,
-        "sim_init_type": "zeros"
+        "sim_init_type": "uniform_random"
     },
     "query_strategy_options": {
-        "acq_fn": "entropy",
+        "acq_fn": "cluster_incon",
         "eps": 0.3,
         "beta": 8,
         "tau": 7,
