@@ -414,7 +414,7 @@ class ExperimentReader:
                 #cut_threshold = 0
                 cut_axis = False
                 #errorbar = ("sd", 0.3)
-                errorbar = ("sd", 1)
+                errorbar = ("sd", 0.5)
                 #if "synthetic" in self.dataset:
                 #    cut_threshold = 700
                 #elif self.dataset == "20newsgroups":
@@ -448,7 +448,7 @@ class ExperimentReader:
                 #else:
                 #    raise ValueError("incorrect dataset!")
 
-                df_filtered = df_filtered[df_filtered[vary[0]] < 40]
+                df_filtered = df_filtered[df_filtered[vary[0]] < 25]
                 metric_map = {"ami": "AMI", "rand": "ARI", "time": "Time (s)", "num_violations": "Num. violations", "time_select_batch": "Time (s)", "time_update_clustering": "Time (s)"}
 
                 #df_filtered['num_maxmin_edges'] = df_filtered['num_maxmin_edges'].astype(str)

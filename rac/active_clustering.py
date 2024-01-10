@@ -308,11 +308,11 @@ class ActiveClustering:
     def store_experiment_data(self, initial=False):
         time_now = time.time() 
 
-        if self.dataset == "mnist":
-        #    #full_data_mnist = np.load("datasets/mnist_data/full_mnist_data.npy")
-        #    #avg_cluster_images = self.calculate_cluster_averages(self.clustering, full_data_mnist)
-            mnist_datt = []
-            self.ac_data.avg_cluster_images.append(self.clustering)
+        #if self.dataset == "mnist":
+        ##    #full_data_mnist = np.load("datasets/mnist_data/full_mnist_data.npy")
+        ##    #avg_cluster_images = self.calculate_cluster_averages(self.clustering, full_data_mnist)
+        #    mnist_datt = []
+        #    self.ac_data.avg_cluster_images.append(self.clustering)
 
         if self.dataset == "synthetic":
             #lower_triangle_indices = np.tril_indices(self.N, -1)
@@ -442,6 +442,7 @@ class ActiveClustering:
         self.total_flips = int(self.n_edges * self.persistent_noise_level)
         if self.persistent_noise_level == 0:
             return
+
         edges, objects = self.qs.select_batch("unif", "pairs", self.total_flips)
 
         for ind1, ind2 in edges:
@@ -562,6 +563,10 @@ class ActiveClustering:
 
         if self.warm_start > 0:
             total_flips = int(self.n_edges * self.warm_start)
+
+            specific_seed = self.repeat_id + self.seed + 42
+            state = np.random.get_state()
+            np.random.seed(specific_seed)
             pairs = self.qs.select_batch("unif", total_flips)
 
             for ind1, ind2 in pairs:
@@ -571,6 +576,9 @@ class ActiveClustering:
                 self.feedback_freq[ind2, ind1] += 1
 
         self.update_clustering() 
+
+        if self.warm_start > 0:
+            np.random.set_state(state)
 
     # Input: list of objects to update clustering w.r.t. (subset of all objects)
     def update_clustering(self):
