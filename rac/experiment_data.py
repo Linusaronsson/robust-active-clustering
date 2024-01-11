@@ -378,9 +378,11 @@ class ExperimentReader:
                 fig_path = Path(path)
                 fig_path.mkdir(parents=True, exist_ok=True)
                 #file_name = exp_kwargs["dataset"] + "_" + metric + "_" + str(exp_kwargs["noise_level"]) + "_" + exp_kwargs["sim_init_type"] + ".png"
-                file_name = exp_kwargs["dataset"] + "_" + metric + "_" + str(exp_kwargs["noise_level"]) + "_" + str(exp_kwargs["sim_init_type"]) + ".png"
+                #file_name = exp_kwargs["dataset"] + "_" + metric + "_" + str(exp_kwargs["noise_level"]) + "_" + str(exp_kwargs["sim_init_type"]) + ".png"
+                file_name = exp_kwargs["dataset"] + "_" + metric + "_" + str(exp_kwargs["noise_level"]) + "_" + str(exp_kwargs["warm_start"]) + ".png"
                 #file_path = path + "plot.png"
                 file_path = path + file_name
+                self.dataset = exp_kwargs["dataset"] 
 
                 # Cont
                 #hues = list(all_options.keys())
@@ -400,7 +402,7 @@ class ExperimentReader:
                 plt.rc('legend', fontsize=SMALL_SIZE)    # legend fontsize
                 plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
                 plt.rc('figure', dpi=200)
-                plt.rc('figure', figsize=(6, 6))
+                plt.rc('figure', figsize=(6, 4))
 
                 if err_style == "bars":
                     err_kws = {
@@ -415,40 +417,40 @@ class ExperimentReader:
                 cut_axis = False
                 #errorbar = ("sd", 0.3)
                 errorbar = ("sd", 0.5)
-                #if "synthetic" in self.dataset:
-                #    cut_threshold = 700
-                #elif self.dataset == "20newsgroups":
-                #    cut_threshold = 700
-                #elif self.dataset == "breast_cancer":
-                #    # noise = 0.0
-                #    errorbar = None
-                #    cut_axis = True
-                #    l1 = 0
-                #    l2 = 0.7
-                #    l3 = 0.72
-                #    l4 = 1.01
-                #    cut_threshold = 700
-                #    #cut_threshold = 900
-                #elif self.dataset == "cardiotocography":
-                #    cut_threshold = 700
-                #elif self.dataset == "cifar10" or self.dataset == "cifar10_original":
-                #    cut_threshold = 700
-                #elif self.dataset == "ecoli":
-                #    cut_threshold = 700
-                #elif self.dataset == "forest_type_mapping":
-                #    cut_threshold = 700
-                #elif self.dataset == "mnist":
-                #    cut_threshold = 700
-                #elif self.dataset == "mushrooms":
-                #    cut_threshold = 700
-                #elif self.dataset == "user_knowledge":
-                #    cut_threshold = 700
-                #elif self.dataset == "yeast":
-                #    cut_threshold = 700
-                #else:
-                #    raise ValueError("incorrect dataset!")
+                if "synthetic" in self.dataset:
+                    cut_threshold = 700
+                elif self.dataset == "20newsgroups":
+                    cut_threshold = 25
+                elif self.dataset == "breast_cancer":
+                    # noise = 0.0
+                    #errorbar = None
+                    #cut_axis = True
+                    #l1 = 0
+                    #l2 = 0.7
+                    #l3 = 0.72
+                    #l4 = 1.01
+                    cut_threshold = 5
+                    #cut_threshold = 900
+                elif self.dataset == "cardiotocography":
+                    cut_threshold = 10
+                elif self.dataset == "cifar10" or self.dataset == "cifar10_original":
+                    cut_threshold = 12
+                elif self.dataset == "ecoli":
+                    cut_threshold = 17
+                elif self.dataset == "forest_type_mapping":
+                    cut_threshold = 10
+                elif self.dataset == "mnist":
+                    cut_threshold = 12
+                elif self.dataset == "mushrooms":
+                    cut_threshold = 4
+                elif self.dataset == "user_knowledge":
+                    cut_threshold = 14
+                elif self.dataset == "yeast":
+                    cut_threshold = 9
+                else:
+                    raise ValueError("incorrect dataset!")
 
-                df_filtered = df_filtered[df_filtered[vary[0]] < 25]
+                df_filtered = df_filtered[df_filtered[vary[0]] < cut_threshold]
                 metric_map = {"ami": "AMI", "rand": "ARI", "time": "Time (s)", "num_violations": "Num. violations", "time_select_batch": "Time (s)", "time_update_clustering": "Time (s)"}
 
                 #df_filtered['num_maxmin_edges'] = df_filtered['num_maxmin_edges'].astype(str)
@@ -456,8 +458,9 @@ class ExperimentReader:
                     ax = sns.lineplot(
                         x=vary[0],
                         y="y",
-                        hue=df_filtered[hues].apply(tuple, axis=1),
-                        #hue=["acq_fn", "num_maxmin_edges"],
+                        #hue=df_filtered[hues].apply(tuple, axis=1),
+                        hue="acq_fn",
+                        hue_order=["info_gain_object", "entropy", "cluster_incon", "maxexp", "freq"],
                         #hue_order=[("maxexp", "0.0"), ("maxexp", "0.005"), ("maxexp", "0.05"), ("maxexp", "0.2"), ("maxexp", "0.6"), ("maxexp", "1.0")],
                         #hue_order=[("maxexp", "0.0"), ("maxexp", "0.005"), ("maxexp", "0.05"), ("maxexp", "0.2"), ("maxexp", "0.6"), ("maxexp", "1.0"), ("QECC", "1.0")],
                         #hue_order=[("maxmin", "0.0"), ("maxmin", "0.005"), ("maxmin", "0.05"), ("maxmin", "0.2"), ("maxmin", "0.6"), ("maxmin", "1.0"), ("QECC", "1.0")],
@@ -555,60 +558,67 @@ class ExperimentReader:
                 #ax.legend(loc='lower right')
                 ax.legend(loc='best')
 
+                legs = ax.get_legend().get_texts()
+                #legs = [l.get_text() for l in legs]
+                fix_legends = True
+                if fix_legends:
+                    #new_legends = []
+                    ax.get_legend().set_title(None)
+                    for ll in legs:
+                        l = ll.get_text()
+                        if "unif" in l:
+                            #new_legends.append("Uniform")
+                            ll.set_text("Uniform")
+                        if "COBRAS" in l and "nCOBRAS" not in l:
+                            #new_legends.append("COBRAS")
+                            ll.set_text("COBRAS")
+                        if "nCOBRAS" in l:
+                            #new_legends.append("nCOBRAS")
+                            ll.set_text("nCOBRAS")
+                        if "freq" in l:
+                            #new_legends.append("Frequency")
+                            ll.set_text("Uniform")
+                        if "uncert" in l:
+                            #new_legends.append("Uncertainty")
+                            ll.set_text("Uncertainty")
+                        if "maxmin" in l:
+                            #new_legends.append("Maxmin")
+                            ll.set_text("Maxmin")
+                        if "maxexp" in l:
+                            #new_legends.append("Maxexp")
+                            ll.set_text("Maxexp")
+                        if "QECC" in l:
+                            #new_legends.append("QECC")
+                            ll.set_text("QECC")
+                        if "entropy" in l:
+                            ll.set_text("Entropy")
+                        if "info_gain_object" in l:
+                            ll.set_text("IG")
+                        if "cluster_incon" in l:
+                            ll.set_text("CC")
+
+                    #ax.legend(labels=new_legends)
+
+
                 #legs = ax.get_legend().get_texts()
-                ##legs = [l.get_text() for l in legs]
+                ###legs = [l.get_text() for l in legs]
                 #fix_legends = False
                 #if fix_legends:
                 #    #new_legends = []
                 #    ax.get_legend().set_title(None)
                 #    for ll in legs:
+                #        #print(type(ll).get_text())
+                #        #print(ll.get_text())
                 #        l = ll.get_text()
-                #        if "unif" in l:
-                #            #new_legends.append("Uniform")
-                #            ll.set_text("Uniform")
-                #        if "COBRAS" in l and "nCOBRAS" not in l:
-                #            #new_legends.append("COBRAS")
-                #            ll.set_text("COBRAS")
-                #        if "nCOBRAS" in l:
-                #            #new_legends.append("nCOBRAS")
-                #            ll.set_text("nCOBRAS")
-                #        if "freq" in l:
-                #            #new_legends.append("Frequency")
-                #            ll.set_text("Frequency")
-                #        if "uncert" in l:
-                #            #new_legends.append("Uncertainty")
-                #            ll.set_text("Uncertainty")
-                #        if "maxmin" in l:
-                #            #new_legends.append("Maxmin")
-                #            ll.set_text("Maxmin")
-                #        if "maxexp" in l:
-                #            #new_legends.append("Maxexp")
-                #            ll.set_text("Maxexp")
-                #        if "QECC" in l:
-                #            #new_legends.append("QECC")
+                #        acqfn = l.split(",")[0]
+                #        xi = l.split(",")[1][2:-2]
+                #        #print(xi)
+                #        if "QECC" in acqfn:
                 #            ll.set_text("QECC")
-                #    #ax.legend(labels=new_legends)
-
-
-                legs = ax.get_legend().get_texts()
-                ##legs = [l.get_text() for l in legs]
-                fix_legends = False
-                if fix_legends:
-                    #new_legends = []
-                    ax.get_legend().set_title(None)
-                    for ll in legs:
-                        #print(type(ll).get_text())
-                        #print(ll.get_text())
-                        l = ll.get_text()
-                        acqfn = l.split(",")[0]
-                        xi = l.split(",")[1][2:-2]
-                        #print(xi)
-                        if "QECC" in acqfn:
-                            ll.set_text("QECC")
-                        elif "maxexp" in acqfn:
-                            ll.set_text(r"$\xi$ = " + xi)
-                        else:
-                            ll.set_text(r"$\xi$ = " + xi)
+                #        elif "maxexp" in acqfn:
+                #            ll.set_text(r"$\xi$ = " + xi)
+                #        else:
+                #            ll.set_text(r"$\xi$ = " + xi)
 
 
 
