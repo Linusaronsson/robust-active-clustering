@@ -9,7 +9,7 @@
     "experiment_options": {
         "seed": 13,
         "num_feedback": 0.01,
-        "noise_level": 0.6,
+        "noise_level": 0.8,
         "persistent_noise_level": 0.0,
         "save_matrix_data": false,
         "infer_sims": false,

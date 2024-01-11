@@ -8,14 +8,14 @@
     },
     "experiment_options": {
         "seed": 13,
-        "num_feedback": 8000,
+        "num_feedback": 2000,
         "noise_level": 0.4,
         "persistent_noise_level": 0.0,
         "save_matrix_data": false,
         "infer_sims": false,
         "predict_sims": false,
         "clustering_alg": "CC",
-        "warm_start": 0.01
+        "warm_start": 0
     },
     "sim_init_options": {
         "K_init": 10,
@@ -23,7 +23,7 @@
         "sim_init_type": "zeros"
     },
     "query_strategy_options": {
-        "acq_fn": "maxexp",
+        "acq_fn": "info_gain_object",
         "eps": 0.3,
         "beta": 8,
         "tau": 7,

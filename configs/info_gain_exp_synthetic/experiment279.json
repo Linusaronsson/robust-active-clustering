@@ -8,7 +8,7 @@
     },
     "experiment_options": {
         "seed": 13,
-        "num_feedback": 4000,
+        "num_feedback": 100,
         "noise_level": 0.4,
         "persistent_noise_level": 0.0,
         "save_matrix_data": false,
@@ -23,7 +23,7 @@
         "sim_init_type": "zeros"
     },
     "query_strategy_options": {
-        "acq_fn": "entropy",
+        "acq_fn": "info_gain_object",
         "eps": 0.3,
         "beta": 8,
         "tau": 7,

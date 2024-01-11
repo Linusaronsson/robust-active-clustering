@@ -8,14 +8,14 @@
     },
     "experiment_options": {
         "seed": 13,
-        "num_feedback": 500,
-        "noise_level": 0.4,
+        "num_feedback": 0.01,
+        "noise_level": 0.6,
         "persistent_noise_level": 0.0,
         "save_matrix_data": false,
         "infer_sims": false,
         "predict_sims": false,
         "clustering_alg": "CC",
-        "warm_start": 0
+        "warm_start": 0.01
     },
     "sim_init_options": {
         "K_init": 10,
@@ -23,14 +23,14 @@
         "sim_init_type": "zeros"
     },
     "query_strategy_options": {
-        "acq_fn": "cluster_incon",
+        "acq_fn": "entropy",
         "eps": 0.3,
         "beta": 8,
         "tau": 7,
         "alpha": 1,
         "num_maxmin_edges": -1,
         "use_power": true,
-        "use_grumbel": true,
+        "use_grumbel": false,
         "power_beta": 1,
         "sparse_sim_matrix": true,
         "mean_field_beta": 20,
