@@ -380,7 +380,7 @@ class ExperimentReader:
                 fig_path.mkdir(parents=True, exist_ok=True)
                 #file_name = exp_kwargs["dataset"] + "_" + metric + "_" + str(exp_kwargs["noise_level"]) + "_" + exp_kwargs["sim_init_type"] + ".png"
                 #file_name = exp_kwargs["dataset"] + "_" + metric + "_" + str(exp_kwargs["noise_level"]) + "_" + str(exp_kwargs["sim_init_type"]) + ".png"
-                file_name = exp_kwargs["dataset"] + "_" + metric + "_" + str(exp_kwargs["noise_level"]) + "_" + str(exp_kwargs["warm_start"]) + ".png"
+                file_name = exp_kwargs["dataset"] + "_" + metric + "_" + str(exp_kwargs["noise_level"]) + "_" + str(exp_kwargs["warm_start"]) + "_" + str(exp_kwargs["use_grumbel"]) + "_" + str(exp_kwargs["info_gain_pair_mode"]) + ".png"
                 #file_path = path + "plot.png"
                 file_path = path + file_name
                 self.dataset = exp_kwargs["dataset"] 
@@ -419,7 +419,7 @@ class ExperimentReader:
                 #errorbar = ("sd", 0.3)
                 errorbar = ("sd", 0.5)
                 if "synthetic" in self.dataset:
-                    cut_threshold = 700
+                    cut_threshold = 25
                 elif self.dataset == "20newsgroups":
                     cut_threshold = 25
                 elif self.dataset == "breast_cancer":
@@ -461,7 +461,7 @@ class ExperimentReader:
                         y="y",
                         #hue=df_filtered[hues].apply(tuple, axis=1),
                         hue="acq_fn",
-                        hue_order=["info_gain_object", "entropy", "cluster_incon", "maxexp", "freq"],
+                        hue_order=["info_gain_object", "entropy", "cluster_incon", "maxexp", "maxmin", "freq"],
                         #hue_order=[("maxexp", "0.0"), ("maxexp", "0.005"), ("maxexp", "0.05"), ("maxexp", "0.2"), ("maxexp", "0.6"), ("maxexp", "1.0")],
                         #hue_order=[("maxexp", "0.0"), ("maxexp", "0.005"), ("maxexp", "0.05"), ("maxexp", "0.2"), ("maxexp", "0.6"), ("maxexp", "1.0"), ("QECC", "1.0")],
                         #hue_order=[("maxmin", "0.0"), ("maxmin", "0.005"), ("maxmin", "0.05"), ("maxmin", "0.2"), ("maxmin", "0.6"), ("maxmin", "1.0"), ("QECC", "1.0")],
