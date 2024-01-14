@@ -809,6 +809,342 @@ class ExperimentReader:
                 plt.savefig(file_path, dpi=200, bbox_inches='tight')
                 plt.clf()
 
+    def generate_AL_curves3(
+        self,
+        data,
+        save_location,
+        categorize,
+        compare,
+        vary,
+        auc, 
+        summary_method, 
+        indices, 
+        threshold, 
+        err_style="band",
+        marker=None,
+        markersize=6,
+        capsize=6,
+        linestyle="solid",
+        **config):
+        #data = self.read_all_data(folder="../experiment_results/maxexp_experiment")
+        config = copy.deepcopy(config)
+        options_keys = []
+        options_values = []
+        compare_options = {}
+        vary_options = {}
+        all_options = {}
+
+        for option_category, options in config.items():
+            if option_category == "general_options":
+                continue
+            for option, option_value in options.items():
+                if type(option_value) != list:
+                    option_value = [option_value]
+                all_options[option] = option_value
+                if option not in compare:
+                    options_keys.append(option)
+                    options_values.append(option_value)
+
+        for option in compare:
+            compare_options[option] = all_options[option]
+            all_options.pop(option, None)
+
+        if "x" not in vary:
+            for option in vary:
+                vary_options[option] = all_options[option]
+                all_options.pop(option, None)
+            data = self.summarize_AL_procedure(
+                data,
+                auc=auc, 
+                method=summary_method, 
+                indices=indices, 
+                threshold=threshold
+            )
+        
+        # extending
+        for metric in self.metrics:
+            if metric in ["time_select_batch", "time_update_clustering", "time", "num_violations"]:
+                continue
+            col = "mean_" + metric
+            data[col] = data[metric].apply(lambda x: np.mean(x, axis=0)) # axis 1 since we transpose in read_all_data (i.e., shape is (num_iterations, num_repeats))
+            data['array_lengths'] = data[col].apply(lambda x: len(x))
+            max_length = data['array_lengths'].max()
+            data = self.extend_dataframe(data, metric, max_length)
+
+        data_column_names = self.metrics
+        non_data_column_names = list(set(data.columns) - set(data_column_names))
+        data = self.flatten_dataframe(data, non_data_column_names, data_column_names)
+
+        for exp_vals in itertools.product(*options_values):
+            exp_kwargs = dict(zip(options_keys, exp_vals))
+
+            for option in compare:
+                exp_kwargs[option] = compare_options[option]
+
+            if "x" not in vary:
+                for option in vary:
+                    exp_kwargs[option] = vary_options[option]
+
+            for metric in self.metrics:
+                exp_kwargs["metric"] = metric
+                df_filtered = self.filter_dataframe(data, exp_kwargs)
+
+                path = save_location + "/" + metric + "/"
+                for option in categorize:
+                    path += str(exp_kwargs[option]) + "/" 
+                fig_path = Path(path)
+                fig_path.mkdir(parents=True, exist_ok=True)
+                #file_name = exp_kwargs["dataset"] + "_" + metric + "_" + str(exp_kwargs["noise_level"]) + "_" + exp_kwargs["sim_init_type"] + ".png"
+                #file_name = exp_kwargs["dataset"] + "_" + metric + "_" + str(exp_kwargs["noise_level"]) + "_" + str(exp_kwargs["sim_init_type"]) + ".png"
+                file_name = exp_kwargs["dataset"] + "_" + metric + "_" + str(exp_kwargs["noise_level"]) + "_" + str(exp_kwargs["warm_start"]) + "_" + str(exp_kwargs["use_grumbel"]) + "_" + str(exp_kwargs["info_gain_pair_mode"]) + "_vary.png"
+                #file_path = path + "plot.png"
+                file_path = path + file_name
+                self.dataset = exp_kwargs["dataset"] 
+
+                # Cont
+                #hues = list(all_options.keys())
+                #hues.extend(list(compare_options.keys()))
+                hues = list(compare_options.keys())
+                sns.set_theme()
+                sns.set_style("whitegrid")
+                SMALL_SIZE = 16
+                MEDIUM_SIZE = 18
+                BIGGER_SIZE = 18
+
+                plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
+                plt.rc('axes', titlesize=SMALL_SIZE)     # fontsize of the axes title
+                plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels
+                plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+                plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+                plt.rc('legend', fontsize=SMALL_SIZE)    # legend fontsize
+                plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
+                plt.rc('figure', dpi=200)
+                plt.rc('figure', figsize=(6, 4))
+
+                if err_style == "bars":
+                    err_kws = {
+                        "capsize": capsize,
+                        "marker": marker,
+                        "markersize": markersize,
+                    }
+                else:
+                    err_kws = {}
+
+                #cut_threshold = 0
+                cut_axis = False
+                #errorbar = ("sd", 0.3)
+                errorbar = ("sd", 0.5)
+                if "synthetic" in self.dataset:
+                    cut_threshold = 25
+                elif self.dataset == "20newsgroups":
+                    cut_threshold = 25
+                elif self.dataset == "breast_cancer":
+                    # noise = 0.0
+                    #errorbar = None
+                    #cut_axis = True
+                    #l1 = 0
+                    #l2 = 0.7
+                    #l3 = 0.72
+                    #l4 = 1.01
+                    cut_threshold = 5
+                    #cut_threshold = 900
+                elif self.dataset == "cardiotocography":
+                    cut_threshold = 10
+                elif self.dataset == "cifar10" or self.dataset == "cifar10_original":
+                    cut_threshold = 12
+                elif self.dataset == "ecoli":
+                    cut_threshold = 17
+                elif self.dataset == "forest_type_mapping":
+                    cut_threshold = 10
+                elif self.dataset == "mnist":
+                    cut_threshold = 12
+                elif self.dataset == "mushrooms":
+                    cut_threshold = 4
+                elif self.dataset == "user_knowledge":
+                    cut_threshold = 14
+                elif self.dataset == "yeast":
+                    cut_threshold = 9
+                else:
+                    raise ValueError("incorrect dataset!")
+
+                df_filtered = df_filtered[df_filtered[vary[0]] < cut_threshold]
+                metric_map = {"ami": "AMI", "rand": "ARI", "time": "Time (s)", "num_violations": "Num. violations", "time_select_batch": "Time (s)", "time_update_clustering": "Time (s)"}
+
+                df_filtered['mean_field_beta'] = df_filtered['mean_field_beta'].astype(str)
+                df_filtered['info_gain_lambda'] = df_filtered['info_gain_lambda'].astype(str)
+                df_filtered['num_edges_info_gain'] = df_filtered['num_edges_info_gain'].astype(str)
+                if not cut_axis:
+                    ax = sns.lineplot(
+                        x=vary[0],
+                        y="y",
+                        #hue=df_filtered[hues].apply(tuple, axis=1),
+                        #hue="mean_field_beta",
+                        hue="num_edges_info_gain",
+                        #hue_order=["1", "3", "10", "20", "50"],
+                        hue_order=["-1", "1", "5", "10", "50", "100", "200"],
+                        #hue_order=["info_gain_object", "entropy", "cluster_incon", "maxexp", "maxmin", "freq"],
+                        #hue_order=[("maxexp", "0.0"), ("maxexp", "0.005"), ("maxexp", "0.05"), ("maxexp", "0.2"), ("maxexp", "0.6"), ("maxexp", "1.0")],
+                        #hue_order=[("maxexp", "0.0"), ("maxexp", "0.005"), ("maxexp", "0.05"), ("maxexp", "0.2"), ("maxexp", "0.6"), ("maxexp", "1.0"), ("QECC", "1.0")],
+                        #hue_order=[("maxmin", "0.0"), ("maxmin", "0.005"), ("maxmin", "0.05"), ("maxmin", "0.2"), ("maxmin", "0.6"), ("maxmin", "1.0"), ("QECC", "1.0")],
+                        #hue_order=[("maxmin", "0.0"), ("maxmin", "0.005"), ("maxmin", "0.05"), ("maxmin", "0.2"), ("maxmin", "0.6"), ("maxmin", "1.0")],
+                        errorbar=errorbar,
+                        marker=".",
+                        err_style=err_style,
+                        data=df_filtered,
+                        linestyle=linestyle,
+                        err_kws=err_kws,
+                    )
+                    #plt.setp(ax.lines, markeredgecolor='none')  # Removes the border of the markers
+                    #plt.setp(ax.lines, alpha=0.7)  # Adjusts the transparency of the markers
+                    plt.setp(ax.lines, markeredgewidth=0.5)  # Adjusts the transparency of the markers
+                    plt.setp(ax.lines, markersize=7)  # Adjusts the transparency of the markers
+
+                    plt.ylabel(metric_map[metric])
+                else:
+                    f, (ax1, ax2) = plt.subplots(ncols=1, nrows=2, sharex=True, sharey=False, gridspec_kw={'height_ratios': [3, 1]})
+                    ax = sns.lineplot(
+                        x=vary[0],
+                        y="y",
+                        #hue=df_filtered[hues].apply(tuple, axis=1),
+                        hue="acq_fn",
+                        hue_order=["maxexp", "maxmin", "uncert", "freq", "unif", "nCOBRAS", "COBRAS", "QECC"],
+                        errorbar=errorbar,
+                        err_style=err_style,
+                        data=df_filtered,
+                        linestyle=linestyle,
+                        err_kws=err_kws,
+                        ax=ax1
+                    )
+                    ax = sns.lineplot(
+                        x=vary[0],
+                        y="y",
+                        #hue=df_filtered[hues].apply(tuple, axis=1),
+                        hue="acq_fn",
+                        hue_order=["maxexp", "maxmin", "uncert", "freq", "unif", "nCOBRAS", "COBRAS", "QECC"],
+                        errorbar=errorbar,
+                        err_style=err_style,
+                        data=df_filtered,
+                        linestyle=linestyle,
+                        err_kws=err_kws,
+                        ax=ax2
+                    )
+                    ax1.spines['bottom'].set_visible(False)
+                    ax2.spines['top'].set_visible(False)
+                    ax1.set_ylim(l3, l4)
+                    ax2.set_ylim(l1, l2)
+
+                    d = .015  # how big to make the diagonal lines in axes coordinates
+                    # arguments to pass to plot, just so we don't keep repeating them
+                    kwargs = dict(transform=ax1.transAxes, color='k', clip_on=False)
+                    ax1.plot((-d, +d), (-d, +d), **kwargs)        # top-left diagonal
+                    ax1.plot((1 - d, 1 + d), (-d, +d), **kwargs)  # top-right diagonal
+
+                    kwargs.update(transform=ax2.transAxes)  # switch to the bottom axes
+                    ax2.plot((-d, +d), (1 - d, 1 + d), **kwargs)  # bottom-left diagonal
+                    ax2.plot((1 - d, 1 + d), (1 - d, 1 + d), **kwargs)  # bottom-right diagonal
+                    ax1.set_ylabel("")
+                    ax2.set_ylabel("")
+                    #f.text(metric_map[metric])
+                    f.text(-0.02, 0.5, metric_map[metric], va='center', rotation='vertical')
+
+
+                    #plt.subplots_adjust(wspace=0, hspace=0)
+                N = len(self.Y)
+                n_edges = (N*(N-1))/2
+                if self.num_feedback < 1:
+                    batch_size = math.ceil(n_edges * self.num_feedback)
+                else:
+                    batch_size = self.num_feedback
+                n_iterations = int(n_edges/batch_size)
+                #tick_labels = np.array(list(range(0, n_iterations))) * batch_size
+                #print(batch_size)
+                #print(n_edges)
+                labels = []
+                for item in ax.get_xticks():
+                    #print((int(item)*batch_size)/n_edges)
+                    labels.append(round((int(item)*batch_size)/n_edges, 2))
+                    #labels.append((int(item)*batch_size)/n_edges, 1)
+
+
+
+                if not cut_axis:
+                    ax.set_xticklabels(labels)
+                else:
+                    ax2.get_legend().remove()
+                    ax2.set_xticklabels(labels)
+                    ax = ax1
+
+                #ax.set_xticks(range(n_iterations), labels=tick_labels)
+                #plt.xlabel(str(vary))
+                plt.xlabel("Proportion of edges queried")
+                #ax.legend(loc='lower right')
+                ax.legend(loc='best')
+
+                #legs = ax.get_legend().get_texts()
+                ##legs = [l.get_text() for l in legs]
+                #fix_legends = True
+                #if fix_legends:
+                #    #new_legends = []
+                #    ax.get_legend().set_title(None)
+                #    for ll in legs:
+                #        l = ll.get_text()
+                #        if "unif" in l:
+                #            #new_legends.append("Uniform")
+                #            ll.set_text("Uniform")
+                #        if "COBRAS" in l and "nCOBRAS" not in l:
+                #            #new_legends.append("COBRAS")
+                #            ll.set_text("COBRAS")
+                #        if "nCOBRAS" in l:
+                #            #new_legends.append("nCOBRAS")
+                #            ll.set_text("nCOBRAS")
+                #        if "freq" in l:
+                #            #new_legends.append("Frequency")
+                #            ll.set_text("Uniform")
+                #        if "uncert" in l:
+                #            #new_legends.append("Uncertainty")
+                #            ll.set_text("Uncertainty")
+                #        if "maxmin" in l:
+                #            #new_legends.append("Maxmin")
+                #            ll.set_text("Maxmin")
+                #        if "maxexp" in l:
+                #            #new_legends.append("Maxexp")
+                #            ll.set_text("Maxexp")
+                #        if "QECC" in l:
+                #            #new_legends.append("QECC")
+                #            ll.set_text("QECC")
+                #        if "entropy" in l:
+                #            ll.set_text("Entropy")
+                #        if "info_gain_object" in l:
+                #            ll.set_text("IG")
+                #        if "cluster_incon" in l:
+                #            ll.set_text("CC")
+
+                #    #ax.legend(labels=new_legends)
+
+
+                legs = ax.get_legend().get_texts()
+                ##legs = [l.get_text() for l in legs]
+                fix_legends = False
+                if fix_legends:
+                    #new_legends = []
+                    ax.get_legend().set_title(None)
+                    for ll in legs:
+                        #print(type(ll).get_text())
+                        #print(ll.get_text())
+                        l = ll.get_text()
+                        #acqfn = l.split(",")[0]
+                        #xi = l.split(",")[1][2:-2]
+                        #print(xi)
+                        #if "info_gain_object" in acqfn:
+                        ll.set_text(r"$\beta$ = " + l)
+
+
+
+                legend = ax.get_legend()
+                plt.savefig(file_path, bbox_extra_artists=(legend,), dpi=200, bbox_inches='tight')
+                #plt.savefig(file_path, dpi=200, bbox_inches='tight')
+                plt.clf()
+
     
     def generate_experiments(self, folder, options_to_keep, start_index=1, **config):
         options_to_compare_extracted = {}

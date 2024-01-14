@@ -9,13 +9,13 @@
     "experiment_options": {
         "seed": 13,
         "num_feedback": 0.01,
-        "noise_level": 0.4,
+        "noise_level": 0.6,
         "persistent_noise_level": 0.0,
         "save_matrix_data": false,
         "infer_sims": false,
         "predict_sims": false,
         "clustering_alg": "CC",
-        "warm_start": 0.02
+        "warm_start": 0.01
     },
     "sim_init_options": {
         "K_init": 10,
@@ -23,7 +23,7 @@
         "sim_init_type": "zeros"
     },
     "query_strategy_options": {
-        "acq_fn": "entropy",
+        "acq_fn": "maxexp",
         "eps": 0.3,
         "beta": 8,
         "tau": 7,
@@ -34,7 +34,7 @@
         "power_beta": 1,
         "sparse_sim_matrix": true,
         "mean_field_beta": 3,
-        "info_gain_lambda": 3,
+        "info_gain_lambda": 1,
         "running_avg": true,
         "num_edges_info_gain": 50,
         "U_size": 1,
