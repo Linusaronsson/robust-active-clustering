@@ -596,7 +596,7 @@ class ExperimentReader:
                         if "info_gain_object" in l:
                             ll.set_text("IG")
                         if "cluster_incon" in l:
-                            ll.set_text("CC")
+                            ll.set_text("Incon-cluster")
 
                     #ax.legend(labels=new_legends)
 
@@ -801,7 +801,7 @@ class ExperimentReader:
                         if "info_gain_object" in l:
                             ll.set_text("IG")
                         if "cluster_incon" in l:
-                            ll.set_text("CC")
+                            ll.set_text("Incon-cluster")
 
                 #ax.legend(labels=new_legends)
                 legend = ax.get_legend()
