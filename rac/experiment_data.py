@@ -555,7 +555,7 @@ class ExperimentReader:
 
                 #ax.set_xticks(range(n_iterations), labels=tick_labels)
                 #plt.xlabel(str(vary))
-                plt.xlabel("Proportion of edges queried")
+                plt.xlabel("Proportion of pairs queried")
                 #ax.legend(loc='lower right')
                 ax.legend(loc='best')
 
@@ -1076,7 +1076,7 @@ class ExperimentReader:
 
                 #ax.set_xticks(range(n_iterations), labels=tick_labels)
                 #plt.xlabel(str(vary))
-                plt.xlabel("Proportion of edges queried")
+                plt.xlabel("Proportion of pairs queried")
                 #ax.legend(loc='lower right')
                 ax.legend(loc='best')
 
