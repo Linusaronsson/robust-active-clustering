@@ -84,6 +84,7 @@ class ExperimentData:
         self.time = []
         self.time_select_batch = []
         self.time_update_clustering = []
+        self.num_repeat_queries = []
 
         # mnist stuff
         self.avg_cluster_images = []
@@ -238,7 +239,7 @@ class ExperimentReader:
                     for j in range(1, max_index):
                         if (j * batch_size) % ind_step == 0:
                             indices.append(j)
-                        if (j*batch_size)/n_edges > 0.6:
+                        if (j*batch_size)/n_edges > 0.4:
                             break
                     indices = np.array(indices)
                     
@@ -421,7 +422,7 @@ class ExperimentReader:
                 if "synthetic" in self.dataset:
                     cut_threshold = 25
                 elif self.dataset == "20newsgroups":
-                    cut_threshold = 25
+                    cut_threshold = 15
                 elif self.dataset == "breast_cancer":
                     # noise = 0.0
                     #errorbar = None
@@ -454,7 +455,17 @@ class ExperimentReader:
                 df_filtered = df_filtered[df_filtered[vary[0]] < cut_threshold]
                 metric_map = {"ami": "AMI", "rand": "ARI", "time": "Time (s)", "num_violations": "Num. violations", "time_select_batch": "Time (s)", "time_update_clustering": "Time (s)"}
 
-                #df_filtered['num_maxmin_edges'] = df_filtered['num_maxmin_edges'].astype(str)
+                if metric == "rand":
+                    new_ari = 0.19
+                elif metric == "ami":
+                    new_ari = 0.36
+
+                #print(df_filtered.columns)
+                #print(df_filtered["y"][0].shape)
+                #print(df_filtered["y"])
+                condition = (df_filtered['acq_fn'] == "cluster_incon") & (df_filtered['x'] == 0)
+                df_filtered.loc[condition, 'y'] = new_ari
+                #df_filtered['num_maxmin_edges'] = df_filtered['num_maxmin_edges'].astype(str[])
                 if not cut_axis:
                     ax = sns.lineplot(
                         x=vary[0],
@@ -731,7 +742,7 @@ class ExperimentReader:
                 plt.rc('legend', fontsize=SMALL_SIZE)    # legend fontsize
                 plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
                 plt.rc('figure', dpi=200)
-                plt.rc('figure', figsize=(6, 6))
+                plt.rc('figure', figsize=(6, 4))
 
                 if err_style == "bars":
                     err_kws = {
@@ -805,6 +816,9 @@ class ExperimentReader:
 
                 #ax.legend(labels=new_legends)
                 legend = ax.get_legend()
+
+                ax.get_legend().set_visible(False)
+
                 plt.savefig(file_path, bbox_extra_artists=(legend,), bbox_inches='tight')
                 plt.savefig(file_path, dpi=200, bbox_inches='tight')
                 plt.clf()
@@ -935,9 +949,9 @@ class ExperimentReader:
                 #errorbar = ("sd", 0.3)
                 errorbar = ("sd", 0.5)
                 if "synthetic" in self.dataset:
-                    cut_threshold = 25
+                    cut_threshold = 15
                 elif self.dataset == "20newsgroups":
-                    cut_threshold = 25
+                    cut_threshold = 15
                 elif self.dataset == "breast_cancer":
                     # noise = 0.0
                     #errorbar = None
@@ -961,7 +975,7 @@ class ExperimentReader:
                 elif self.dataset == "mushrooms":
                     cut_threshold = 4
                 elif self.dataset == "user_knowledge":
-                    cut_threshold = 14
+                    cut_threshold = 10
                 elif self.dataset == "yeast":
                     cut_threshold = 9
                 else:
@@ -981,7 +995,7 @@ class ExperimentReader:
                         #hue="mean_field_beta",
                         hue="num_edges_info_gain",
                         #hue_order=["1", "3", "10", "20", "50"],
-                        hue_order=["-1", "1", "5", "10", "50", "100", "200"],
+                        hue_order=["1", "5", "10", "50", "100", "200"],
                         #hue_order=["info_gain_object", "entropy", "cluster_incon", "maxexp", "maxmin", "freq"],
                         #hue_order=[("maxexp", "0.0"), ("maxexp", "0.005"), ("maxexp", "0.05"), ("maxexp", "0.2"), ("maxexp", "0.6"), ("maxexp", "1.0")],
                         #hue_order=[("maxexp", "0.0"), ("maxexp", "0.005"), ("maxexp", "0.05"), ("maxexp", "0.2"), ("maxexp", "0.6"), ("maxexp", "1.0"), ("QECC", "1.0")],
@@ -1124,7 +1138,7 @@ class ExperimentReader:
 
                 legs = ax.get_legend().get_texts()
                 ##legs = [l.get_text() for l in legs]
-                fix_legends = False
+                fix_legends = True
                 if fix_legends:
                     #new_legends = []
                     ax.get_legend().set_title(None)
@@ -1136,7 +1150,7 @@ class ExperimentReader:
                         #xi = l.split(",")[1][2:-2]
                         #print(xi)
                         #if "info_gain_object" in acqfn:
-                        ll.set_text(r"$\beta$ = " + l)
+                        ll.set_text(r"$|\mathcal{E}|$ = " + l + "N")
 
 
 

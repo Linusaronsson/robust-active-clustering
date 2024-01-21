@@ -174,6 +174,7 @@ class ActiveClustering:
                 if len(self.edges) != self.query_size:
                     raise ValueError("Num queried {} not equal to query size {}!!".format(len(self.edges[0]), self.query_size))
                 
+                self.num_repeat_queries = 0
                 for ind1, ind2 in self.edges:
                     self.update_similarity(ind1, ind2)
 
@@ -344,6 +345,10 @@ class ActiveClustering:
 
             count_non_zero_lower = np.count_nonzero(np.tril(self.violations, k=-1))
             self.ac_data.num_violations.append(count_non_zero_lower)
+
+            self.ac_data.num_repeat_queries.append(self.num_repeat_queries)
+
+
 
         self.ac_data.rand.append(adjusted_rand_score(self.Y, self.clustering_solution))
         self.ac_data.ami.append(adjusted_mutual_info_score(self.Y, self.clustering_solution))
@@ -612,6 +617,10 @@ class ActiveClustering:
     
     def update_similarity(self, ind1, ind2, custom_query=None, update_freq=True):
         #if update_freq:
+
+        if self.feedback_freq[ind1, ind2] > 1:
+            self.num_repeat_queries += 1
+
         self.feedback_freq[ind1, ind2] += 1
         self.feedback_freq[ind2, ind1] += 1
 
