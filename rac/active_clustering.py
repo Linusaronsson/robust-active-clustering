@@ -346,7 +346,6 @@ class ActiveClustering:
             count_non_zero_lower = np.count_nonzero(np.tril(self.violations, k=-1))
             self.ac_data.num_violations.append(count_non_zero_lower)
 
-            self.ac_data.num_repeat_queries.append(self.num_repeat_queries)
 
 
 
@@ -372,7 +371,9 @@ class ActiveClustering:
             self.ac_data.num_neg.append(num_neg)
             self.ac_data.num_pos_ground_truth.append(num_pos_ground_truth)
             self.ac_data.num_neg_ground_truth.append(num_neg_ground_truth)
+            #self.ac_data.num_repeat_queries.append(0)
         else:
+            self.ac_data.num_repeat_queries.append(self.num_repeat_queries)
             self.ac_data.num_queries.append(self.query_size) 
             print("TIME AFTER RUN: ", time_now - self.start)
             self.ac_data.time.append(time_now - self.start)
