@@ -498,7 +498,7 @@ class ActiveClustering:
         if self.acq_fn in ["QECC", "COBRAS", "nCOBRAS"]:
             self.sim_init_type = "random_clustering"
 
-        if self.acq_fn == "cluster_incon":
+        if self.acq_fn == "cluster_incon" and self.sim_init_type not in ["uniform_random", "random_clustering"]:
             self.sim_init_type = "uniform_random"
 
         if self.sim_init_type == "zeros":
