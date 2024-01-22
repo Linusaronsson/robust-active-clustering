@@ -348,7 +348,7 @@ class ExperimentReader:
         
         # extending
         for metric in self.metrics:
-            if metric in ["time_select_batch", "time_update_clustering", "time", "num_violations"]:
+            if metric in ["time_select_batch", "time_update_clustering", "time", "num_violations", "num_repeat_queries"]:
                 continue
             col = "mean_" + metric
             data[col] = data[metric].apply(lambda x: np.mean(x, axis=0)) # axis 1 since we transpose in read_all_data (i.e., shape is (num_iterations, num_repeats))
@@ -453,18 +453,19 @@ class ExperimentReader:
                     raise ValueError("incorrect dataset!")
 
                 df_filtered = df_filtered[df_filtered[vary[0]] < cut_threshold]
-                metric_map = {"ami": "AMI", "rand": "ARI", "time": "Time (s)", "num_violations": "Num. violations", "time_select_batch": "Time (s)", "time_update_clustering": "Time (s)"}
+                metric_map = {"ami": "AMI", "rand": "ARI", "time": "Time (s)", "num_violations": "Num. violations",
+                            "time_select_batch": "Time (s)", "time_update_clustering": "Time (s)", "num_repeat_queries": "Num. pairs re-queried"}
 
-                if metric == "rand":
-                    new_ari = 0.19
-                elif metric == "ami":
-                    new_ari = 0.36
+                #if metric == "rand":
+                    #new_ari = 0.19
+                #elif metric == "ami":
+                    #new_ari = 0.36
 
                 #print(df_filtered.columns)
                 #print(df_filtered["y"][0].shape)
                 #print(df_filtered["y"])
-                condition = (df_filtered['acq_fn'] == "cluster_incon") & (df_filtered['x'] == 0)
-                df_filtered.loc[condition, 'y'] = new_ari
+                #condition = (df_filtered['acq_fn'] == "cluster_incon") & (df_filtered['x'] == 0)
+                #df_filtered.loc[condition, 'y'] = new_ari
                 #df_filtered['num_maxmin_edges'] = df_filtered['num_maxmin_edges'].astype(str[])
                 if not cut_axis:
                     ax = sns.lineplot(
@@ -607,7 +608,7 @@ class ExperimentReader:
                         if "info_gain_object" in l:
                             ll.set_text("IG")
                         if "cluster_incon" in l:
-                            ll.set_text("Incon-cluster")
+                            ll.set_text("IMU-C")
 
                     #ax.legend(labels=new_legends)
 
@@ -812,7 +813,7 @@ class ExperimentReader:
                         if "info_gain_object" in l:
                             ll.set_text("IG")
                         if "cluster_incon" in l:
-                            ll.set_text("Incon-cluster")
+                            ll.set_text("IMU-C")
 
                 #ax.legend(labels=new_legends)
                 legend = ax.get_legend()
