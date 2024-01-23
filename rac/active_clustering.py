@@ -498,8 +498,6 @@ class ActiveClustering:
         if self.acq_fn in ["QECC", "COBRAS", "nCOBRAS"]:
             self.sim_init_type = "random_clustering"
 
-        if self.acq_fn == "cluster_incon" and self.sim_init_type not in ["uniform_random", "random_clustering", "custom"]:
-            self.sim_init_type = "uniform_random"
 
         if self.sim_init_type == "zeros":
             self.pairwise_similarities = np.zeros((self.N, self.N))
@@ -581,7 +579,19 @@ class ActiveClustering:
                 self.feedback_freq[ind1, ind2] += 1
                 self.feedback_freq[ind2, ind1] += 1
 
+
         self.update_clustering() 
+
+        if self.acq_fn == "cluster_incon" and self.sim_init_type == "zeros" and self.warm_start > 0:# not in ["uniform_random", "random_clustering", "custom"]:
+            self.pairwise_similarities_new = np.random.uniform(
+                low=-self.sim_init,
+                high=self.sim_init, 
+                size=(self.N, self.N)
+            )
+            for ind1, ind2 in pairs:
+                self.pairwise_similarities_new[ind1, ind2] = self.ground_truth_pairwise_similarities_noisy[ind1, ind2]
+                self.pairwise_similarities_new[ind2, ind1] = self.ground_truth_pairwise_similarities_noisy[ind1, ind2]
+            self.pairwise_similarities = self.pairwise_similarities_new
 
         if self.warm_start > 0:
             np.random.set_state(state)
