@@ -44,11 +44,9 @@
         "mf_iterations": 50
     },
     "dataset_options": {
-        "dataset": {
-            "dataset": "synthetic",
-            "n_samples": 500,
-            "n_clusters": 10,
-            "class_balance": null
-        }
+        "dataset": "synthetic",
+        "n_samples": 500,
+        "n_clusters": 10,
+        "class_balance": null
     }
 }
