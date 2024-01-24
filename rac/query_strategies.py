@@ -44,9 +44,9 @@ class QueryStrategy:
             self.info_matrix = self.compute_cluster_informativeness(-np.abs(self.ac.pairwise_similarities))
             self.info_matrix = self.info_matrix - np.abs(self.ac.pairwise_similarities)
         elif acq_fn == "cluster_incon":
-            self.info_matrix1 = self.compute_cluster_informativeness(self.ac.violations)# - self.ac.alpha*np.abs(self.ac.pairwise_similarities))
-            self.info_matrix2 = self.compute_cluster_informativeness(np.abs(self.ac.pairwise_similarities))
-            self.info_matrix = self.info_matrix1 - self.ac.alpha*self.info_matrix2
+            self.info_matrix1 = self.compute_cluster_informativeness(self.ac.violations - self.ac.alpha*np.abs(self.ac.pairwise_similarities))
+            #self.info_matrix2 = self.compute_cluster_informativeness(np.abs(self.ac.pairwise_similarities))
+            #self.info_matrix = self.info_matrix1 - self.ac.alpha*self.info_matrix2
             self.info_matrix = self.info_matrix - np.abs(self.ac.pairwise_similarities)
         else:
             raise ValueError("Invalid acquisition function: {}".format(acq_fn))
