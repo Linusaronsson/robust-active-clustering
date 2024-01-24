@@ -248,13 +248,13 @@ class QueryStrategy:
             I[col_indices, row_indices] = region_sum
 
 
-        #sorted_regions = sorted(region_sums, key=lambda x: x[0], reverse=True)
-        #decrement = 0
-        #for region_sum, region in sorted_regions:
-        #    row_indices, col_indices = zip(*region)
-        #    I[row_indices, col_indices] = region_sum #- decrement
-        #    I[col_indices, row_indices] = region_sum #- decrement
-        #    decrement += 10000
+        sorted_regions = sorted(region_sums, key=lambda x: x[0], reverse=True)
+        decrement = 0
+        for region_sum, region in sorted_regions:
+            row_indices, col_indices = zip(*region)
+            I[row_indices, col_indices] = region_sum - decrement
+            I[col_indices, row_indices] = region_sum - decrement
+            decrement += 10000
         return I
 
     def compute_maxmin(self):
