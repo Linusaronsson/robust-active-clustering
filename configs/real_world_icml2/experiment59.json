@@ -18,16 +18,16 @@
         "warm_start": 0
     },
     "sim_init_options": {
-        "K_init": 10,
-        "sim_init": 0.1,
+        "K_init": 2,
+        "sim_init": 0.001,
         "sim_init_type": "custom"
     },
     "query_strategy_options": {
-        "acq_fn": "maxexp",
+        "acq_fn": "cluster_incon",
         "eps": 0.3,
         "beta": 1,
         "tau": 7,
-        "alpha": 1,
+        "alpha": 0.5,
         "num_maxmin_edges": -1,
         "use_power": true,
         "use_grumbel": true,
@@ -44,6 +44,6 @@
         "mf_iterations": 50
     },
     "dataset_options": {
-        "dataset": "ecoli"
+        "dataset": "mushrooms"
     }
 }

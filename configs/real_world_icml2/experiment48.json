@@ -19,7 +19,7 @@
     },
     "sim_init_options": {
         "K_init": 10,
-        "sim_init": 0.1,
+        "sim_init": 0.01,
         "sim_init_type": "custom"
     },
     "query_strategy_options": {
@@ -44,6 +44,6 @@
         "mf_iterations": 50
     },
     "dataset_options": {
-        "dataset": "yeast"
+        "dataset": "ecoli"
     }
 }

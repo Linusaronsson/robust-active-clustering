@@ -19,11 +19,11 @@
     },
     "sim_init_options": {
         "K_init": 3,
-        "sim_init": 0.1,
+        "sim_init": 0.001,
         "sim_init_type": "custom"
     },
     "query_strategy_options": {
-        "acq_fn": "cluster_incon",
+        "acq_fn": "freq",
         "eps": 0.3,
         "beta": 1,
         "tau": 7,
@@ -44,6 +44,6 @@
         "mf_iterations": 50
     },
     "dataset_options": {
-        "dataset": "cifar10"
+        "dataset": "mnist"
     }
 }
