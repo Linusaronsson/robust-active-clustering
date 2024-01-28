@@ -773,6 +773,7 @@ class ExperimentReader:
                 for _, spine in ax.spines.items():
                     spine.set_color('black')
                     spine.set_linewidth(1)
+
                 if err_style == "bars":
                     err_kws = {
                         "capsize": capsize,
@@ -841,7 +842,7 @@ class ExperimentReader:
                         y="y",
                         #hue=df_filtered[hues].apply(tuple, axis=1),
                         hue="acq_fn",
-                        hue_order=["entropy", "cluster_incon", "maxexp", "maxmin", "freq"],
+                        hue_order=["entropy", "maxexp", "maxmin", "freq"],
                         #hue_order=[("maxexp", "0.0"), ("maxexp", "0.005"), ("maxexp", "0.05"), ("maxexp", "0.2"), ("maxexp", "0.6"), ("maxexp", "1.0")],
                         #hue_order=[("maxexp", "0.0"), ("maxexp", "0.005"), ("maxexp", "0.05"), ("maxexp", "0.2"), ("maxexp", "0.6"), ("maxexp", "1.0"), ("QECC", "1.0")],
                         #hue_order=[("maxmin", "0.0"), ("maxmin", "0.005"), ("maxmin", "0.05"), ("maxmin", "0.2"), ("maxmin", "0.6"), ("maxmin", "1.0"), ("QECC", "1.0")],
@@ -1102,7 +1103,7 @@ class ExperimentReader:
                 #hues.extend(list(compare_options.keys()))
                 hues = list(compare_options.keys())
                 sns.set_theme()
-                sns.set_style("whitegrid")
+                sns.set_style("white")
                 SMALL_SIZE = 16
                 MEDIUM_SIZE = 18
                 BIGGER_SIZE = 18
@@ -1112,10 +1113,19 @@ class ExperimentReader:
                 plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels
                 plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
                 plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
-                plt.rc('legend', fontsize=SMALL_SIZE)    # legend fontsize
+                plt.rc('legend', fontsize=18)    # legend fontsize
                 plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
                 plt.rc('figure', dpi=200)
                 plt.rc('figure', figsize=(6, 4))
+
+                # Customize gridlines
+                plt.grid(True, which='both', linestyle='--', linewidth=0.5)
+
+                # Set the border color and width
+                ax = plt.gca()  # Get current axis
+                for _, spine in ax.spines.items():
+                    spine.set_color('black')
+                    spine.set_linewidth(1)
 
                 if err_style == "bars":
                     err_kws = {
@@ -1288,12 +1298,13 @@ class ExperimentReader:
                 file_path = path + file_name
                 self.dataset = exp_kwargs["dataset"] 
 
+
                 # Cont
                 #hues = list(all_options.keys())
                 #hues.extend(list(compare_options.keys()))
                 hues = list(compare_options.keys())
                 sns.set_theme()
-                sns.set_style("whitegrid")
+                sns.set_style("white")
                 SMALL_SIZE = 16
                 MEDIUM_SIZE = 18
                 BIGGER_SIZE = 18
@@ -1303,10 +1314,19 @@ class ExperimentReader:
                 plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels
                 plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
                 plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
-                plt.rc('legend', fontsize=SMALL_SIZE)    # legend fontsize
+                plt.rc('legend', fontsize=16)    # legend fontsize
                 plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
                 plt.rc('figure', dpi=200)
                 plt.rc('figure', figsize=(6, 4))
+
+                # Customize gridlines
+                plt.grid(True, which='both', linestyle='--', linewidth=0.5)
+
+                # Set the border color and width
+                ax = plt.gca()  # Get current axis
+                for _, spine in ax.spines.items():
+                    spine.set_color('black')
+                    spine.set_linewidth(1)
 
                 if err_style == "bars":
                     err_kws = {
@@ -1527,6 +1547,7 @@ class ExperimentReader:
 
 
 
+                ax.get_legend().set_visible(False)
                 legend = ax.get_legend()
                 plt.savefig(file_path, bbox_extra_artists=(legend,), dpi=200, bbox_inches='tight')
                 #plt.savefig(file_path, dpi=200, bbox_inches='tight')
