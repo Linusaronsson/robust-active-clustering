@@ -23,8 +23,8 @@
         "sim_init_type": "custom"
     },
     "query_strategy_options": {
-        "acq_fn": "maxmin",
-        "eps": 0.3,
+        "acq_fn": "cluster_incon",
+        "eps": 0.1,
         "beta": 1,
         "tau": 7,
         "alpha": 0.2,

@@ -24,10 +24,10 @@
     },
     "query_strategy_options": {
         "acq_fn": "entropy",
-        "eps": 0.3,
+        "eps": 0.1,
         "beta": 1,
         "tau": 7,
-        "alpha": 0.2,
+        "alpha": 1,
         "num_maxmin_edges": -1,
         "use_power": true,
         "use_grumbel": true,

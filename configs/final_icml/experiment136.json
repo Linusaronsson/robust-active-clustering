@@ -15,19 +15,19 @@
         "infer_sims": false,
         "predict_sims": false,
         "clustering_alg": "CC",
-        "warm_start": 0.01
+        "warm_start": 0
     },
     "sim_init_options": {
         "K_init": 10,
-        "sim_init": 0.0001,
-        "sim_init_type": "uniform_random"
+        "sim_init": 0.01,
+        "sim_init_type": "custom"
     },
     "query_strategy_options": {
-        "acq_fn": "maxexp",
-        "eps": 0.3,
+        "acq_fn": "maxmin",
+        "eps": 0,
         "beta": 1,
         "tau": 7,
-        "alpha": 1,
+        "alpha": 0,
         "num_maxmin_edges": -1,
         "use_power": true,
         "use_grumbel": true,

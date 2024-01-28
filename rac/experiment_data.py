@@ -460,7 +460,7 @@ class ExperimentReader:
                 else:
                     raise ValueError("incorrect dataset!")
 
-                #cut_threshold = 23
+                cut_threshold = 50
                 df_filtered = df_filtered[df_filtered[vary[0]] < cut_threshold]
                 metric_map = {"ami": "AMI", "rand": "ARI", "time": "Time (s)", "num_violations": "Num. violations",
                             "time_select_batch": "Time (s)", "time_update_clustering": "Time (s)", "num_repeat_queries": "Num. pairs re-queried"}
@@ -482,7 +482,7 @@ class ExperimentReader:
                         y="y",
                         #hue=df_filtered[hues].apply(tuple, axis=1),
                         hue="acq_fn",
-                        hue_order=["info_gain_object", "entropy", "cluster_incon", "maxexp", "maxmin", "freq"],
+                        hue_order=["entropy", "cluster_incon", "maxexp", "maxmin", "freq"],
                         #hue_order=[("maxexp", "0.0"), ("maxexp", "0.005"), ("maxexp", "0.05"), ("maxexp", "0.2"), ("maxexp", "0.6"), ("maxexp", "1.0")],
                         #hue_order=[("maxexp", "0.0"), ("maxexp", "0.005"), ("maxexp", "0.05"), ("maxexp", "0.2"), ("maxexp", "0.6"), ("maxexp", "1.0"), ("QECC", "1.0")],
                         #hue_order=[("maxmin", "0.0"), ("maxmin", "0.005"), ("maxmin", "0.05"), ("maxmin", "0.2"), ("maxmin", "0.6"), ("maxmin", "1.0"), ("QECC", "1.0")],
@@ -646,8 +646,8 @@ class ExperimentReader:
 
                 legend = ax.get_legend()
 
-                if self.dataset != "20newsgroups":
-                    ax.get_legend().set_visible(False)
+                #if self.dataset != "20newsgroups":
+                    #ax.get_legend().set_visible(False)
 
                 plt.savefig(file_path, bbox_extra_artists=(legend,), dpi=200, bbox_inches='tight')
                 #plt.savefig(file_path, dpi=200, bbox_inches='tight')
