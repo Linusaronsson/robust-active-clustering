@@ -9,25 +9,27 @@
     "experiment_options": {
         "seed": 13,
         "num_feedback": 0.01,
-        "noise_level": 0.4,
+        "noise_level": 0.6,
         "persistent_noise_level": 0.0,
         "save_matrix_data": false,
         "infer_sims": false,
         "predict_sims": false,
         "clustering_alg": "CC",
-        "warm_start": 0
+        "warm_start": 0.02
     },
     "sim_init_options": {
         "K_init": 10,
-        "sim_init": 0.1,
+        "sim_init": 0.01,
         "sim_init_type": "custom"
     },
     "query_strategy_options": {
-        "acq_fn": "freq",
-        "eps": 0,
+        "acq_fn": "entropy",
+        "eps": 0.3,
         "beta": 1,
         "tau": 7,
-        "alpha": 0,
+        "alpha": 1,
+        "alpha2": 0.5,
+        "alpha3": 0.2,
         "num_maxmin_edges": -1,
         "use_power": true,
         "use_grumbel": true,
