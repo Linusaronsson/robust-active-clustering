@@ -15,7 +15,7 @@
         "infer_sims": false,
         "predict_sims": false,
         "clustering_alg": "CC",
-        "warm_start": 0.02
+        "warm_start": 0
     },
     "sim_init_options": {
         "K_init": 10,
@@ -23,9 +23,9 @@
         "sim_init_type": "zeros"
     },
     "query_strategy_options": {
-        "acq_fn": "freq",
+        "acq_fn": "maxexp",
         "eps": 0.3,
-        "beta": 1,
+        "beta": 8,
         "tau": 7,
         "alpha": 1,
         "num_maxmin_edges": -1,

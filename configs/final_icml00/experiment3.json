@@ -23,7 +23,7 @@
         "sim_init_type": "zeros"
     },
     "query_strategy_options": {
-        "acq_fn": "maxexp",
+        "acq_fn": "freq",
         "eps": 0.3,
         "beta": 1,
         "tau": 7,
