@@ -418,13 +418,13 @@ class QueryStrategy:
         sim_jk = self.ac.pairwise_similarities[j, k]
         num_pos = 0
 
-        if sim_ij >= 0:
+        if sim_ij > 0:
             num_pos += 1
 
-        if sim_ik >= 0:
+        if sim_ik > 0:
             num_pos += 1
 
-        if sim_jk >= 0:
+        if sim_jk > 0:
             num_pos += 1
 
         return num_pos == 2
