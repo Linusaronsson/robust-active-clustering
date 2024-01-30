@@ -433,7 +433,7 @@ class QueryStrategy:
         return self.ac.clustering_solution[o1] == self.ac.clustering_solution[o2]
 
     def violates_clustering(self, o1, o2): 
-        return (not self.in_same_cluster(o1, o2) and self.ac.pairwise_similarities[o1, o2] >= 0) or \
+        return (not self.in_same_cluster(o1, o2) and self.ac.pairwise_similarities[o1, o2] > 0) or \
                 (self.in_same_cluster(o1, o2) and self.ac.pairwise_similarities[o1, o2] < 0)
     
     def random_sort(self, arr, ascending=True):

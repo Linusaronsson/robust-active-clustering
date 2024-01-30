@@ -820,7 +820,7 @@ class ExperimentReader:
                 else:
                     raise ValueError("incorrect dataset!")
 
-                cut_threshold = 40
+                #cut_threshold = 40
                 df_filtered = df_filtered[df_filtered[vary[0]] < cut_threshold]
                 metric_map = {"ami": "AMI", "rand": "ARI", "time": "Time (s)", "num_violations": "Num. violations",
                             "time_select_batch": "Time (s)", "time_update_clustering": "Time (s)", "num_repeat_queries": "Num. pairs re-queried"}
