@@ -669,6 +669,7 @@ class ExperimentReader:
         markersize=6,
         capsize=6,
         linestyle="solid",
+        hide_legend=False,
         **config):
         #data = self.read_all_data(folder="../experiment_results/maxexp_experiment")
         config = copy.deepcopy(config)
@@ -789,16 +790,17 @@ class ExperimentReader:
                 #errorbar = ("sd", 0.3)
                 errorbar = ("sd", 0.5)
                 s_type = str(exp_kwargs["sim_init_type"])
+                nl = exp_kwargs["noise_level"]
                 if "synthetic" in self.dataset:
                     if s_type == "zeros":
-                        cut_threshold = 25
+                        cut_threshold = 16
                     else:
-                        cut_threshold = 14
+                        cut_threshold = 11
                 elif self.dataset == "20newsgroups":
                     if s_type == "zeros":
-                        cut_threshold = 15
+                        cut_threshold = 9
                     else:
-                        cut_threshold = 25
+                        cut_threshold = 16
                 elif self.dataset == "breast_cancer":
                     # noise = 0.0
                     #errorbar = None
@@ -811,24 +813,30 @@ class ExperimentReader:
                     #cut_threshold = 900
                 elif self.dataset == "cardiotocography":
                     if s_type == "zeros":
-                        cut_threshold = 10
+                        cut_threshold = 8
                     else:
-                        cut_threshold = 15
+                        cut_threshold = 10
                 elif self.dataset == "cifar10" or self.dataset == "cifar10_original":
                     if s_type == "zeros":
-                        cut_threshold = 12
+                        if nl == 0.6:
+                            cut_threshold = 12
+                        else:
+                            cut_threshold = 9
                     else:
                         cut_threshold = 8
                 elif self.dataset == "ecoli":
                     if s_type == "zeros":
-                        cut_threshold = 18
+                        cut_threshold = 12
                     else:
-                        cut_threshold = 17
+                        cut_threshold = 15
                 elif self.dataset == "forest_type_mapping":
                     if s_type == "zeros":
-                        cut_threshold = 10
+                        if nl == 0.6:
+                            cut_threshold = 10
+                        else:
+                            cut_threshold = 8
                     else:
-                        cut_threshold = 13
+                        cut_threshold = 9
                 elif self.dataset == "mnist":
                     if s_type == "zeros":
                         cut_threshold = 12
@@ -841,14 +849,14 @@ class ExperimentReader:
                         cut_threshold = 10
                 elif self.dataset == "user_knowledge":
                     if s_type == "zeros":
-                        cut_threshold = 9
+                        cut_threshold = 6
                     else:
-                        cut_threshold = 15
+                        cut_threshold = 9
                 elif self.dataset == "yeast":
                     if s_type == "zeros":
-                        cut_threshold = 9
+                        cut_threshold = 6
                     else:
-                        cut_threshold = 16
+                        cut_threshold = 9
                 else:
                     raise ValueError("incorrect dataset!")
                     
@@ -869,7 +877,8 @@ class ExperimentReader:
                 #condition = (df_filtered['acq_fn'] == "cluster_incon") & (df_filtered['x'] == 0)
                 #df_filtered.loc[condition, 'y'] = new_ari
                 #df_filtered['num_maxmin_edges'] = df_filtered['num_maxmin_edges'].astype(str[])
-                if not cut_axis:
+                #if not cut_axis:
+                if exp_kwargs["sim_init_type"] == "custom":
                     ax = sns.lineplot(
                         x=vary[0],
                         y="y",
@@ -894,53 +903,77 @@ class ExperimentReader:
 
                     plt.ylabel(metric_map[metric])
                 else:
-                    f, (ax1, ax2) = plt.subplots(ncols=1, nrows=2, sharex=True, sharey=False, gridspec_kw={'height_ratios': [3, 1]})
                     ax = sns.lineplot(
                         x=vary[0],
                         y="y",
                         #hue=df_filtered[hues].apply(tuple, axis=1),
                         hue="acq_fn",
-                        hue_order=["maxexp", "maxmin", "uncert", "freq", "unif", "nCOBRAS", "COBRAS", "QECC"],
+                        hue_order=["info_gain_object", "entropy", "cluster_incon", "maxexp", "maxmin", "freq"],
+                        #hue_order=[("maxexp", "0.0"), ("maxexp", "0.005"), ("maxexp", "0.05"), ("maxexp", "0.2"), ("maxexp", "0.6"), ("maxexp", "1.0")],
+                        #hue_order=[("maxexp", "0.0"), ("maxexp", "0.005"), ("maxexp", "0.05"), ("maxexp", "0.2"), ("maxexp", "0.6"), ("maxexp", "1.0"), ("QECC", "1.0")],
+                        #hue_order=[("maxmin", "0.0"), ("maxmin", "0.005"), ("maxmin", "0.05"), ("maxmin", "0.2"), ("maxmin", "0.6"), ("maxmin", "1.0"), ("QECC", "1.0")],
+                        #hue_order=[("maxmin", "0.0"), ("maxmin", "0.005"), ("maxmin", "0.05"), ("maxmin", "0.2"), ("maxmin", "0.6"), ("maxmin", "1.0")],
                         errorbar=errorbar,
+                        marker=".",
                         err_style=err_style,
                         data=df_filtered,
                         linestyle=linestyle,
                         err_kws=err_kws,
-                        ax=ax1
                     )
-                    ax = sns.lineplot(
-                        x=vary[0],
-                        y="y",
-                        #hue=df_filtered[hues].apply(tuple, axis=1),
-                        hue="acq_fn",
-                        hue_order=["maxexp", "maxmin", "uncert", "freq", "unif", "nCOBRAS", "COBRAS", "QECC"],
-                        errorbar=errorbar,
-                        err_style=err_style,
-                        data=df_filtered,
-                        linestyle=linestyle,
-                        err_kws=err_kws,
-                        ax=ax2
-                    )
-                    ax1.spines['bottom'].set_visible(False)
-                    ax2.spines['top'].set_visible(False)
-                    ax1.set_ylim(l3, l4)
-                    ax2.set_ylim(l1, l2)
+                    #plt.setp(ax.lines, markeredgecolor='none')  # Removes the border of the markers
+                    #plt.setp(ax.lines, alpha=0.7)  # Adjusts the transparency of the markers
+                    plt.setp(ax.lines, markeredgewidth=0.5)  # Adjusts the transparency of the markers
+                    plt.setp(ax.lines, markersize=7)  # Adjusts the transparency of the markers
 
-                    d = .015  # how big to make the diagonal lines in axes coordinates
-                    # arguments to pass to plot, just so we don't keep repeating them
-                    kwargs = dict(transform=ax1.transAxes, color='k', clip_on=False)
-                    ax1.plot((-d, +d), (-d, +d), **kwargs)        # top-left diagonal
-                    ax1.plot((1 - d, 1 + d), (-d, +d), **kwargs)  # top-right diagonal
-
-                    kwargs.update(transform=ax2.transAxes)  # switch to the bottom axes
-                    ax2.plot((-d, +d), (1 - d, 1 + d), **kwargs)  # bottom-left diagonal
-                    ax2.plot((1 - d, 1 + d), (1 - d, 1 + d), **kwargs)  # bottom-right diagonal
-                    ax1.set_ylabel("")
-                    ax2.set_ylabel("")
-                    #f.text(metric_map[metric])
-                    f.text(-0.02, 0.5, metric_map[metric], va='center', rotation='vertical')
-
-
+                    plt.ylabel(metric_map[metric])
+#                else:
+#                    f, (ax1, ax2) = plt.subplots(ncols=1, nrows=2, sharex=True, sharey=False, gridspec_kw={'height_ratios': [3, 1]})
+#                    ax = sns.lineplot(
+#                        x=vary[0],
+#                        y="y",
+#                        #hue=df_filtered[hues].apply(tuple, axis=1),
+#                        hue="acq_fn",
+#                        hue_order=["maxexp", "maxmin", "uncert", "freq", "unif", "nCOBRAS", "COBRAS", "QECC"],
+#                        errorbar=errorbar,
+#                        err_style=err_style,
+#                        data=df_filtered,
+#                        linestyle=linestyle,
+#                        err_kws=err_kws,
+#                        ax=ax1
+#                    )
+#                    ax = sns.lineplot(
+#                        x=vary[0],
+#                        y="y",
+#                        #hue=df_filtered[hues].apply(tuple, axis=1),
+#                        hue="acq_fn",
+#                        hue_order=["maxexp", "maxmin", "uncert", "freq", "unif", "nCOBRAS", "COBRAS", "QECC"],
+#                        errorbar=errorbar,
+#                        err_style=err_style,
+#                        data=df_filtered,
+#                        linestyle=linestyle,
+#                        err_kws=err_kws,
+#                        ax=ax2
+#                    )
+#                    ax1.spines['bottom'].set_visible(False)
+#                    ax2.spines['top'].set_visible(False)
+#                    ax1.set_ylim(l3, l4)
+#                    ax2.set_ylim(l1, l2)
+#
+#                    d = .015  # how big to make the diagonal lines in axes coordinates
+#                    # arguments to pass to plot, just so we don't keep repeating them
+#                    kwargs = dict(transform=ax1.transAxes, color='k', clip_on=False)
+#                    ax1.plot((-d, +d), (-d, +d), **kwargs)        # top-left diagonal
+#                    ax1.plot((1 - d, 1 + d), (-d, +d), **kwargs)  # top-right diagonal
+#
+#                    kwargs.update(transform=ax2.transAxes)  # switch to the bottom axes
+#                    ax2.plot((-d, +d), (1 - d, 1 + d), **kwargs)  # bottom-left diagonal
+#                    ax2.plot((1 - d, 1 + d), (1 - d, 1 + d), **kwargs)  # bottom-right diagonal
+#                    ax1.set_ylabel("")
+#                    ax2.set_ylabel("")
+#                    #f.text(metric_map[metric])
+#                    f.text(-0.02, 0.5, metric_map[metric], va='center', rotation='vertical')
+#
+#
                     #plt.subplots_adjust(wspace=0, hspace=0)
                 N = len(self.Y)
                 n_edges = (N*(N-1))/2
@@ -1039,8 +1072,9 @@ class ExperimentReader:
 
                 legend = ax.get_legend()
 
-                #if self.dataset != "20newsgroups":
-                    #ax.get_legend().set_visible(False)
+                if hide_legend:
+                    if self.dataset != "20newsgroups":
+                        ax.get_legend().set_visible(False)
 
                 plt.savefig(file_path, bbox_extra_artists=(legend,), dpi=200, bbox_inches='tight')
                 #plt.savefig(file_path, dpi=200, bbox_inches='tight')
