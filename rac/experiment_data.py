@@ -740,7 +740,8 @@ class ExperimentReader:
                 fig_path.mkdir(parents=True, exist_ok=True)
                 #file_name = exp_kwargs["dataset"] + "_" + metric + "_" + str(exp_kwargs["noise_level"]) + "_" + exp_kwargs["sim_init_type"] + ".png"
                 #file_name = exp_kwargs["dataset"] + "_" + metric + "_" + str(exp_kwargs["noise_level"]) + "_" + str(exp_kwargs["sim_init_type"]) + ".png"
-                file_name = exp_kwargs["dataset"] + "_" + metric + "_" + str(exp_kwargs["noise_level"]) + "_" + str(exp_kwargs["sim_init_type"]) + "_" + str(exp_kwargs["sim_init"]) + ".png"
+                #file_name = exp_kwargs["dataset"] + "_" + metric + "_" + str(exp_kwargs["noise_level"]) + "_" + str(exp_kwargs["sim_init_type"]) + "_" + str(exp_kwargs["sim_init"]) + ".png"
+                file_name = exp_kwargs["dataset"] + "_" + metric + "_" + str(exp_kwargs["noise_level"]) + "_" + str(exp_kwargs["sim_init_type"]) + "_" + str(exp_kwargs["warm_start"]) + "_" + str(exp_kwargs["use_grumbel"]) + "_" + str(exp_kwargs["info_gain_pair_mode"]) + "_" + str(exp_kwargs["alpha"]) + ".png"
                 #file_path = path + "plot.png"
                 file_path = path + file_name
                 self.dataset = exp_kwargs["dataset"] 
@@ -787,10 +788,17 @@ class ExperimentReader:
                 cut_axis = False
                 #errorbar = ("sd", 0.3)
                 errorbar = ("sd", 0.5)
+                s_type = str(exp_kwargs["sim_init_type"])
                 if "synthetic" in self.dataset:
-                    cut_threshold = 14
+                    if s_type == "zeros":
+                        cut_threshold = 25
+                    else:
+                        cut_threshold = 14
                 elif self.dataset == "20newsgroups":
-                    cut_threshold = 25
+                    if s_type == "zeros":
+                        cut_threshold = 15
+                    else:
+                        cut_threshold = 25
                 elif self.dataset == "breast_cancer":
                     # noise = 0.0
                     #errorbar = None
@@ -802,25 +810,50 @@ class ExperimentReader:
                     cut_threshold = 5
                     #cut_threshold = 900
                 elif self.dataset == "cardiotocography":
-                    cut_threshold = 15
+                    if s_type == "zeros":
+                        cut_threshold = 10
+                    else:
+                        cut_threshold = 15
                 elif self.dataset == "cifar10" or self.dataset == "cifar10_original":
-                    cut_threshold = 8
+                    if s_type == "zeros":
+                        cut_threshold = 12
+                    else:
+                        cut_threshold = 8
                 elif self.dataset == "ecoli":
-                    cut_threshold = 18
+                    if s_type == "zeros":
+                        cut_threshold = 18
+                    else:
+                        cut_threshold = 17
                 elif self.dataset == "forest_type_mapping":
-                    cut_threshold = 13
+                    if s_type == "zeros":
+                        cut_threshold = 10
+                    else:
+                        cut_threshold = 13
                 elif self.dataset == "mnist":
-                    cut_threshold = 10
+                    if s_type == "zeros":
+                        cut_threshold = 12
+                    else:
+                        cut_threshold = 10
                 elif self.dataset == "mushrooms":
-                    cut_threshold = 10
+                    if s_type == "zeros":
+                        cut_threshold = 4
+                    else:
+                        cut_threshold = 10
                 elif self.dataset == "user_knowledge":
-                    cut_threshold = 15
+                    if s_type == "zeros":
+                        cut_threshold = 9
+                    else:
+                        cut_threshold = 15
                 elif self.dataset == "yeast":
-                    cut_threshold = 16
+                    if s_type == "zeros":
+                        cut_threshold = 9
+                    else:
+                        cut_threshold = 16
                 else:
                     raise ValueError("incorrect dataset!")
+                    
 
-                #cut_threshold = 40
+                #cut_threshold = 20
                 df_filtered = df_filtered[df_filtered[vary[0]] < cut_threshold]
                 metric_map = {"ami": "AMI", "rand": "ARI", "time": "Time (s)", "num_violations": "Num. violations",
                             "time_select_batch": "Time (s)", "time_update_clustering": "Time (s)", "num_repeat_queries": "Num. pairs re-queried"}
