@@ -20,10 +20,10 @@
     "sim_init_options": {
         "K_init": 3,
         "sim_init": 0.01,
-        "sim_init_type": "zeros"
+        "sim_init_type": "custom"
     },
     "query_strategy_options": {
-        "acq_fn": "info_gain_object",
+        "acq_fn": "cluster_incon",
         "eps": 0.3,
         "beta": 1,
         "tau": 7,
@@ -44,6 +44,6 @@
         "mf_iterations": 50
     },
     "dataset_options": {
-        "dataset": "forest_type_mapping"
+        "dataset": "cifar10"
     }
 }
