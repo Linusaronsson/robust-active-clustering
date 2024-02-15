@@ -762,7 +762,7 @@ class ExperimentReader:
                 plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels
                 plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
                 plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
-                plt.rc('legend', fontsize=18)    # legend fontsize
+                plt.rc('legend', fontsize=16)    # legend fontsize
                 plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
                 plt.rc('figure', dpi=200)
                 plt.rc('figure', figsize=(6, 4))
@@ -793,7 +793,7 @@ class ExperimentReader:
                 nl = exp_kwargs["noise_level"]
                 if "synthetic" in self.dataset:
                     if s_type == "zeros":
-                        cut_threshold = 16
+                        cut_threshold = 13
                     else:
                         cut_threshold = 11
                 elif self.dataset == "20newsgroups":
