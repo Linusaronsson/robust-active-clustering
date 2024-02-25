@@ -55,7 +55,6 @@ class QueryStrategyAL:
         return scipy_entropy(probs.T)
 
     def compute_cc_entropy(self):
-        print("ASDIASJD")
         proba_pool = self.al.model.predict_proba(self.al.X_pool)
         entropy_pool = np.array([scipy_entropy(proba) for proba in proba_pool])
         entropy_pool_normalized = (entropy_pool - entropy_pool.min()) / (entropy_pool.max() - entropy_pool.min())
