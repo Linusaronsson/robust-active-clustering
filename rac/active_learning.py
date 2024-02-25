@@ -11,6 +11,7 @@ from rac.query_strategies_AL import QueryStrategyAL
 from rac.experiment_data import ExperimentData
 from sklearn.gaussian_process import GaussianProcessClassifier
 from sklearn.gaussian_process.kernels import RBF
+from sklearn.neural_network import MLPClassifier
 
 from scipy import sparse
 
@@ -118,6 +119,8 @@ class ActiveLearning:
         if self.model_name == "GP":
             kernel = 1.0 * RBF(1.0)
             self.model = GaussianProcessClassifier(kernel=kernel, random_state=self._seed, n_restarts_optimizer=5)
+        elif self.model_name == "MLP":
+            self.model = MLPClassifier(random_state=self._seed, max_iter=300)
         else:
             raise ValueError("Invalid model name: {}".format(self.model_name))
     
@@ -134,6 +137,10 @@ class ActiveLearning:
             gpc = self.model.fit(self.X_train, self.Y_train)
             self.predictions = gpc.predict(self.X_test)
             #self.pred_probs = gpc.predict_proba(self.X_test)
+        elif self.model_name == "MLP":
+            self.model = MLPClassifier(random_state=self._seed, max_iter=300)
+            gpc = self.model.fit(self.X_train, self.Y_train)
+            self.predictions = gpc.predict(self.X_test)
         else:
             pass
         
