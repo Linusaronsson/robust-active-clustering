@@ -1,7 +1,7 @@
 {
     "_experiment_name": "test_al",
-    "_num_repeats": 14,
-    "_n_workers": 14,
+    "_num_repeats": 10,
+    "_n_workers": 10,
     "_local": true,
     "_verbose": true,
     "_overwrite": false,

@@ -117,7 +117,7 @@ class ActiveLearning:
     def initialize_model(self):
         if self.model_name == "GP":
             kernel = 1.0 * RBF(1.0)
-            self.model = GaussianProcessClassifier(kernel=kernel, random_state=self._seed, n_restarts_optimizer=10)
+            self.model = GaussianProcessClassifier(kernel=kernel, random_state=self._seed, n_restarts_optimizer=5)
         else:
             raise ValueError("Invalid model name: {}".format(self.model_name))
     
