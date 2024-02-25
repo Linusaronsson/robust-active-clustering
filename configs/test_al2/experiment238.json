@@ -1,0 +1,23 @@
+{
+    "_experiment_name": "test_al2",
+    "_num_repeats": 10,
+    "_n_workers": 10,
+    "_local": true,
+    "_verbose": true,
+    "_overwrite": false,
+    "_mode": "al",
+    "seed": 14,
+    "batch_size": 1,
+    "noise_level": 0.0,
+    "warm_start": 0.02,
+    "acq_fn": "uniform",
+    "model_name": "MLP",
+    "acq_noise": false,
+    "power_beta": 1,
+    "use_power": false,
+    "mean_field_beta": 1,
+    "dataset_name": "synthetic",
+    "dataset_n_samples": 500,
+    "dataset_n_clusters": 10,
+    "dataset_class_balance": null
+}
