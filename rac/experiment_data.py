@@ -17,77 +17,43 @@ import copy
 
 class ExperimentData:
     def __init__(self, Y, repeat_id, **kwargs):
-        for key, value in kwargs.items():
-            self.__dict__.update(kwargs[key])
-
+        self.__dict__.update(kwargs)
 
         self.repeat_id = repeat_id
         self.experiment_params = []
         #self.name = str(repeat_id) + "_"
         self.name = ""
+        self.dataset_full_name = ""
         for key, value in kwargs.items():
-            if key == "general_options":
+            if key[0] == "_":
                 continue
-            for key, value in value.items():
-                self.name += str(value) + "_"
-                self.experiment_params.append(key)
+            if key.split("_")[0] == "dataset":
+                self.dataset_full_name += str(value) + "_"
+            self.name += str(value) + "_"
+            self.experiment_params.append(key)
         self.name = self.name[:-1]
         self.name_repeat = self.name + "_" + str(repeat_id)
-
         self.hashed_name = sha256(self.name.encode("utf-8")).hexdigest()
-
-        self.dataset_name = ""
-        for key, value in kwargs["dataset_options"].items():
-            self.dataset_name += str(value) + "_"
-        self.dataset_name = self.dataset_name[:-1]
+        self.dataset_full_name = self.dataset_full_name[:-1]
 
         # ground truth clustering solution
         self.Y = Y
-
-        # num queries and estimated pw sims at last iteration
-        self.feedback_freq = None
-        self.pairwise_similarities = None
-
-        # info about current pairwise similarities
-        self.num_pos = []
-        self.num_neg = []
-        self.num_neg_ground_truth = []
-        self.num_pos_ground_truth = []
-
-        self.accuracy = []
-        self.precision = []
-        self.recall = []
-        self.precision_neg = []
-        self.recall_neg = []
-        self.f1_score = []
-        self.f1_score_weighted = []
-
-        self.accuracy_clustering = []
-        self.precision_clustering = []
-        self.recall_clustering = []
-        self.precision_neg_clustering = []
-        self.recall_neg_clustering = []
-        self.f1_score_clustering = []
-        self.f1_score_weighted_clustering = []
 
         # info about clustering
         self.rand = []
         self.ami = []
         self.v_measure = []
         self.num_clusters = []
+        self.accuracy = []
 
         # info about bad triangles
         self.num_violations = []
 
         # other useful information
-        self.num_queries = []
         self.time = []
         self.time_select_batch = []
         self.time_update_clustering = []
         self.num_repeat_queries = []
-
-        # mnist stuff
-        self.avg_cluster_images = []
 
     def is_equal_no_repeat(self, a2):
         params = set(self.experiment_params + a2.experiment_params)
@@ -102,13 +68,9 @@ class ExperimentData:
         return self.is_equal_no_repeat(a2) and self.repeat_id == a2.repeat_id
 
 class ExperimentReader:
-    def __init__(self, metrics=None):
+    def __init__(self, metrics=["rand"]):
         self.metrics = metrics
-        if self.metrics is not None:
-            self.metrics.append("rand")
-            self.metrics = list(set(self.metrics))
         self.Y = None
-        self.num_feedback = None
 
     def get_metric_data(self, exp):
         data = {}
@@ -139,16 +101,12 @@ class ExperimentReader:
                     except EOFError:
                         print("EOF error in read data")
                         continue
-                        exp = []
-                    
                     dat = exp[0].__dict__
                     if self.Y is None:
                         self.Y = exp[0].Y
-                        self.dataset = exp[0].dataset_name
-                        self.num_feedback = exp[0].num_feedback
                     wanted_keys = exp[0].experiment_params
                     sub_dat = dict((k, dat[k]) for k in wanted_keys if k in dat)
-                    sub_dat
+                    #sub_dat
                     #sub_dat["data"] = exp
                     metric_data = self.get_metric_data(exp)
                     for metric in self.metrics:
@@ -188,7 +146,6 @@ class ExperimentReader:
         df_flattened = pd.concat(dataframes, ignore_index=True)
         return df_flattened
     
-    
     def extend_list_all(self, data, max_size):
         new_dat = data.tolist()
         for i in range(len(data)):
@@ -215,25 +172,23 @@ class ExperimentReader:
         df = df.copy()
         for metric in self.metrics:
             col = "mean_" + metric
-            df[col] = df[metric].apply(lambda x: np.mean(x, axis=0)) # axis 1 since we transpose in read_all_data (i.e., shape is (num_iterations, num_repeats))
+            df[col] = df[metric].apply(lambda x: np.mean(x, axis=0)) # axis 0 (i.e., shape is (num_repeats, num_iterations))
             df['array_lengths'] = df[col].apply(lambda x: len(x))
             min_length = df['array_lengths'].min()
             max_length = df['array_lengths'].max()
             df['last_index_above_threshold'] = df[col].apply(lambda x: np.where(x > threshold)[0][0] if any(x > threshold) else len(x))
             max_index = df['last_index_above_threshold'].max()
             min_index = df['last_index_above_threshold'].min()
-            #print("IASDJOASIDJIOASJD")
 
             if method == "batch_size":
                 ind_step = 2000
                 df = self.extend_dataframe(df, metric, max_length)
-                #print(len(df))
                 for i, row in df.iterrows():
                     N = len(self.Y)
                     n_edges = (N*(N-1))/2
-                    batch_size = row["num_feedback"]
-                    #print(batch_size)
+                    batch_size = row["batch_size"]
                     if batch_size < 1:
+                        # should not be reached
                         continue
                     indices = []
                     for j in range(1, max_index):
@@ -242,13 +197,7 @@ class ExperimentReader:
                         if (j*batch_size)/n_edges > 0.4:
                             break
                     indices = np.array(indices)
-                    
-                    #print("ASD: ", batch_size, indices, len(indices))
-                    #print(df.at[i, metric].shape)
-                    #print(df.at[i, metric][:, indices])
-                    #print(np.mean(df.at[i, metric][:, indices], axis=1).reshape(-1, 1))
                     df.at[i, metric] = np.mean(df.at[i, metric][:, indices], axis=1).reshape(-1, 1)
-                #df = self.summarize_metric(df, metric, auc, max_length)
             elif method == "auc_max_ind":
                 df = self.extend_dataframe(df, metric, max_length)
                 df = self.summarize_metric(df, metric, auc, max_length)
@@ -275,17 +224,6 @@ class ExperimentReader:
                 raise ValueError("Invalid method")
         return df
         
-    def get_keys_from_options(self, config):
-        options_keys = []
-        options_values = []
-        for key1, value1 in config.items():
-            for key2, value2 in value1.items():
-                if type(value2) != list:
-                    value2 = [value2]
-                options_keys.append(key2)
-                options_values.append(value2)
-        return options_keys, options_values
-
     def filter_dataframe(self, df, conditions):
         mask = pd.Series(True, index=df.index)
         for column, values in conditions.items():
@@ -301,43 +239,44 @@ class ExperimentReader:
         categorize,
         compare,
         vary,
-        auc, 
-        summary_method, 
-        indices, 
-        threshold, 
+        options_in_file_name,
+        auc=False, 
+        summary_method="auc_max_ind", 
+        indices=[], 
+        threshold=[], 
         err_style="band",
         marker=None,
         markersize=6,
         capsize=6,
         linestyle="solid",
+        prop=True,
         **config):
-        #data = self.read_all_data(folder="../experiment_results/maxexp_experiment")
+
         config = copy.deepcopy(config)
+
         options_keys = []
         options_values = []
         compare_options = {}
         vary_options = {}
-        all_options = {}
 
-        for option_category, options in config.items():
-            if option_category == "general_options":
+        for key, value in config.items():
+            if key[0] == "_":
                 continue
-            for option, option_value in options.items():
-                if type(option_value) != list:
-                    option_value = [option_value]
-                all_options[option] = option_value
-                if option not in compare:
-                    options_keys.append(option)
-                    options_values.append(option_value)
+            if type(value) != list:
+                value = [value]
+            
+            options_keys.append(key)
+            if key not in compare and key not in vary:
+                options_values.append(value)
+            else:
+                options_values.append([1111111111])
 
         for option in compare:
-            compare_options[option] = all_options[option]
-            all_options.pop(option, None)
+            compare_options[option] = config[option]
 
         if "x" not in vary:
             for option in vary:
-                vary_options[option] = all_options[option]
-                all_options.pop(option, None)
+                vary_options[option] = config[option]
             data = self.summarize_AL_procedure(
                 data,
                 auc=auc, 
@@ -351,7 +290,7 @@ class ExperimentReader:
             if metric in ["time_select_batch", "time_update_clustering", "time", "num_violations", "num_repeat_queries"]:
                 continue
             col = "mean_" + metric
-            data[col] = data[metric].apply(lambda x: np.mean(x, axis=0)) # axis 1 since we transpose in read_all_data (i.e., shape is (num_iterations, num_repeats))
+            data[col] = data[metric].apply(lambda x: np.mean(x, axis=0))
             data['array_lengths'] = data[col].apply(lambda x: len(x))
             max_length = data['array_lengths'].max()
             data = self.extend_dataframe(data, metric, max_length)
@@ -379,16 +318,16 @@ class ExperimentReader:
                     path += str(exp_kwargs[option]) + "/" 
                 fig_path = Path(path)
                 fig_path.mkdir(parents=True, exist_ok=True)
-                #file_name = exp_kwargs["dataset"] + "_" + metric + "_" + str(exp_kwargs["noise_level"]) + "_" + exp_kwargs["sim_init_type"] + ".png"
-                #file_name = exp_kwargs["dataset"] + "_" + metric + "_" + str(exp_kwargs["noise_level"]) + "_" + str(exp_kwargs["sim_init_type"]) + ".png"
-                file_name = exp_kwargs["dataset"] + "_" + metric + "_" + str(exp_kwargs["noise_level"]) + "_" + str(exp_kwargs["warm_start"]) + "_" + str(exp_kwargs["use_grumbel"]) + "_" + str(exp_kwargs["info_gain_pair_mode"]) + ".png"
-                #file_path = path + "plot.png"
-                file_path = path + file_name
-                self.dataset = exp_kwargs["dataset"] 
 
-                # Cont
-                #hues = list(all_options.keys())
-                #hues.extend(list(compare_options.keys()))
+                file_name = metric + "_"
+                for option in options_in_file_name:
+                    file_name += str(exp_kwargs[option]) + "_"
+                file_name = file_name[:-1] + ".png"
+
+                file_path = path + file_name
+                self.dataset = exp_kwargs["dataset_name"] 
+                self.batch_size = exp_kwargs["batch_size"] 
+
                 hues = list(compare_options.keys())
                 sns.set_theme()
                 sns.set_style("white")
@@ -414,6 +353,7 @@ class ExperimentReader:
                 for _, spine in ax.spines.items():
                     spine.set_color('black')
                     spine.set_linewidth(1)
+
                 if err_style == "bars":
                     err_kws = {
                         "capsize": capsize,
@@ -423,24 +363,13 @@ class ExperimentReader:
                 else:
                     err_kws = {}
 
-                #cut_threshold = 0
-                cut_axis = False
-                #errorbar = ("sd", 0.3)
                 errorbar = ("sd", 0.5)
                 if "synthetic" in self.dataset:
                     cut_threshold = 25
                 elif self.dataset == "20newsgroups":
                     cut_threshold = 15
                 elif self.dataset == "breast_cancer":
-                    # noise = 0.0
-                    #errorbar = None
-                    #cut_axis = True
-                    #l1 = 0
-                    #l2 = 0.7
-                    #l3 = 0.72
-                    #l4 = 1.01
                     cut_threshold = 5
-                    #cut_threshold = 900
                 elif self.dataset == "cardiotocography":
                     cut_threshold = 10
                 elif self.dataset == "cifar10" or self.dataset == "cifar10_original":
@@ -462,164 +391,60 @@ class ExperimentReader:
 
                 cut_threshold = 50
                 df_filtered = df_filtered[df_filtered[vary[0]] < cut_threshold]
-                metric_map = {"ami": "AMI", "rand": "ARI", "time": "Time (s)", "num_violations": "Num. violations",
-                            "time_select_batch": "Time (s)", "time_update_clustering": "Time (s)", "num_repeat_queries": "Num. pairs re-queried"}
+                metric_map = {
+                    "ami": "AMI", "rand": "ARI", "time": "Time (s)", "num_violations": "Num. violations",
+                    "time_select_batch": "Time (s)", "time_update_clustering": "Time (s)",
+                    "num_repeat_queries": "Num. pairs re-queried", "accuracy": "Accuracy", 
+                    "v_measure": "V-measure"
+                }
 
-                #if metric == "rand":
-                    #new_ari = 0.19
-                #elif metric == "ami":
-                    #new_ari = 0.36
+                acq_fn_map = {
+                    "maxexp": "Maxexp", "maxmin": "Maxmin", "uncert": "Uncertainty",
+                    "freq": "Frequency", "unif": "Uniform", "nCOBRAS": "nCOBRAS",
+                    "COBRAS": "COBRAS", "QECC": "QECC", "info_gain_object": "IG",
+                    "cluster_incon": "IMU-C", "entropy": "Entropy"
+                }
 
-                #print(df_filtered.columns)
-                #print(df_filtered["y"][0].shape)
-                #print(df_filtered["y"])
-                #condition = (df_filtered['acq_fn'] == "cluster_incon") & (df_filtered['x'] == 0)
-                #df_filtered.loc[condition, 'y'] = new_ari
-                #df_filtered['num_maxmin_edges'] = df_filtered['num_maxmin_edges'].astype(str[])
-                if not cut_axis:
-                    ax = sns.lineplot(
-                        x=vary[0],
-                        y="y",
-                        #hue=df_filtered[hues].apply(tuple, axis=1),
-                        hue="acq_fn",
-                        hue_order=["entropy", "cluster_incon", "maxexp", "maxmin", "freq"],
-                        #hue_order=[("maxexp", "0.0"), ("maxexp", "0.005"), ("maxexp", "0.05"), ("maxexp", "0.2"), ("maxexp", "0.6"), ("maxexp", "1.0")],
-                        #hue_order=[("maxexp", "0.0"), ("maxexp", "0.005"), ("maxexp", "0.05"), ("maxexp", "0.2"), ("maxexp", "0.6"), ("maxexp", "1.0"), ("QECC", "1.0")],
-                        #hue_order=[("maxmin", "0.0"), ("maxmin", "0.005"), ("maxmin", "0.05"), ("maxmin", "0.2"), ("maxmin", "0.6"), ("maxmin", "1.0"), ("QECC", "1.0")],
-                        #hue_order=[("maxmin", "0.0"), ("maxmin", "0.005"), ("maxmin", "0.05"), ("maxmin", "0.2"), ("maxmin", "0.6"), ("maxmin", "1.0")],
-                        errorbar=errorbar,
-                        marker=".",
-                        err_style=err_style,
-                        data=df_filtered,
-                        linestyle=linestyle,
-                        err_kws=err_kws,
-                    )
-                    #plt.setp(ax.lines, markeredgecolor='none')  # Removes the border of the markers
-                    #plt.setp(ax.lines, alpha=0.7)  # Adjusts the transparency of the markers
-                    plt.setp(ax.lines, markeredgewidth=0.5)  # Adjusts the transparency of the markers
-                    plt.setp(ax.lines, markersize=7)  # Adjusts the transparency of the markers
+                if "x" in vary:
+                    var = "total_queries"
+                var = vary[0]
+                ax = sns.lineplot(
+                    x=vary[0],
+                    y="y",
+                    hue=df_filtered[hues].apply(tuple, axis=1),
+                    #hue="acq_fn",
+                    #hue_order=["entropy", "cluster_incon", "maxexp", "maxmin", "freq"],
+                    errorbar=errorbar,
+                    marker=".",
+                    err_style=err_style,
+                    data=df_filtered,
+                    linestyle=linestyle,
+                    err_kws=err_kws,
+                )
 
-                    plt.ylabel(metric_map[metric])
-                else:
-                    f, (ax1, ax2) = plt.subplots(ncols=1, nrows=2, sharex=True, sharey=False, gridspec_kw={'height_ratios': [3, 1]})
-                    ax = sns.lineplot(
-                        x=vary[0],
-                        y="y",
-                        #hue=df_filtered[hues].apply(tuple, axis=1),
-                        hue="acq_fn",
-                        hue_order=["maxexp", "maxmin", "uncert", "freq", "unif", "nCOBRAS", "COBRAS", "QECC"],
-                        errorbar=errorbar,
-                        err_style=err_style,
-                        data=df_filtered,
-                        linestyle=linestyle,
-                        err_kws=err_kws,
-                        ax=ax1
-                    )
-                    ax = sns.lineplot(
-                        x=vary[0],
-                        y="y",
-                        #hue=df_filtered[hues].apply(tuple, axis=1),
-                        hue="acq_fn",
-                        hue_order=["maxexp", "maxmin", "uncert", "freq", "unif", "nCOBRAS", "COBRAS", "QECC"],
-                        errorbar=errorbar,
-                        err_style=err_style,
-                        data=df_filtered,
-                        linestyle=linestyle,
-                        err_kws=err_kws,
-                        ax=ax2
-                    )
-                    ax1.spines['bottom'].set_visible(False)
-                    ax2.spines['top'].set_visible(False)
-                    ax1.set_ylim(l3, l4)
-                    ax2.set_ylim(l1, l2)
+                #plt.setp(ax.lines, markeredgecolor='none')  # Removes the border of the markers
+                #plt.setp(ax.lines, alpha=0.7)  # Adjusts the transparency of the markers
+                plt.setp(ax.lines, markeredgewidth=0.5)  # Adjusts the transparency of the markers
+                plt.setp(ax.lines, markersize=7)  # Adjusts the transparency of the markers
 
-                    d = .015  # how big to make the diagonal lines in axes coordinates
-                    # arguments to pass to plot, just so we don't keep repeating them
-                    kwargs = dict(transform=ax1.transAxes, color='k', clip_on=False)
-                    ax1.plot((-d, +d), (-d, +d), **kwargs)        # top-left diagonal
-                    ax1.plot((1 - d, 1 + d), (-d, +d), **kwargs)  # top-right diagonal
+                plt.ylabel(metric_map[metric])
 
-                    kwargs.update(transform=ax2.transAxes)  # switch to the bottom axes
-                    ax2.plot((-d, +d), (1 - d, 1 + d), **kwargs)  # bottom-left diagonal
-                    ax2.plot((1 - d, 1 + d), (1 - d, 1 + d), **kwargs)  # bottom-right diagonal
-                    ax1.set_ylabel("")
-                    ax2.set_ylabel("")
-                    #f.text(metric_map[metric])
-                    f.text(-0.02, 0.5, metric_map[metric], va='center', rotation='vertical')
+                #labels = self.construct_x_ticks(ax, prop)
+                #ax.set_xticklabels(labels)
 
-
-                    #plt.subplots_adjust(wspace=0, hspace=0)
-                N = len(self.Y)
-                n_edges = (N*(N-1))/2
-                if self.num_feedback < 1:
-                    batch_size = math.ceil(n_edges * self.num_feedback)
-                else:
-                    batch_size = self.num_feedback
-                n_iterations = int(n_edges/batch_size)
-                #tick_labels = np.array(list(range(0, n_iterations))) * batch_size
-                #print(batch_size)
-                #print(n_edges)
-                labels = []
-                for item in ax.get_xticks():
-                    #print((int(item)*batch_size)/n_edges)
-                    labels.append(round((int(item)*batch_size)/n_edges, 2))
-                    #labels.append((int(item)*batch_size)/n_edges, 1)
-
-
-
-                if not cut_axis:
-                    ax.set_xticklabels(labels)
-                else:
-                    ax2.get_legend().remove()
-                    ax2.set_xticklabels(labels)
-                    ax = ax1
-
-                #ax.set_xticks(range(n_iterations), labels=tick_labels)
-                #plt.xlabel(str(vary))
                 plt.xlabel("Proportion of pairs queried")
                 #ax.legend(loc='lower right')
                 ax.legend(loc='best')
 
-                legs = ax.get_legend().get_texts()
-                #legs = [l.get_text() for l in legs]
-                fix_legends = True
-                if fix_legends:
-                    #new_legends = []
-                    ax.get_legend().set_title(None)
-                    for ll in legs:
-                        l = ll.get_text()
-                        if "unif" in l:
-                            #new_legends.append("Uniform")
-                            ll.set_text("Uniform")
-                        if "COBRAS" in l and "nCOBRAS" not in l:
-                            #new_legends.append("COBRAS")
-                            ll.set_text("COBRAS")
-                        if "nCOBRAS" in l:
-                            #new_legends.append("nCOBRAS")
-                            ll.set_text("nCOBRAS")
-                        if "freq" in l:
-                            #new_legends.append("Frequency")
-                            ll.set_text("Uniform")
-                        if "uncert" in l:
-                            #new_legends.append("Uncertainty")
-                            ll.set_text("Uncertainty")
-                        if "maxmin" in l:
-                            #new_legends.append("Maxmin")
-                            ll.set_text("Maxmin")
-                        if "maxexp" in l:
-                            #new_legends.append("Maxexp")
-                            ll.set_text("Maxexp")
-                        if "QECC" in l:
-                            #new_legends.append("QECC")
-                            ll.set_text("QECC")
-                        if "entropy" in l:
-                            ll.set_text("Entropy")
-                        if "info_gain_object" in l:
-                            ll.set_text("IG")
-                        if "cluster_incon" in l:
-                            ll.set_text("IMU-C")
-
-                    #ax.legend(labels=new_legends)
+                #legs = ax.get_legend().get_texts()
+                #fix_legends = True
+                #if fix_legends:
+                #    ax.get_legend().set_title(None)
+                #    for ll in legs:
+                #        l = ll.get_text()
+                #        for k, v in acq_fn_map.items():
+                #            if k in l:
+                #                ll.set_text(v)
 
 
                 #legs = ax.get_legend().get_texts()
@@ -641,1023 +466,59 @@ class ExperimentReader:
                 #            ll.set_text(r"$\xi$ = " + xi)
                 #        else:
                 #            ll.set_text(r"$\xi$ = " + xi)
-
-
 
                 legend = ax.get_legend()
 
                 #if self.dataset != "20newsgroups":
                     #ax.get_legend().set_visible(False)
 
-                plt.savefig(file_path, bbox_extra_artists=(legend,), dpi=200, bbox_inches='tight')
+                plt.savefig(file_path, bbox_extra_artists=(legend,), dpi=150, bbox_inches='tight')
                 #plt.savefig(file_path, dpi=200, bbox_inches='tight')
                 plt.clf()
-
-    def generate_AL_curves_tmlr(
-        self,
-        data,
-        save_location,
-        categorize,
-        compare,
-        vary,
-        auc, 
-        summary_method, 
-        indices, 
-        threshold, 
-        err_style="band",
-        marker=None,
-        markersize=6,
-        capsize=6,
-        linestyle="solid",
-        hide_legend=False,
-        **config):
-        #data = self.read_all_data(folder="../experiment_results/maxexp_experiment")
-        config = copy.deepcopy(config)
-        options_keys = []
-        options_values = []
-        compare_options = {}
-        vary_options = {}
-        all_options = {}
-
-        for option_category, options in config.items():
-            if option_category == "general_options":
-                continue
-            for option, option_value in options.items():
-                if type(option_value) != list:
-                    option_value = [option_value]
-                all_options[option] = option_value
-                if option not in compare:
-                    options_keys.append(option)
-                    options_values.append(option_value)
-
-        for option in compare:
-            compare_options[option] = all_options[option]
-            all_options.pop(option, None)
-
-        if "x" not in vary:
-            for option in vary:
-                vary_options[option] = all_options[option]
-                all_options.pop(option, None)
-            data = self.summarize_AL_procedure(
-                data,
-                auc=auc, 
-                method=summary_method, 
-                indices=indices, 
-                threshold=threshold
-            )
-        
-        # extending
-        for metric in self.metrics:
-            if metric in ["time_select_batch", "time_update_clustering", "time", "num_violations", "num_repeat_queries"]:
-                continue
-            col = "mean_" + metric
-            data[col] = data[metric].apply(lambda x: np.mean(x, axis=0)) # axis 1 since we transpose in read_all_data (i.e., shape is (num_iterations, num_repeats))
-            data['array_lengths'] = data[col].apply(lambda x: len(x))
-            max_length = data['array_lengths'].max()
-            data = self.extend_dataframe(data, metric, max_length)
-
-        data_column_names = self.metrics
-        non_data_column_names = list(set(data.columns) - set(data_column_names))
-        data = self.flatten_dataframe(data, non_data_column_names, data_column_names)
-
-        for exp_vals in itertools.product(*options_values):
-            exp_kwargs = dict(zip(options_keys, exp_vals))
-
-            for option in compare:
-                exp_kwargs[option] = compare_options[option]
-
-            if "x" not in vary:
-                for option in vary:
-                    exp_kwargs[option] = vary_options[option]
-
-            for metric in self.metrics:
-                exp_kwargs["metric"] = metric
-                df_filtered = self.filter_dataframe(data, exp_kwargs)
-
-                path = save_location + "/" + metric + "/"
-                for option in categorize:
-                    path += str(exp_kwargs[option]) + "/" 
-                fig_path = Path(path)
-                fig_path.mkdir(parents=True, exist_ok=True)
-                #file_name = exp_kwargs["dataset"] + "_" + metric + "_" + str(exp_kwargs["noise_level"]) + "_" + exp_kwargs["sim_init_type"] + ".png"
-                #file_name = exp_kwargs["dataset"] + "_" + metric + "_" + str(exp_kwargs["noise_level"]) + "_" + str(exp_kwargs["sim_init_type"]) + ".png"
-                #file_name = exp_kwargs["dataset"] + "_" + metric + "_" + str(exp_kwargs["noise_level"]) + "_" + str(exp_kwargs["sim_init_type"]) + "_" + str(exp_kwargs["sim_init"]) + ".png"
-                file_name = exp_kwargs["dataset"] + "_" + metric + "_" + str(exp_kwargs["noise_level"]) + "_" + str(exp_kwargs["sim_init_type"]) + "_" + str(exp_kwargs["warm_start"]) + "_" + str(exp_kwargs["use_grumbel"]) + "_" + str(exp_kwargs["info_gain_pair_mode"]) + "_" + str(exp_kwargs["alpha"]) + ".png"
-                #file_path = path + "plot.png"
-                file_path = path + file_name
-                self.dataset = exp_kwargs["dataset"] 
-
-                # Cont
-                #hues = list(all_options.keys())
-                #hues.extend(list(compare_options.keys()))
-                hues = list(compare_options.keys())
-                sns.set_theme()
-                sns.set_style("white")
-                SMALL_SIZE = 16
-                MEDIUM_SIZE = 18
-                BIGGER_SIZE = 18
-
-                plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
-                plt.rc('axes', titlesize=SMALL_SIZE)     # fontsize of the axes title
-                plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels
-                plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
-                plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
-                plt.rc('legend', fontsize=16)    # legend fontsize
-                plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
-                plt.rc('figure', dpi=200)
-                plt.rc('figure', figsize=(6, 4))
-
-                # Customize gridlines
-                plt.grid(True, which='both', linestyle='--', linewidth=0.5)
-
-                # Set the border color and width
-                ax = plt.gca()  # Get current axis
-                for _, spine in ax.spines.items():
-                    spine.set_color('black')
-                    spine.set_linewidth(1)
-
-                if err_style == "bars":
-                    err_kws = {
-                        "capsize": capsize,
-                        "marker": marker,
-                        "markersize": markersize,
-                    }
-                else:
-                    err_kws = {}
-
-                #cut_threshold = 0
-                cut_axis = False
-                #errorbar = ("sd", 0.3)
-                errorbar = ("sd", 0.5)
-                s_type = str(exp_kwargs["sim_init_type"])
-                nl = exp_kwargs["noise_level"]
-                if "synthetic" in self.dataset:
-                    if s_type == "zeros":
-                        cut_threshold = 13
-                    else:
-                        cut_threshold = 11
-                elif self.dataset == "20newsgroups":
-                    if s_type == "zeros":
-                        cut_threshold = 9
-                    else:
-                        cut_threshold = 16
-                elif self.dataset == "breast_cancer":
-                    # noise = 0.0
-                    #errorbar = None
-                    #cut_axis = True
-                    #l1 = 0
-                    #l2 = 0.7
-                    #l3 = 0.72
-                    #l4 = 1.01
-                    cut_threshold = 5
-                    #cut_threshold = 900
-                elif self.dataset == "cardiotocography":
-                    if s_type == "zeros":
-                        cut_threshold = 8
-                    else:
-                        cut_threshold = 10
-                elif self.dataset == "cifar10" or self.dataset == "cifar10_original":
-                    if s_type == "zeros":
-                        if nl == 0.6:
-                            cut_threshold = 12
-                        else:
-                            cut_threshold = 9
-                    else:
-                        cut_threshold = 8
-                elif self.dataset == "ecoli":
-                    if s_type == "zeros":
-                        cut_threshold = 12
-                    else:
-                        cut_threshold = 15
-                elif self.dataset == "forest_type_mapping":
-                    if s_type == "zeros":
-                        if nl == 0.6:
-                            cut_threshold = 10
-                        else:
-                            cut_threshold = 8
-                    else:
-                        cut_threshold = 9
-                elif self.dataset == "mnist":
-                    if s_type == "zeros":
-                        cut_threshold = 12
-                    else:
-                        cut_threshold = 10
-                elif self.dataset == "mushrooms":
-                    if s_type == "zeros":
-                        cut_threshold = 4
-                    else:
-                        cut_threshold = 10
-                elif self.dataset == "user_knowledge":
-                    if s_type == "zeros":
-                        cut_threshold = 6
-                    else:
-                        cut_threshold = 9
-                elif self.dataset == "yeast":
-                    if s_type == "zeros":
-                        cut_threshold = 6
-                    else:
-                        cut_threshold = 9
-                else:
-                    raise ValueError("incorrect dataset!")
-                    
-
-                #cut_threshold = 20
-                df_filtered = df_filtered[df_filtered[vary[0]] < cut_threshold]
-                metric_map = {"ami": "AMI", "rand": "ARI", "time": "Time (s)", "num_violations": "Num. violations",
-                            "time_select_batch": "Time (s)", "time_update_clustering": "Time (s)", "num_repeat_queries": "Num. pairs re-queried"}
-
-                #if metric == "rand":
-                    #new_ari = 0.19
-                #elif metric == "ami":
-                    #new_ari = 0.36
-
-                #print(df_filtered.columns)
-                #print(df_filtered["y"][0].shape)
-                #print(df_filtered["y"])
-                #condition = (df_filtered['acq_fn'] == "cluster_incon") & (df_filtered['x'] == 0)
-                #df_filtered.loc[condition, 'y'] = new_ari
-                #df_filtered['num_maxmin_edges'] = df_filtered['num_maxmin_edges'].astype(str[])
-                #if not cut_axis:
-                if exp_kwargs["sim_init_type"] == "custom":
-                    ax = sns.lineplot(
-                        x=vary[0],
-                        y="y",
-                        #hue=df_filtered[hues].apply(tuple, axis=1),
-                        hue="acq_fn",
-                        hue_order=["entropy", "cluster_incon", "maxexp", "maxmin", "freq"],
-                        #hue_order=[("maxexp", "0.0"), ("maxexp", "0.005"), ("maxexp", "0.05"), ("maxexp", "0.2"), ("maxexp", "0.6"), ("maxexp", "1.0")],
-                        #hue_order=[("maxexp", "0.0"), ("maxexp", "0.005"), ("maxexp", "0.05"), ("maxexp", "0.2"), ("maxexp", "0.6"), ("maxexp", "1.0"), ("QECC", "1.0")],
-                        #hue_order=[("maxmin", "0.0"), ("maxmin", "0.005"), ("maxmin", "0.05"), ("maxmin", "0.2"), ("maxmin", "0.6"), ("maxmin", "1.0"), ("QECC", "1.0")],
-                        #hue_order=[("maxmin", "0.0"), ("maxmin", "0.005"), ("maxmin", "0.05"), ("maxmin", "0.2"), ("maxmin", "0.6"), ("maxmin", "1.0")],
-                        errorbar=errorbar,
-                        marker=".",
-                        err_style=err_style,
-                        data=df_filtered,
-                        linestyle=linestyle,
-                        err_kws=err_kws,
-                    )
-                    #plt.setp(ax.lines, markeredgecolor='none')  # Removes the border of the markers
-                    #plt.setp(ax.lines, alpha=0.7)  # Adjusts the transparency of the markers
-                    plt.setp(ax.lines, markeredgewidth=0.5)  # Adjusts the transparency of the markers
-                    plt.setp(ax.lines, markersize=7)  # Adjusts the transparency of the markers
-
-                    plt.ylabel(metric_map[metric])
-                else:
-                    ax = sns.lineplot(
-                        x=vary[0],
-                        y="y",
-                        #hue=df_filtered[hues].apply(tuple, axis=1),
-                        hue="acq_fn",
-                        hue_order=["info_gain_object", "entropy", "cluster_incon", "maxexp", "maxmin", "freq"],
-                        #hue_order=[("maxexp", "0.0"), ("maxexp", "0.005"), ("maxexp", "0.05"), ("maxexp", "0.2"), ("maxexp", "0.6"), ("maxexp", "1.0")],
-                        #hue_order=[("maxexp", "0.0"), ("maxexp", "0.005"), ("maxexp", "0.05"), ("maxexp", "0.2"), ("maxexp", "0.6"), ("maxexp", "1.0"), ("QECC", "1.0")],
-                        #hue_order=[("maxmin", "0.0"), ("maxmin", "0.005"), ("maxmin", "0.05"), ("maxmin", "0.2"), ("maxmin", "0.6"), ("maxmin", "1.0"), ("QECC", "1.0")],
-                        #hue_order=[("maxmin", "0.0"), ("maxmin", "0.005"), ("maxmin", "0.05"), ("maxmin", "0.2"), ("maxmin", "0.6"), ("maxmin", "1.0")],
-                        errorbar=errorbar,
-                        marker=".",
-                        err_style=err_style,
-                        data=df_filtered,
-                        linestyle=linestyle,
-                        err_kws=err_kws,
-                    )
-                    #plt.setp(ax.lines, markeredgecolor='none')  # Removes the border of the markers
-                    #plt.setp(ax.lines, alpha=0.7)  # Adjusts the transparency of the markers
-                    plt.setp(ax.lines, markeredgewidth=0.5)  # Adjusts the transparency of the markers
-                    plt.setp(ax.lines, markersize=7)  # Adjusts the transparency of the markers
-
-                    plt.ylabel(metric_map[metric])
-#                else:
-#                    f, (ax1, ax2) = plt.subplots(ncols=1, nrows=2, sharex=True, sharey=False, gridspec_kw={'height_ratios': [3, 1]})
-#                    ax = sns.lineplot(
-#                        x=vary[0],
-#                        y="y",
-#                        #hue=df_filtered[hues].apply(tuple, axis=1),
-#                        hue="acq_fn",
-#                        hue_order=["maxexp", "maxmin", "uncert", "freq", "unif", "nCOBRAS", "COBRAS", "QECC"],
-#                        errorbar=errorbar,
-#                        err_style=err_style,
-#                        data=df_filtered,
-#                        linestyle=linestyle,
-#                        err_kws=err_kws,
-#                        ax=ax1
-#                    )
-#                    ax = sns.lineplot(
-#                        x=vary[0],
-#                        y="y",
-#                        #hue=df_filtered[hues].apply(tuple, axis=1),
-#                        hue="acq_fn",
-#                        hue_order=["maxexp", "maxmin", "uncert", "freq", "unif", "nCOBRAS", "COBRAS", "QECC"],
-#                        errorbar=errorbar,
-#                        err_style=err_style,
-#                        data=df_filtered,
-#                        linestyle=linestyle,
-#                        err_kws=err_kws,
-#                        ax=ax2
-#                    )
-#                    ax1.spines['bottom'].set_visible(False)
-#                    ax2.spines['top'].set_visible(False)
-#                    ax1.set_ylim(l3, l4)
-#                    ax2.set_ylim(l1, l2)
-#
-#                    d = .015  # how big to make the diagonal lines in axes coordinates
-#                    # arguments to pass to plot, just so we don't keep repeating them
-#                    kwargs = dict(transform=ax1.transAxes, color='k', clip_on=False)
-#                    ax1.plot((-d, +d), (-d, +d), **kwargs)        # top-left diagonal
-#                    ax1.plot((1 - d, 1 + d), (-d, +d), **kwargs)  # top-right diagonal
-#
-#                    kwargs.update(transform=ax2.transAxes)  # switch to the bottom axes
-#                    ax2.plot((-d, +d), (1 - d, 1 + d), **kwargs)  # bottom-left diagonal
-#                    ax2.plot((1 - d, 1 + d), (1 - d, 1 + d), **kwargs)  # bottom-right diagonal
-#                    ax1.set_ylabel("")
-#                    ax2.set_ylabel("")
-#                    #f.text(metric_map[metric])
-#                    f.text(-0.02, 0.5, metric_map[metric], va='center', rotation='vertical')
-#
-#
-                    #plt.subplots_adjust(wspace=0, hspace=0)
-                N = len(self.Y)
-                n_edges = (N*(N-1))/2
-                if self.num_feedback < 1:
-                    batch_size = math.ceil(n_edges * self.num_feedback)
-                else:
-                    batch_size = self.num_feedback
-                n_iterations = int(n_edges/batch_size)
-                #tick_labels = np.array(list(range(0, n_iterations))) * batch_size
-                #print(batch_size)
-                #print(n_edges)
-                labels = []
-                for item in ax.get_xticks():
-                    #print((int(item)*batch_size)/n_edges)
-                    labels.append(round((int(item)*batch_size)/n_edges, 2))
-                    #labels.append((int(item)*batch_size)/n_edges, 1)
-
-
-
-                if not cut_axis:
-                    ax.set_xticklabels(labels)
-                else:
-                    ax2.get_legend().remove()
-                    ax2.set_xticklabels(labels)
-                    ax = ax1
-
-                #ax.set_xticks(range(n_iterations), labels=tick_labels)
-                #plt.xlabel(str(vary))
-                plt.xlabel("Proportion of pairs queried")
-                #ax.legend(loc='lower right')
-                ax.legend(loc='best')
-
-                legs = ax.get_legend().get_texts()
-                #legs = [l.get_text() for l in legs]
-                fix_legends = True
-                if fix_legends:
-                    #new_legends = []
-                    ax.get_legend().set_title(None)
-                    for ll in legs:
-                        l = ll.get_text()
-                        if "unif" in l:
-                            #new_legends.append("Uniform")
-                            ll.set_text("Uniform")
-                        if "COBRAS" in l and "nCOBRAS" not in l:
-                            #new_legends.append("COBRAS")
-                            ll.set_text("COBRAS")
-                        if "nCOBRAS" in l:
-                            #new_legends.append("nCOBRAS")
-                            ll.set_text("nCOBRAS")
-                        if "freq" in l:
-                            #new_legends.append("Frequency")
-                            ll.set_text("Uniform")
-                        if "uncert" in l:
-                            #new_legends.append("Uncertainty")
-                            ll.set_text("Uncertainty")
-                        if "maxmin" in l:
-                            #new_legends.append("Maxmin")
-                            ll.set_text("Maxmin")
-                        if "maxexp" in l:
-                            #new_legends.append("Maxexp")
-                            ll.set_text("Maxexp")
-                        if "QECC" in l:
-                            #new_legends.append("QECC")
-                            ll.set_text("QECC")
-                        if "entropy" in l:
-                            ll.set_text("Entropy")
-                        if "info_gain_object" in l:
-                            ll.set_text("IG")
-                        if "cluster_incon" in l:
-                            ll.set_text("IMU-C")
-
-                    #ax.legend(labels=new_legends)
-
-
-                #legs = ax.get_legend().get_texts()
-                ###legs = [l.get_text() for l in legs]
-                #fix_legends = False
-                #if fix_legends:
-                #    #new_legends = []
-                #    ax.get_legend().set_title(None)
-                #    for ll in legs:
-                #        #print(type(ll).get_text())
-                #        #print(ll.get_text())
-                #        l = ll.get_text()
-                #        acqfn = l.split(",")[0]
-                #        xi = l.split(",")[1][2:-2]
-                #        #print(xi)
-                #        if "QECC" in acqfn:
-                #            ll.set_text("QECC")
-                #        elif "maxexp" in acqfn:
-                #            ll.set_text(r"$\xi$ = " + xi)
-                #        else:
-                #            ll.set_text(r"$\xi$ = " + xi)
-
-
-
-                legend = ax.get_legend()
-
-                if hide_legend:
-                    if self.dataset != "20newsgroups":
-                        ax.get_legend().set_visible(False)
-
-                plt.savefig(file_path, bbox_extra_artists=(legend,), dpi=200, bbox_inches='tight')
-                #plt.savefig(file_path, dpi=200, bbox_inches='tight')
-                plt.clf()
-
-    def generate_AL_curves2(
-        self,
-        data,
-        save_location,
-        categorize,
-        compare,
-        vary,
-        auc, 
-        summary_method, 
-        indices, 
-        threshold, 
-        err_style="band",
-        marker=None,
-        markersize=6,
-        capsize=6,
-        linestyle="solid",
-        **config):
-        #data = self.read_all_data(folder="../experiment_results/maxexp_experiment")
-        config = copy.deepcopy(config)
-        options_keys = []
-        options_values = []
-        compare_options = {}
-        vary_options = {}
-        all_options = {}
-
-        for option_category, options in config.items():
-            if option_category == "general_options":
-                continue
-            for option, option_value in options.items():
-                if type(option_value) != list:
-                    option_value = [option_value]
-                all_options[option] = option_value
-                if option not in compare:
-                    options_keys.append(option)
-                    options_values.append(option_value)
-
-        for option in compare:
-            compare_options[option] = all_options[option]
-            all_options.pop(option, None)
-
-        if "x" not in vary:
-            for option in vary:
-                vary_options[option] = all_options[option]
-                all_options.pop(option, None)
-            data = self.summarize_AL_procedure(
-                data,
-                auc=auc, 
-                method=summary_method, 
-                indices=indices, 
-                threshold=threshold
-            )
-        
-        # extending
-        for metric in self.metrics:
-            col = "mean_" + metric
-            data[col] = data[metric].apply(lambda x: np.mean(x, axis=0)) # axis 1 since we transpose in read_all_data (i.e., shape is (num_iterations, num_repeats))
-            data['array_lengths'] = data[col].apply(lambda x: len(x))
-            max_length = data['array_lengths'].max()
-            data = self.extend_dataframe(data, metric, max_length)
-
-        data_column_names = self.metrics
-        non_data_column_names = list(set(data.columns) - set(data_column_names))
-        data = self.flatten_dataframe(data, non_data_column_names, data_column_names)
-
-        for exp_vals in itertools.product(*options_values):
-            exp_kwargs = dict(zip(options_keys, exp_vals))
-
-            for option in compare:
-                exp_kwargs[option] = compare_options[option]
-
-            if "x" not in vary:
-                for option in vary:
-                    exp_kwargs[option] = vary_options[option]
-
-            for metric in self.metrics:
-                exp_kwargs["metric"] = metric
-                df_filtered = self.filter_dataframe(data, exp_kwargs)
-
-                path = save_location + "/" + metric + "/"
-                for option in categorize:
-                    path += str(exp_kwargs[option]) + "/" 
-                fig_path = Path(path)
-                fig_path.mkdir(parents=True, exist_ok=True)
-                file_path = path + "plot.png"
-
-                # Cont
-                #hues = list(all_options.keys())
-                #hues.extend(list(compare_options.keys()))
-                hues = list(compare_options.keys())
-                sns.set_theme()
-                sns.set_style("white")
-                SMALL_SIZE = 16
-                MEDIUM_SIZE = 18
-                BIGGER_SIZE = 18
-
-                plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
-                plt.rc('axes', titlesize=SMALL_SIZE)     # fontsize of the axes title
-                plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels
-                plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
-                plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
-                plt.rc('legend', fontsize=18)    # legend fontsize
-                plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
-                plt.rc('figure', dpi=200)
-                plt.rc('figure', figsize=(6, 4))
-
-                # Customize gridlines
-                plt.grid(True, which='both', linestyle='--', linewidth=0.5)
-
-                # Set the border color and width
-                ax = plt.gca()  # Get current axis
-                for _, spine in ax.spines.items():
-                    spine.set_color('black')
-                    spine.set_linewidth(1)
-
-                if err_style == "bars":
-                    err_kws = {
-                        "capsize": capsize,
-                        "marker": marker,
-                        "markersize": markersize,
-                    }
-                else:
-                    err_kws={}
-
-                errorbar = ("sd", 1)
-                ax = sns.lineplot(
-                    x=vary[0],
-                    y="y",
-                    #hue=df_filtered[hues].apply(tuple, axis=1),
-                    hue="acq_fn",
-                    hue_order=["info_gain_object", "entropy", "cluster_incon", "maxexp", "maxmin", "freq"],
-                    errorbar=errorbar,
-                    err_style=err_style,
-                    data=df_filtered,
-                    linestyle=linestyle,
-                    err_kws=err_kws,
-                )
-                metric_map = {"ami": "AMI (AUC)", "rand": "ARI (AUC)"}
-                plt.ylabel(metric_map[metric])
-              
-                #ax.set_xticks(range(n_iterations), labels=tick_labels)
-                x_label_ = "Noise level" if vary[0] == "noise_level" else "Batch size"
-                plt.xlabel(x_label_)
-                #plt.xlabel("Proportion of edges queried")
-                ax.legend(loc='best')
-
-                legs = ax.get_legend().get_texts()
-                #legs = [l.get_text() for l in legs]
-                fix_legends = True
-                if fix_legends:
-                    #new_legends = []
-                    ax.get_legend().set_title(None)
-                    for ll in legs:
-                        l = ll.get_text()
-                        if "unif" in l:
-                            #new_legends.append("Uniform")
-                            ll.set_text("Uniform")
-                        if "COBRAS" in l and "nCOBRAS" not in l:
-                            #new_legends.append("COBRAS")
-                            ll.set_text("COBRAS")
-                        if "nCOBRAS" in l:
-                            #new_legends.append("nCOBRAS")
-                            ll.set_text("nCOBRAS")
-                        if "freq" in l:
-                            #new_legends.append("Frequency")
-                            ll.set_text("Uniform")
-                        if "uncert" in l:
-                            #new_legends.append("Uncertainty")
-                            ll.set_text("Uncertainty")
-                        if "maxmin" in l:
-                            #new_legends.append("Maxmin")
-                            ll.set_text("Maxmin")
-                        if "maxexp" in l:
-                            #new_legends.append("Maxexp")
-                            ll.set_text("Maxexp")
-                        if "QECC" in l:
-                            #new_legends.append("QECC")
-                            ll.set_text("QECC")
-                        if "entropy" in l:
-                            ll.set_text("Entropy")
-                        if "info_gain_object" in l:
-                            ll.set_text("IG")
-                        if "cluster_incon" in l:
-                            ll.set_text("IMU-C")
-
-                #ax.legend(labels=new_legends)
-                legend = ax.get_legend()
-
-                #ax.get_legend().set_visible(False)
-
-                plt.savefig(file_path, bbox_extra_artists=(legend,), bbox_inches='tight')
-                plt.savefig(file_path, dpi=200, bbox_inches='tight')
-                plt.clf()
-
-    def generate_AL_curves3(
-        self,
-        data,
-        save_location,
-        categorize,
-        compare,
-        vary,
-        auc, 
-        summary_method, 
-        indices, 
-        threshold, 
-        err_style="band",
-        marker=None,
-        markersize=6,
-        capsize=6,
-        linestyle="solid",
-        **config):
-        #data = self.read_all_data(folder="../experiment_results/maxexp_experiment")
-        config = copy.deepcopy(config)
-        options_keys = []
-        options_values = []
-        compare_options = {}
-        vary_options = {}
-        all_options = {}
-
-        for option_category, options in config.items():
-            if option_category == "general_options":
-                continue
-            for option, option_value in options.items():
-                if type(option_value) != list:
-                    option_value = [option_value]
-                all_options[option] = option_value
-                if option not in compare:
-                    options_keys.append(option)
-                    options_values.append(option_value)
-
-        for option in compare:
-            compare_options[option] = all_options[option]
-            all_options.pop(option, None)
-
-        if "x" not in vary:
-            for option in vary:
-                vary_options[option] = all_options[option]
-                all_options.pop(option, None)
-            data = self.summarize_AL_procedure(
-                data,
-                auc=auc, 
-                method=summary_method, 
-                indices=indices, 
-                threshold=threshold
-            )
-        
-        # extending
-        for metric in self.metrics:
-            if metric in ["time_select_batch", "time_update_clustering", "time", "num_violations"]:
-                continue
-            col = "mean_" + metric
-            data[col] = data[metric].apply(lambda x: np.mean(x, axis=0)) # axis 1 since we transpose in read_all_data (i.e., shape is (num_iterations, num_repeats))
-            data['array_lengths'] = data[col].apply(lambda x: len(x))
-            max_length = data['array_lengths'].max()
-            data = self.extend_dataframe(data, metric, max_length)
-
-        data_column_names = self.metrics
-        non_data_column_names = list(set(data.columns) - set(data_column_names))
-        data = self.flatten_dataframe(data, non_data_column_names, data_column_names)
-
-        for exp_vals in itertools.product(*options_values):
-            exp_kwargs = dict(zip(options_keys, exp_vals))
-
-            for option in compare:
-                exp_kwargs[option] = compare_options[option]
-
-            if "x" not in vary:
-                for option in vary:
-                    exp_kwargs[option] = vary_options[option]
-
-            for metric in self.metrics:
-                exp_kwargs["metric"] = metric
-                df_filtered = self.filter_dataframe(data, exp_kwargs)
-
-                path = save_location + "/" + metric + "/"
-                for option in categorize:
-                    path += str(exp_kwargs[option]) + "/" 
-                fig_path = Path(path)
-                fig_path.mkdir(parents=True, exist_ok=True)
-                #file_name = exp_kwargs["dataset"] + "_" + metric + "_" + str(exp_kwargs["noise_level"]) + "_" + exp_kwargs["sim_init_type"] + ".png"
-                #file_name = exp_kwargs["dataset"] + "_" + metric + "_" + str(exp_kwargs["noise_level"]) + "_" + str(exp_kwargs["sim_init_type"]) + ".png"
-                file_name = exp_kwargs["dataset"] + "_" + metric + "_" + str(exp_kwargs["noise_level"]) + "_" + str(exp_kwargs["warm_start"]) + "_" + str(exp_kwargs["use_grumbel"]) + "_" + str(exp_kwargs["info_gain_pair_mode"]) + "_vary.png"
-                #file_path = path + "plot.png"
-                file_path = path + file_name
-                self.dataset = exp_kwargs["dataset"] 
-
-
-                # Cont
-                #hues = list(all_options.keys())
-                #hues.extend(list(compare_options.keys()))
-                hues = list(compare_options.keys())
-                sns.set_theme()
-                sns.set_style("white")
-                SMALL_SIZE = 16
-                MEDIUM_SIZE = 18
-                BIGGER_SIZE = 18
-
-                plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
-                plt.rc('axes', titlesize=SMALL_SIZE)     # fontsize of the axes title
-                plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels
-                plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
-                plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
-                plt.rc('legend', fontsize=16)    # legend fontsize
-                plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
-                plt.rc('figure', dpi=200)
-                plt.rc('figure', figsize=(6, 4))
-
-                # Customize gridlines
-                plt.grid(True, which='both', linestyle='--', linewidth=0.5)
-
-                # Set the border color and width
-                ax = plt.gca()  # Get current axis
-                for _, spine in ax.spines.items():
-                    spine.set_color('black')
-                    spine.set_linewidth(1)
-
-                if err_style == "bars":
-                    err_kws = {
-                        "capsize": capsize,
-                        "marker": marker,
-                        "markersize": markersize,
-                    }
-                else:
-                    err_kws = {}
-
-                #cut_threshold = 0
-                cut_axis = False
-                #errorbar = ("sd", 0.3)
-                errorbar = ("sd", 0.5)
-                if "synthetic" in self.dataset:
-                    cut_threshold = 15
-                elif self.dataset == "20newsgroups":
-                    cut_threshold = 15
-                elif self.dataset == "breast_cancer":
-                    # noise = 0.0
-                    #errorbar = None
-                    #cut_axis = True
-                    #l1 = 0
-                    #l2 = 0.7
-                    #l3 = 0.72
-                    #l4 = 1.01
-                    cut_threshold = 5
-                    #cut_threshold = 900
-                elif self.dataset == "cardiotocography":
-                    cut_threshold = 10
-                elif self.dataset == "cifar10" or self.dataset == "cifar10_original":
-                    cut_threshold = 12
-                elif self.dataset == "ecoli":
-                    cut_threshold = 17
-                elif self.dataset == "forest_type_mapping":
-                    cut_threshold = 10
-                elif self.dataset == "mnist":
-                    cut_threshold = 12
-                elif self.dataset == "mushrooms":
-                    cut_threshold = 4
-                elif self.dataset == "user_knowledge":
-                    cut_threshold = 10
-                elif self.dataset == "yeast":
-                    cut_threshold = 9
-                else:
-                    raise ValueError("incorrect dataset!")
-
-                df_filtered = df_filtered[df_filtered[vary[0]] < cut_threshold]
-                metric_map = {"ami": "AMI", "rand": "ARI", "time": "Time (s)", "num_violations": "Num. violations", "time_select_batch": "Time (s)", "time_update_clustering": "Time (s)"}
-
-                df_filtered['mean_field_beta'] = df_filtered['mean_field_beta'].astype(str)
-                df_filtered['info_gain_lambda'] = df_filtered['info_gain_lambda'].astype(str)
-                df_filtered['num_edges_info_gain'] = df_filtered['num_edges_info_gain'].astype(str)
-                if not cut_axis:
-                    ax = sns.lineplot(
-                        x=vary[0],
-                        y="y",
-                        #hue=df_filtered[hues].apply(tuple, axis=1),
-                        #hue="mean_field_beta",
-                        hue="num_edges_info_gain",
-                        #hue_order=["1", "3", "10", "20", "50"],
-                        hue_order=["1", "5", "10", "50", "100", "200"],
-                        #hue_order=["info_gain_object", "entropy", "cluster_incon", "maxexp", "maxmin", "freq"],
-                        #hue_order=[("maxexp", "0.0"), ("maxexp", "0.005"), ("maxexp", "0.05"), ("maxexp", "0.2"), ("maxexp", "0.6"), ("maxexp", "1.0")],
-                        #hue_order=[("maxexp", "0.0"), ("maxexp", "0.005"), ("maxexp", "0.05"), ("maxexp", "0.2"), ("maxexp", "0.6"), ("maxexp", "1.0"), ("QECC", "1.0")],
-                        #hue_order=[("maxmin", "0.0"), ("maxmin", "0.005"), ("maxmin", "0.05"), ("maxmin", "0.2"), ("maxmin", "0.6"), ("maxmin", "1.0"), ("QECC", "1.0")],
-                        #hue_order=[("maxmin", "0.0"), ("maxmin", "0.005"), ("maxmin", "0.05"), ("maxmin", "0.2"), ("maxmin", "0.6"), ("maxmin", "1.0")],
-                        errorbar=errorbar,
-                        marker=".",
-                        err_style=err_style,
-                        data=df_filtered,
-                        linestyle=linestyle,
-                        err_kws=err_kws,
-                    )
-                    #plt.setp(ax.lines, markeredgecolor='none')  # Removes the border of the markers
-                    #plt.setp(ax.lines, alpha=0.7)  # Adjusts the transparency of the markers
-                    plt.setp(ax.lines, markeredgewidth=0.5)  # Adjusts the transparency of the markers
-                    plt.setp(ax.lines, markersize=7)  # Adjusts the transparency of the markers
-
-                    plt.ylabel(metric_map[metric])
-                else:
-                    f, (ax1, ax2) = plt.subplots(ncols=1, nrows=2, sharex=True, sharey=False, gridspec_kw={'height_ratios': [3, 1]})
-                    ax = sns.lineplot(
-                        x=vary[0],
-                        y="y",
-                        #hue=df_filtered[hues].apply(tuple, axis=1),
-                        hue="acq_fn",
-                        hue_order=["maxexp", "maxmin", "uncert", "freq", "unif", "nCOBRAS", "COBRAS", "QECC"],
-                        errorbar=errorbar,
-                        err_style=err_style,
-                        data=df_filtered,
-                        linestyle=linestyle,
-                        err_kws=err_kws,
-                        ax=ax1
-                    )
-                    ax = sns.lineplot(
-                        x=vary[0],
-                        y="y",
-                        #hue=df_filtered[hues].apply(tuple, axis=1),
-                        hue="acq_fn",
-                        hue_order=["maxexp", "maxmin", "uncert", "freq", "unif", "nCOBRAS", "COBRAS", "QECC"],
-                        errorbar=errorbar,
-                        err_style=err_style,
-                        data=df_filtered,
-                        linestyle=linestyle,
-                        err_kws=err_kws,
-                        ax=ax2
-                    )
-                    ax1.spines['bottom'].set_visible(False)
-                    ax2.spines['top'].set_visible(False)
-                    ax1.set_ylim(l3, l4)
-                    ax2.set_ylim(l1, l2)
-
-                    d = .015  # how big to make the diagonal lines in axes coordinates
-                    # arguments to pass to plot, just so we don't keep repeating them
-                    kwargs = dict(transform=ax1.transAxes, color='k', clip_on=False)
-                    ax1.plot((-d, +d), (-d, +d), **kwargs)        # top-left diagonal
-                    ax1.plot((1 - d, 1 + d), (-d, +d), **kwargs)  # top-right diagonal
-
-                    kwargs.update(transform=ax2.transAxes)  # switch to the bottom axes
-                    ax2.plot((-d, +d), (1 - d, 1 + d), **kwargs)  # bottom-left diagonal
-                    ax2.plot((1 - d, 1 + d), (1 - d, 1 + d), **kwargs)  # bottom-right diagonal
-                    ax1.set_ylabel("")
-                    ax2.set_ylabel("")
-                    #f.text(metric_map[metric])
-                    f.text(-0.02, 0.5, metric_map[metric], va='center', rotation='vertical')
-
-
-                    #plt.subplots_adjust(wspace=0, hspace=0)
-                N = len(self.Y)
-                n_edges = (N*(N-1))/2
-                if self.num_feedback < 1:
-                    batch_size = math.ceil(n_edges * self.num_feedback)
-                else:
-                    batch_size = self.num_feedback
-                n_iterations = int(n_edges/batch_size)
-                #tick_labels = np.array(list(range(0, n_iterations))) * batch_size
-                #print(batch_size)
-                #print(n_edges)
-                labels = []
-                for item in ax.get_xticks():
-                    #print((int(item)*batch_size)/n_edges)
-                    labels.append(round((int(item)*batch_size)/n_edges, 2))
-                    #labels.append((int(item)*batch_size)/n_edges, 1)
-
-
-
-                if not cut_axis:
-                    ax.set_xticklabels(labels)
-                else:
-                    ax2.get_legend().remove()
-                    ax2.set_xticklabels(labels)
-                    ax = ax1
-
-                #ax.set_xticks(range(n_iterations), labels=tick_labels)
-                #plt.xlabel(str(vary))
-                plt.xlabel("Proportion of pairs queried")
-                #ax.legend(loc='lower right')
-                ax.legend(loc='best')
-
-                #legs = ax.get_legend().get_texts()
-                ##legs = [l.get_text() for l in legs]
-                #fix_legends = True
-                #if fix_legends:
-                #    #new_legends = []
-                #    ax.get_legend().set_title(None)
-                #    for ll in legs:
-                #        l = ll.get_text()
-                #        if "unif" in l:
-                #            #new_legends.append("Uniform")
-                #            ll.set_text("Uniform")
-                #        if "COBRAS" in l and "nCOBRAS" not in l:
-                #            #new_legends.append("COBRAS")
-                #            ll.set_text("COBRAS")
-                #        if "nCOBRAS" in l:
-                #            #new_legends.append("nCOBRAS")
-                #            ll.set_text("nCOBRAS")
-                #        if "freq" in l:
-                #            #new_legends.append("Frequency")
-                #            ll.set_text("Uniform")
-                #        if "uncert" in l:
-                #            #new_legends.append("Uncertainty")
-                #            ll.set_text("Uncertainty")
-                #        if "maxmin" in l:
-                #            #new_legends.append("Maxmin")
-                #            ll.set_text("Maxmin")
-                #        if "maxexp" in l:
-                #            #new_legends.append("Maxexp")
-                #            ll.set_text("Maxexp")
-                #        if "QECC" in l:
-                #            #new_legends.append("QECC")
-                #            ll.set_text("QECC")
-                #        if "entropy" in l:
-                #            ll.set_text("Entropy")
-                #        if "info_gain_object" in l:
-                #            ll.set_text("IG")
-                #        if "cluster_incon" in l:
-                #            ll.set_text("CC")
-
-                #    #ax.legend(labels=new_legends)
-
-
-                legs = ax.get_legend().get_texts()
-                ##legs = [l.get_text() for l in legs]
-                fix_legends = True
-                if fix_legends:
-                    #new_legends = []
-                    ax.get_legend().set_title(None)
-                    for ll in legs:
-                        #print(type(ll).get_text())
-                        #print(ll.get_text())
-                        l = ll.get_text()
-                        #acqfn = l.split(",")[0]
-                        #xi = l.split(",")[1][2:-2]
-                        #print(xi)
-                        #if "info_gain_object" in acqfn:
-                        ll.set_text(r"$|\mathcal{E}|$ = " + l + "N")
-
-
-
-                ax.get_legend().set_visible(False)
-                legend = ax.get_legend()
-                plt.savefig(file_path, bbox_extra_artists=(legend,), dpi=200, bbox_inches='tight')
-                #plt.savefig(file_path, dpi=200, bbox_inches='tight')
-                plt.clf()
-
     
+    def construct_x_ticks(self, ax, prop):
+        N = len(self.Y)
+        n_edges = (N*(N-1))/2
+        if self.batch_size < 1:
+            batch_size = math.ceil(n_edges * self.batch_size)
+        else:
+            batch_size = self.batch_size
+        if prop:
+            labels = []
+            for item in ax.get_xticks():
+                labels.append(round((int(item)*batch_size)/n_edges, 2))
+        else:
+            labels = []
+            for item in ax.get_xticks():
+                print(item)
+                labels.append(round((int(item)*batch_size)/n_edges, 2))
+                #labels = np.array(list(range(0, n_iterations))) * batch_size
+            
+        return labels
+
     def generate_experiments(self, folder, options_to_keep, start_index=1, **config):
-        options_to_compare_extracted = {}
-        all_options = {}
+        options_keys = []
+        options_values = []
         i = start_index
         fig_path = Path(folder)
         fig_path.mkdir(parents=True, exist_ok=True)
-        for option_category, options in config.items():
-            if option_category not in all_options:
-                all_options[option_category] = list(options.keys())
 
-            if option_category not in options_to_compare_extracted:
-                options_to_compare_extracted[option_category] = {}
+        for key, value in config.items():
+            if type(value) != list:
+                value = [value]
+            if key not in options_to_keep:
+                options_values.append(value)
+            else:
+                options_values.append([1])
+            options_keys.append(key)
 
-            for option in options_to_keep:
-                if option in config[option_category]:
-                    options_to_compare_extracted[option_category][option] = config[option_category][option]
-                    config[option_category].pop(option, None)
-
-        options_keys, options_values = self.get_keys_from_options(config)
         for exp_vals in itertools.product(*options_values):
             exp_kwargs = dict(zip(options_keys, exp_vals))
-            kwargs = {}
-            for option_category, options in all_options.items():
-                if option_category not in kwargs:
-                    kwargs[option_category] = {}
-                for option in options:
-                    if option in options_to_keep:
-                        continue
-                    kwargs[option_category][option] = exp_kwargs[option]
-
-            for option_category, options in options_to_compare_extracted.items():
-                if option_category not in kwargs:
-                    kwargs[option_category] = {}
-                for option, option_values in options.items():
-                    kwargs[option_category][option] = option_values
+            for key, value in exp_kwargs.items():
+                if key in options_to_keep:
+                    exp_kwargs[key] = config[key]
 
             with open(folder + "/experiment" + str(i) + ".json", "w") as fp:
-                json.dump(kwargs, fp, indent=4)
+                json.dump(exp_kwargs, fp, indent=4)
             i += 1
         return i

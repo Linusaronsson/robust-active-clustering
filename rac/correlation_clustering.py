@@ -1,80 +1,69 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Dec  1 14:13:46 2017
-
-@author: mchehreg
-"""
 import numpy as np
 import random 
 import sys
 from scipy.special import softmax
 from scipy import sparse
 
-def max_correlation(my_graph, my_K, my_itr_num):
+def max_correlation(S, K, num_iterations):
 
-    my_N = np.size(my_graph,0)
+    N = np.size(S, 0)
 
-    best_Obj = -sys.float_info.max 
-    best_Sol = np.zeros((my_N,), dtype = int)
+    best_objective = -sys.float_info.max 
+    best_solution = np.zeros((N,), dtype = int)
         
     N_iter = 30
 
-    for itr in range(0,my_itr_num):
-  
-        cur_Sol = np.zeros((my_N,), dtype = int) 
-        
-        for i in range(0,my_N):
-            cur_Sol[i] = random.randint(0,my_K-1)
+    for itr in range(0, num_iterations):
+        current_solution = np.zeros((N,), dtype = int) 
+        for i in range(0,N):
+            current_solution[i] = random.randint(0,K-1)
 
         # calc total cost
-        cur_Obj = 0.0
-        for i in range(0,my_N):
+        current_objective = 0.0
+        for i in range(0,N):
             for j in range(0,i):
-                if cur_Sol[i] == cur_Sol[j]:
-                    cur_Obj = cur_Obj + my_graph[i,j]
+                if current_solution[i] == current_solution[j]:
+                    current_objective = current_objective + S[i,j]
 
-
-        old_Obj = cur_Obj - 1
+        old_objective = current_objective - 1
 
         while True:
-            if (cur_Obj-old_Obj) <= sys.float_info.epsilon or N_iter <= 0:
+            if (current_objective-old_objective) <= sys.float_info.epsilon or N_iter <= 0:
                 break
             N_iter -= 1
-            old_Obj = cur_Obj
-
-            order = list(range(0,my_N))
+            old_objective = current_objective
+            order = list(range(0,N))
             random.shuffle(order)
             
-            for i in range(0,my_N):
-                cur_Ind = order[i]
-                temp_Objs = np.zeros((my_K,), dtype = float)
+            for i in range(0,N):
+                cur_ind = order[i]
+                temp_objects = np.zeros((K,), dtype = float)
                 
-                for j in range(0,my_N): 
-                    if j != cur_Ind:
-                        temp_Objs[cur_Sol[j]] = temp_Objs[cur_Sol[j]] + my_graph[cur_Ind,j]
+                for j in range(0,N): 
+                    if j != cur_ind:
+                        temp_objects[current_solution[j]] = temp_objects[current_solution[j]] + S[cur_ind,j]
 
-
-                sep_Obj = temp_Objs[cur_Sol[cur_Ind]]
-                temp_Objs[cur_Sol[cur_Ind]] = cur_Obj
+                sep_Obj = temp_objects[current_solution[cur_ind]]
+                temp_objects[current_solution[cur_ind]] = current_objective
                 
-                for k in range(0,my_K):
-                    if k != cur_Sol[cur_Ind]:
-                        temp_Objs[k] = cur_Obj - sep_Obj + temp_Objs[k]
+                for k in range(0,K):
+                    if k != current_solution[cur_ind]:
+                        temp_objects[k] = current_objective - sep_Obj + temp_objects[k]
                                              
                         
-                temp_max = np.argmax(temp_Objs)
-                cur_Sol[cur_Ind] = temp_max
-                cur_Obj = temp_Objs[temp_max]
+                temp_max = np.argmax(temp_objects)
+                current_solution[cur_ind] = temp_max
+                current_objective = temp_objects[temp_max]
 
-        if itr == 0 or cur_Obj > best_Obj:
-            best_Sol = np.array(cur_Sol)
-            best_Obj = cur_Obj
+        if itr == 0 or current_objective > best_objective:
+            best_solution = np.array(current_solution)
+            best_objective = current_objective
             
-    return best_Sol, best_Obj
+    return best_solution, best_objective
 
-def fast_max_correlation(graph, K, iterations):
-    N = graph.shape[0]  # Number of nodes
-    best_obj = -sys.float_info.max  # Initialize best objective to lowest possible float
+def fast_max_correlation(S, K, iterations):
+    N = S.shape[0]  # Number of nodes
+    best_objective = -sys.float_info.max  # Initialize best objective to lowest possible float
     best_solution = np.zeros((N,), dtype=int)  # Initialize best solution as an array of zeros
 
     for _ in range(iterations):
@@ -82,14 +71,14 @@ def fast_max_correlation(graph, K, iterations):
         current_solution = np.random.randint(0, K, size=N)
         
         # Calculate initial objective value
-        current_obj = np.sum(graph * (current_solution[:, None] == current_solution))
+        current_obj = np.sum(S * (current_solution[:, None] == current_solution))
 
         while True:
             improved = False
             for i in np.random.permutation(N):
                 current_cluster = current_solution[i]
                 # Calculate the objective for the current configuration
-                cluster_obj = np.sum(graph[i] * (current_solution == current_cluster))
+                cluster_obj = np.sum(S[i] * (current_solution == current_cluster))
                 best_change = 0
                 best_cluster = current_cluster
                 
@@ -98,7 +87,7 @@ def fast_max_correlation(graph, K, iterations):
                     if new_cluster == current_cluster:
                         continue  # Skip if it's the same class
                     # Calculate the objective if i were in the new class
-                    new_cluster_obj = np.sum(graph[i] * (current_solution == new_cluster))
+                    new_cluster_obj = np.sum(S[i] * (current_solution == new_cluster))
                     # Calculate the change in objective
                     change = new_cluster_obj - cluster_obj
                     # If the change is positive and better than the best_change, update best_change
@@ -118,92 +107,90 @@ def fast_max_correlation(graph, K, iterations):
                 break
         
         # Update best solution
-        if current_obj > best_obj:
-            best_obj = current_obj
+        if current_obj > best_objective:
+            best_objective = current_obj
             best_solution = current_solution.copy()
 
-    return best_solution, best_obj
+    return best_solution, best_objective
 
-def max_correlation_dynamic_K(my_graph, my_K, my_itr_num):
-    my_N = np.size(my_graph, 0)
-    #print("SIZE: ", my_N)
-    K_dyn = np.minimum(my_K, my_N)
+def max_correlation_dynamic_K(S, K, num_iterations):
+    N = np.size(S, 0)
+    #print("SIZE: ", N)
+    K_dyn = np.minimum(K, N)
     #print("NUM CLUSTERS: ", K_dyn)
 
-    best_Obj = -sys.float_info.max 
-    best_Sol = np.zeros((my_N,), dtype=int)
+    best_objective = -sys.float_info.max 
+    best_solution = np.zeros((N,), dtype=int)
 
     N_iter = 30
 
-    for itr in range(0,my_itr_num):
-        cur_Sol = np.zeros((my_N,), dtype=int) 
+    for itr in range(0,num_iterations):
+        current_solution = np.zeros((N,), dtype=int) 
         
-        for i in range(0,my_N):
-            cur_Sol[i] = np.random.randint(0, K_dyn)
+        for i in range(0,N):
+            current_solution[i] = np.random.randint(0, K_dyn)
             
         # to gaurantee non-empty clusters
-        temp_indices = np.random.choice(range(0, my_N), K_dyn, replace=False)
+        temp_indices = np.random.choice(range(0, N), K_dyn, replace=False)
         for k in range(0,K_dyn):
-            cur_Sol[temp_indices[k]] = k
+            current_solution[temp_indices[k]] = k
 
-        cur_Obj = 0.0
+        current_objective = 0.0
         for k in range(0, K_dyn):
-            inds = np.where(cur_Sol == k)[0]
+            inds = np.where(current_solution == k)[0]
             lower_triangle_indices = np.tril_indices(len(inds), -1) 
-            cur_Obj += np.sum(my_graph[np.ix_(inds, inds)][lower_triangle_indices])
+            current_objective += np.sum(S[np.ix_(inds, inds)][lower_triangle_indices])
 
-        old_Obj = cur_Obj - 1.0
-        #print("ENTERED ALG: ", itr)
+        old_objective = current_objective - 1.0
 
         for _ in range(30): 
-            if (cur_Obj-old_Obj) <= sys.float_info.epsilon:
+            if (current_objective-old_objective) <= sys.float_info.epsilon:
                 break
             N_iter -= 1
-            old_Obj = cur_Obj
-            indices = np.arange(0, my_N)
+            old_objective = current_objective
+            indices = np.arange(0, N)
             np.random.shuffle(indices)
             for i in indices:
-                temp_Objs = np.zeros(K_dyn)
+                temp_objects = np.zeros(K_dyn)
                 for k in range(0, K_dyn):
-                    inds = np.where(cur_Sol == k)[0]
+                    inds = np.where(current_solution == k)[0]
                     inds = inds[inds != i]
-                    temp_Objs[k] = np.sum(my_graph[i, inds])
+                    temp_objects[k] = np.sum(S[i, inds])
 
-                if np.max(temp_Objs) < 0.0:
+                if np.max(temp_objects) < 0.0:
                     # cerate a new cluster
-                        cur_Obj = cur_Obj - temp_Objs[cur_Sol[i]]
-                        cur_Sol[i] = K_dyn
+                        current_objective = current_objective - temp_objects[current_solution[i]]
+                        current_solution[i] = K_dyn
                         K_dyn = K_dyn + 1
                 else:
-                    sep_Obj = temp_Objs[cur_Sol[i]]
-                    temp_Objs[cur_Sol[i]] = cur_Obj
+                    sep_Obj = temp_objects[current_solution[i]]
+                    temp_objects[current_solution[i]] = current_objective
                     for k in range(0,K_dyn):
-                        if k != cur_Sol[i]:
-                            temp_Objs[k] = cur_Obj - sep_Obj + temp_Objs[k]
+                        if k != current_solution[i]:
+                            temp_objects[k] = current_objective - sep_Obj + temp_objects[k]
 
-                    temp_old_cluster = cur_Sol[i]
-                    temp_max = np.argmax(temp_Objs)
-                    cur_Sol[i] = temp_max
-                    cur_Obj = temp_Objs[temp_max]
+                    temp_old_cluster = current_solution[i]
+                    temp_max = np.argmax(temp_objects)
+                    current_solution[i] = temp_max
+                    current_objective = temp_objects[temp_max]
                         
                     # check the empy cluster, shinke if necessary
-                    K_dyn_temp = len(np.unique(cur_Sol))
+                    K_dyn_temp = len(np.unique(current_solution))
                     if K_dyn_temp < K_dyn:
-                        for j in range(0,my_N):
-                            if cur_Sol[j] > temp_old_cluster:
-                                cur_Sol[j] = cur_Sol[j] - 1
+                        for j in range(0,N):
+                            if current_solution[j] > temp_old_cluster:
+                                current_solution[j] = current_solution[j] - 1
                         K_dyn = K_dyn - 1
 
-        if itr == 0 or cur_Obj > best_Obj:
-            best_Sol = np.array(cur_Sol)
-            best_Obj = cur_Obj
+        if itr == 0 or current_objective > best_objective:
+            best_solution = np.array(current_solution)
+            best_objective = current_objective
             
-    return best_Sol, best_Obj
+    return best_solution, best_objective
 
 from sklearn.metrics import adjusted_rand_score
 
-def mean_field_clustering(S, K, betas, true_labels=None, max_iter=100, tol=1e-6, noise_level=0.0, predicted_labels=None, q=None, h=None):
-    #np.fill_diagonal(S, 0)
+def mean_field_clustering(S, K, betas, max_iter=100, tol=1e-6, predicted_labels=None, q=None, h=None):
     N = S.shape[0]
 
     if q is None:
@@ -219,54 +206,24 @@ def mean_field_clustering(S, K, betas, true_labels=None, max_iter=100, tol=1e-6,
             for i in range(N):
                 h[i, k] = S[i, cluster_indices].sum()
         
-        #beta = 50
         q = softmax(beta*h, axis=1)
     else:
         q = np.copy(q)
         h = np.copy(h)
 
-    #print("INITIAL Q: ", q)
-
-    #n_level = 0.3
-    #noise = n_level * (np.random.rand(N, K) - 0.5)
-    #q += noise
-    #q = np.maximum(q, 0)  # Ensure q stays non-negative
-    #q /= np.sum(q, axis=1, keepdims=True)  # Re-normalize q
-
-    #if is_sparse and not sparse.issparse(S):
-        #S = sparse.csr_matrix(S)
-    
-    #max_iter = 1000
-    #betas = [1]
-    #tol = 1e-10
-    #old_diff = np.inf
     for beta in betas:
         for iteration in range(max_iter):
             h = -S.dot(q)
-            #h = -np.dot(S, q)
             q_new = softmax(beta*-h, axis=1)
-            #print("--------")
             
-            #current_solution = np.argmax(q_new, axis=1)
-            #current_ari = adjusted_rand_score(current_solution, predicted_labels)
-            #current_ari2 = adjusted_rand_score(current_solution, true_labels)
-            #current_ari3 = adjusted_rand_score(predicted_labels, true_labels)
             # Check for convergence
             diff = np.linalg.norm(q_new - q)
-            #print("iteration: ", iteration, " diff: ", diff, " beta: ", beta, " ari: ", current_ari, "mf: ", current_ari2, "local search: ", current_ari3)
-            #if np.abs(diff - old_diff) < tol:
             if diff < tol:
                 print(f'Converged after {iteration} iterations')
                 break
 
-            #old_diff = diff
             q = q_new
 
-            # Inject noise
-            #noise = noise_level * (np.random.rand(N, K) - 0.5)
-            #q += noise
-            #q = np.maximum(q, 0)  # Ensure q stays non-negative
-            #q /= np.sum(q, axis=1, keepdims=True)  # Re-normalize q
     return np.argmax(q, axis=1), q, h
 
 if __name__ == "__main__":

@@ -10,19 +10,21 @@ from sklearn import datasets
 from sklearn import preprocessing
 from sklearn.cluster import KMeans
 from sklearn.datasets import make_classification
+from hashlib import sha256
 
 import itertools
 from rac.active_clustering import ActiveClustering
+from rac.active_learning import ActiveLearning
 from pathlib import Path
 
 def get_dataset(**options):
-    dataset = options["dataset"]
+    dataset = options["dataset_name"]
     seed = options["seed"]
     normalize = False
     if dataset == "synthetic":
-        class_balance = options["class_balance"]
-        n_clusters = options["n_clusters"]
-        n_samples = options["n_samples"]
+        class_balance = options["dataset_class_balance"]
+        n_clusters = options["dataset_n_clusters"]
+        n_samples = options["dataset_n_samples"]
         if class_balance == None:
             weights = None
         else:
@@ -79,36 +81,6 @@ def get_dataset(**options):
     elif dataset == "yeast":
         X = np.load("datasets/yeast_data/X.npy")
         Y = np.load("datasets/yeast_data/Y.npy")
-    elif dataset == "20newsgroups_small": ##############################
-        X = np.load("datasets_small/20newsgroups_data/X.npy")
-        Y = np.load("datasets_small/20newsgroups_data/Y.npy")
-    elif dataset == "cifar10_small":
-        X = np.load("datasets_small/cifar10_data/X.npy")
-        Y = np.load("datasets_small/cifar10_data/Y.npy")
-    elif dataset == "mnist_small":
-        X = np.load("datasets_small/mnist_data/X.npy")
-        Y = np.load("datasets_small/mnist_data/Y.npy")
-    elif dataset == "breast_cancer_small":
-        X = np.load("datasets_small/breast_cancer_data/X.npy")
-        Y = np.load("datasets_small/breast_cancer_data/Y.npy")
-    elif dataset == "cardiotocography_small":
-        X = np.load("datasets_small/cardiotocography_data/X.npy")
-        Y = np.load("datasets_small/cardiotocography_data/Y.npy")
-    elif dataset == "ecoli_small":
-        X = np.load("datasets_small/ecoli_data/X.npy")
-        Y = np.load("datasets_small/ecoli_data/Y.npy")
-    elif dataset == "forest_type_mapping_small":
-        X = np.load("datasets_small/ForestTypeMapping_data/X.npy")
-        Y = np.load("datasets_small/ForestTypeMapping_data/Y.npy")
-    elif dataset == "mushrooms_small":
-        X = np.load("datasets_small/mushrooms_data/X.npy")
-        Y = np.load("datasets_small/mushrooms_data/Y.npy")
-    elif dataset == "user_knowledge_small":
-        X = np.load("datasets_small/user_knowledge_data/X.npy")
-        Y = np.load("datasets_small/user_knowledge_data/Y.npy")
-    elif dataset == "yeast_small":
-        X = np.load("datasets_small/yeast_data/X.npy")
-        Y = np.load("datasets_small/yeast_data/Y.npy")
     else:
         raise ValueError("INVALID DATASET")
     if normalize:
@@ -116,14 +88,13 @@ def get_dataset(**options):
         #X = preprocessing.MinMaxScaler().fit_transform(X)
     return X, Y
 
-def gather_results(result_queue, general_options):
+def gather_results(result_queue, path):
     try:
         while True:
             ac_data = result_queue.get(block=True, timeout=None)
             if ac_data is None:
                 return
-            path = general_options["path"]
-            experiment_path = path + ac_data.dataset_name
+            experiment_path = path + ac_data.dataset_full_name
             data_path = experiment_path + "/" + ac_data.hashed_name
             if not os.path.exists(data_path):
                 Path(experiment_path).mkdir(parents=True, exist_ok=True)
@@ -146,14 +117,13 @@ def gather_results(result_queue, general_options):
         print(e)
         print("--------------")
 
-def run_experiment(experiment_queue, result_queue, worker_id, general_options):
+def run_experiment(experiment_queue, result_queue, worker_id, path):
     try:
         while True:
             ac = experiment_queue.get(block=True, timeout=None)
             if ac is None:
                 return
             ac_data = ac.ac_data
-            path = general_options["path"]
             print("#### Worker ID: {} ####".format(worker_id))
             already_completed = False
             completed_experiments_path = path + "completed_experiments.txt"
@@ -191,68 +161,82 @@ def run_experiments(config):
     manager = mp.Manager()
     experiment_queue = manager.Queue() 
     result_queue = manager.Queue() 
-    general_options = config["general_options"]
-    all_options = {}
-    for option_category, options in config.items():
-        if option_category not in all_options:
-            all_options[option_category] = list(options.keys())
 
-    options_keys, options_values = get_keys_from_options(config)
-    saved_datasets = {}
-    for repeat_id in range(general_options["num_repeats"]):
-        for exp_vals in itertools.product(*options_values):
-            exp_kwargs = dict(zip(options_keys, exp_vals))
-
-            k = exp_kwargs["K_init"]
-            dataset_name = str(k)
-            for dataset_key in all_options["dataset_options"]:
-                dataset_name += str(exp_kwargs[dataset_key])
-
-            seed = exp_kwargs["seed"]
-            if dataset_name not in saved_datasets:
-                saved_datasets[dataset_name] = {}
-                X, Y = get_dataset(**exp_kwargs)
-                saved_datasets[dataset_name]["X"] = X
-                saved_datasets[dataset_name]["Y"] = Y
-                if exp_kwargs["sim_init_type"] == "custom":
-                    kmeans = KMeans(n_clusters=k, random_state=seed).fit(X)
-                    saved_datasets[dataset_name]["initial_labels"] = kmeans.labels_
-                else:
-                    saved_datasets[dataset_name]["initial_labels"] = None
-
-            initial_labels = saved_datasets[dataset_name]["initial_labels"]
-            X = saved_datasets[dataset_name]["X"]
-            Y = saved_datasets[dataset_name]["Y"]
-
-            kwargs = {}
-            for option_category, options in all_options.items():
-                if option_category not in kwargs:
-                    kwargs[option_category] = {}
-                for option in options:
-                    kwargs[option_category][option] = exp_kwargs[option]
-
-            ac = ActiveClustering(X, Y, repeat_id, initial_labels, **kwargs)
-            experiment_queue.put(ac)
-
-    if not general_options["local"]:
-        general_options["path"] = "/mimer/NOBACKUP/groups/active-learning/experiment_results/" 
+    if not config["_local"]:
+        path = "/mimer/NOBACKUP/groups/active-learning/experiment_results/" 
     else:
-        general_options["path"] = "experiment_results_local/" 
+        path = "experiment_results_local/" 
         
-    general_options["path"] += general_options["experiment_name"] + "/"
-    path = general_options["path"]
+    path += config["_experiment_name"] + "/"
     exp_results = Path(path)
-    completed_exps = Path(path + "completed_experiments.txt")
+    completed_experiments_path = path + "completed_experiments.txt"
+    completed_exps = Path(completed_experiments_path)
     exp_results.mkdir(parents=True, exist_ok=True)
     completed_exps.touch(exist_ok=True)
 
+    options_keys = []
+    options_values = []
+    for key, value in config.items():
+        if type(value) != list:
+            value = [value]
+        options_keys.append(key)
+        options_values.append(value)
+
+    all_options = config.keys()
+    saved_datasets = {}
+    for repeat_id in range(config["_num_repeats"]):
+        for exp_vals in itertools.product(*options_values):
+            exp_kwargs = dict(zip(options_keys, exp_vals))
+            if config["_mode"] == "ac":
+                k = exp_kwargs["K_init"]
+                dataset_name = str(k)
+                for key, value in exp_kwargs.items():
+                    if key.split("_")[0] == "dataset":
+                        dataset_name += str(value)
+
+                seed = exp_kwargs["seed"]
+                if dataset_name not in saved_datasets:
+                    saved_datasets[dataset_name] = {}
+                    X, Y = get_dataset(**exp_kwargs)
+                    saved_datasets[dataset_name]["X"] = X
+                    saved_datasets[dataset_name]["Y"] = Y
+                    if exp_kwargs["sim_init_type"] == "kmeans":
+                        kmeans = KMeans(n_clusters=k, random_state=seed).fit(X)
+                        saved_datasets[dataset_name]["initial_labels"] = kmeans.labels_
+                    else:
+                        saved_datasets[dataset_name]["initial_labels"] = None
+
+                initial_labels = saved_datasets[dataset_name]["initial_labels"]
+                X = saved_datasets[dataset_name]["X"]
+                Y = saved_datasets[dataset_name]["Y"]
+
+                ac = ActiveClustering(X, Y, repeat_id, initial_labels, **exp_kwargs)
+            else:
+                X, Y = get_dataset(**exp_kwargs)
+                ac = ActiveLearning(X, Y, repeat_id, **exp_kwargs)
+            experiment_queue.put(ac)
+
+            if config["_overwrite"] and os.path.exists(completed_experiments_path):
+                ac_data = ac.ac_data
+                experiment_path = path + ac_data.dataset_full_name
+                data_path = experiment_path + "/" + ac_data.hashed_name
+                with open(completed_experiments_path, "r") as f:
+                    lines = f.readlines()
+                with open(completed_experiments_path, "w") as file:
+                    for line in lines:
+                        if line.strip() != ac_data.name_repeat:
+                            file.write(line)
+                if os.path.exists(data_path):
+                    os.remove(data_path)
+
+
     processes = []
-    for worker in range(general_options["n_workers"]):
-        process = mp.Process(target=run_experiment, args=(experiment_queue, result_queue, worker, general_options), daemon=False)
+    for worker in range(config["_n_workers"]):
+        process = mp.Process(target=run_experiment, args=(experiment_queue, result_queue, worker, path), daemon=False)
         process.start()
         processes.append(process)
         experiment_queue.put(None)
-    gather_process = mp.Process(target=gather_results, args=(result_queue, general_options), daemon=False)
+    gather_process = mp.Process(target=gather_results, args=(result_queue, path), daemon=False)
     gather_process.start()
     for process in processes:
         process.join()

@@ -12,7 +12,6 @@ class QueryStrategy:
         self.info_matrix = None
 
     def select_batch(self, acq_fn, batch_size):
-        #use_grumble = False
         if acq_fn == "unif":
             self.info_matrix = np.random.rand(self.ac.N, self.ac.N)
         elif acq_fn == "freq":
@@ -30,13 +29,11 @@ class QueryStrategy:
             else:
                 self.info_matrix = self.compute_maxexp()
         elif acq_fn == "info_gain_object":
-            #use_grumble = True
             self.info_matrix = self.compute_info_gain(S=self.ac.pairwise_similarities, mode="object")
         elif acq_fn == "info_gain_edge":
             self.info_matrix = self.compute_info_gain(S=self.ac.pairwise_similarities, mode="edge")
         elif acq_fn == "entropy":
             self.info_matrix = self.compute_entropy(S=self.ac.pairwise_similarities)
-            #use_grumble = True
         elif acq_fn == "cluster_freq":
             self.info_matrix = self.compute_cluster_informativeness(-self.ac.feedback_freq)
             self.info_matrix = self.info_matrix - self.ac.feedback_freq
@@ -59,14 +56,14 @@ class QueryStrategy:
         else:
             raise ValueError("Invalid acquisition function: {}".format(acq_fn))
 
-        return self.select_edges(batch_size, self.info_matrix, use_grumbel=self.ac.use_grumbel)
+        return self.select_edges(batch_size, self.info_matrix, acq_noise=self.ac.acq_noise)
            
-    def select_edges(self, batch_size, I, use_grumbel=False, special_c=True):
+    def select_edges(self, batch_size, I, acq_noise=False):
         inds_max_query = np.where(self.ac.feedback_freq > self.ac.tau)
         I[inds_max_query] = -np.inf
         tri_rows, tri_cols = np.tril_indices(n=I.shape[0], k=-1)
         informative_scores = I[tri_rows, tri_cols]
-        if use_grumbel and self.ac.acq_fn in ["entropy"] and special_c:
+        if acq_noise:
             num_pairs = len(informative_scores)
             #informative_scores += np.abs(np.min(informative_scores))
             informative_scores[informative_scores < 0] = 0
@@ -77,7 +74,8 @@ class QueryStrategy:
                 informative_scores = np.log(informative_scores)
             #print("max log: ", np.max(informative_scores))
             #print("min log: ", np.min(informative_scores))
-            informative_scores = informative_scores + scipy.stats.gumbel_r.rvs(loc=0, scale=1/self.ac.power_beta, size=num_pairs, random_state=None)
+            power_beta = 1
+            informative_scores = informative_scores + scipy.stats.gumbel_r.rvs(loc=0, scale=1/power_beta, size=num_pairs, random_state=None)
         else:
             unique_diffs = np.diff(np.unique(informative_scores))
             if unique_diffs.size > 0:
@@ -122,7 +120,7 @@ class QueryStrategy:
             lower_triangle_indices = np.tril_indices(self.ac.N, -1)
             inds = np.where(self.ac.feedback_freq[lower_triangle_indices] > 0)[0]
             num_edges = int(self.ac.num_edges_info_gain*self.ac.N) if self.ac.num_edges_info_gain > 0 else len(inds)
-            return self.select_edges(num_edges, info_matrix, use_grumbel=self.ac.use_grumbel, special_c=False)
+            return self.select_edges(num_edges, info_matrix, use_grumbel=False)
         else:
             raise ValueError("Invalid mode: {}".format(mode))
 
@@ -140,11 +138,6 @@ class QueryStrategy:
         I = np.zeros((self.ac.N, self.ac.N))
         H_0 = np.sum(scipy_entropy(q, axis=1))
         lmbda = self.ac.info_gain_lambda
-        w1 = W[:, 0]
-        w2 = W[:, 1]
-
-        #print(W.shape)
-        #print(W)
         
         # For each pair (x, y) in W
         for x, y in W:
@@ -164,67 +157,14 @@ class QueryStrategy:
                 h_minus[y, :] += q_minus[x, :] * (S_xy + lmbda)
                 q_minus = scipy_softmax(-self.ac.mean_field_beta*h_minus, axis=1)
 
-            if mode == "object":
                 p_plus = np.sum(q[x, :] * q[y, :])
                 p_minus = 1 - p_plus
-                #print("U: {}".format(U))
-                #q_lambda_U = q_lambda[U, :]
-                #q_minus_lambda_U = q_minus_lambda[U, :]
-                #H_C_1 = self.H_0 - np.sum(self.initial_entropies[U]) + np.sum(scipy_entropy(q_lambda_U, axis=1))
-                #H_C_2 = self.H_0 - np.sum(self.initial_entropies[U]) + np.sum(scipy_entropy(q_minus_lambda_U, axis=1))
                 H_C_1 = np.sum(scipy_entropy(q_plus, axis=1))
                 H_C_2 = np.sum(scipy_entropy(q_minus, axis=1))
                 H_C_e = p_plus * H_C_1 + p_minus * H_C_2
-                #H_0 = np.sum(scipy_entropy(q, axis=1))
-                #print("P_e1: {}".format(P_e1))
-                #print("P_e_minus_1: {}".format(P_e_minus_1))
-                #print("H_C_1: {}".format(H_C_1))
-                #print("H_C_2: {}".format(H_C_2))
-                #print("H_C_e: {}".format(H_C_e))
-                #print("H_0: {}".format(self.H_0))
-                #print("H_0 - H_C_e: {}".format(self.H_0 - H_C_e))
-                #print("@@@@@@@@")
                 I[x, y] = H_0-H_C_e
                 I[y, x] = I[x, y]
-            elif mode == "edge":
-                #U = np.arange(self.ac.N)
-                I[x, y] = -self.compute_info_gain_edge(q, q_plus, q_minus, x, y, w1, w2)
-                I[y, x] = I[x, y]
-                #pass
-            else:
-                raise ValueError("Invalid mode (compute_info_gain): {}".format(mode))
         return I
-
-    def compute_info_gain_edge(self, q, q_plus, q_minus, x, y, w1, w2):
-        p1 = np.sum(q[x, :] * q[y, :])
-        p2 = 1 - p1
-
-
-        pairwise_probs = np.sum(q_plus[w1, :] * q_plus[w2, :], axis=1)
-        probs_stacked = np.column_stack((pairwise_probs, 1 - pairwise_probs))
-        H_plus = np.sum(scipy_entropy(probs_stacked, base=np.e, axis=1))
-
-        pairwise_probs = np.sum(q_minus[w1, :] * q_minus[w2, :], axis=1)
-        probs_stacked = np.column_stack((pairwise_probs, 1 - pairwise_probs))
-        H_minus = np.sum(scipy_entropy(probs_stacked, base=np.e, axis=1))
-       #pairwise_probs_updated = q_plus @ q_plus.T
-       #updated_entropies = scipy_entropy(np.stack((pairwise_probs_updated, 1 - pairwise_probs_updated), axis=-1), base=np.e, axis=-1)
-       #H1 = np.sum(np.tril(updated_entropies, k=-1))  
-
-       #pairwise_probs_updated = q_minus @ q_minus.T
-       #updated_entropies = scipy_entropy(np.stack((pairwise_probs_updated, 1 - pairwise_probs_updated), axis=-1), base=np.e, axis=-1)
-       #H2 = np.sum(np.tril(updated_entropies, k=-1))  
-
-        I_U = p1 * H_plus + p2 * H_minus
-        #print("p1: {}".format(p1))
-        #print("p2: {}".format(p2))
-        #print("H1: {}".format(H1))
-        #print("H2: {}".format(H2))
-        #print("I_U: {}".format(I_U))
-        #print("H_0: {}".format(self.H_0))
-        #print("H_0-I_U: {}".format(self.H_0 - I_U))
-        #print("@@@@@@@@@@@@@@@")
-        return I_U
 
     def compute_cluster_informativeness(self, info_matrix):
         local_regions = []
