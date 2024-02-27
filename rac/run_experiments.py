@@ -25,6 +25,7 @@ def get_dataset(**options):
         class_balance = options["dataset_class_balance"]
         n_clusters = options["dataset_n_clusters"]
         n_samples = options["dataset_n_samples"]
+        class_sep = options["dataset_class_sep"]
         if class_balance == None:
             weights = None
         else:
@@ -41,7 +42,7 @@ def get_dataset(**options):
             n_clusters_per_class=1,
             weights=weights,
             flip_y=0,
-            class_sep=1.8,
+            class_sep=class_sep,
             hypercube=True,
             shift=0.0,
             scale=1.0,

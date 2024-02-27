@@ -7,10 +7,10 @@
     "_overwrite": false,
     "_mode": "al",
     "seed": 14,
-    "batch_size": 150,
+    "batch_size": 50,
     "noise_level": 0.0,
     "warm_start": 0.025,
-    "acq_fn": "entropy",
+    "acq_fn": "cc_entropy",
     "model_name": "MLP",
     "acq_noise": true,
     "power_beta": 1,
@@ -19,5 +19,6 @@
     "dataset_name": "synthetic",
     "dataset_n_samples": 3000,
     "dataset_n_clusters": 20,
-    "dataset_class_balance": null
+    "dataset_class_balance": null,
+    "dataset_class_sep": 1.2
 }
