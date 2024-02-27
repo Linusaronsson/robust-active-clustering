@@ -3,6 +3,8 @@ import math
 
 from sklearn.metrics import  accuracy_score
 from sklearn.model_selection import train_test_split
+from sklearn.model_selection import StratifiedShuffleSplit
+
 import itertools
 import numpy as np
 from scipy.spatial import distance
@@ -98,12 +100,20 @@ class ActiveLearning:
     def initialize_al_procedure(self):
         self.N = len(self.Y)
         indices = range(self.N)
-        train_indices_initial, self.test_indices = train_test_split(indices, test_size=0.2, random_state=self._seed)
+        train_indices_initial, self.test_indices = train_test_split(
+        indices, test_size=0.2, stratify=self.Y, random_state=self._seed)
+        
+        # Convert train_indices_initial to actual labels for stratification in next split
+        train_labels_initial = self.Y[train_indices_initial]
+        
+        # Second split with stratification
         self.train_indices, self.pool_indices = train_test_split(
             train_indices_initial,
             test_size=1-self.warm_start,
+            stratify=train_labels_initial,  # Stratify based on the initial train set labels
             random_state=self._seed
         )
+
         self.train_indices = np.array(self.train_indices)
         self.test_indices = np.array(self.test_indices)
         self.pool_indices = np.array(self.pool_indices)
@@ -112,6 +122,7 @@ class ActiveLearning:
         self.X_pool, self.Y_pool = self.X[self.pool_indices], self.Y[self.pool_indices]
         self.N_pt = len(self.Y_pool) + len(self.Y_train)
         self.total_queries = len(self.Y_train)
+
         self.initialize_model()
         self.update_model()
 

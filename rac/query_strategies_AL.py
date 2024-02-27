@@ -55,21 +55,31 @@ class QueryStrategyAL:
         return scipy_entropy(probs.T)
 
     def compute_cc_entropy(self):
-        proba_pool = self.al.model.predict_proba(self.al.X_pool)
-        entropy_pool = np.array([scipy_entropy(proba) for proba in proba_pool])
-        entropy_pool_normalized = (entropy_pool - entropy_pool.min()) / (entropy_pool.max() - entropy_pool.min())
-        Y_pool = np.argmax(proba_pool, axis=1)
-        Y_all = np.concatenate([self.al.Y_train, Y_pool])
-        entropy_all = np.concatenate([np.zeros(len(self.al.Y_train)), entropy_pool_normalized])
-        N = len(Y_all)
+        # Probabilities for X_train (one-hot encode Y_train)
+        prob_train = np.zeros((self.al.Y_train.size, self.al.Y.max()+1))
+        prob_train[np.arange(self.al.Y_train.size), self.al.Y_train] = 1
+
+        # Predict probabilities for X_pool
+        prob_pool = self.al.model.predict_proba(self.al.X_pool)
+
+        # Combine into a single probability matrix
+        prob_all = np.vstack([prob_train, prob_pool])
+
+        # Initialize similarity matrix
+        N = prob_all.shape[0]
         S = np.zeros((N, N))
+
+        # Calculate expected similarity
         for i in range(N):
-            for j in range(i + 1, N):
-                base_similarity = 1 if Y_all[i] == Y_all[j] else -1
-                # Adjust the similarity less if both are certain (low entropy), more if uncertain (high entropy)
-                entropy_adjustment = 1 - max(entropy_all[i], entropy_all[j])  # Use max to consider the most uncertain in the pair
-                adjusted_similarity = base_similarity * entropy_adjustment
-                S[i, j] = S[j, i] = adjusted_similarity
+            for j in range(N):
+                if i != j:
+                    P_S_ij_plus_1 = np.sum(prob_all[i, :] * prob_all[j, :])
+                    E_S_ij_plus_1 = P_S_ij_plus_1
+                    E_S_ij_minus_1 = E_S_ij_plus_1 - 1
+                    E_S_ij = P_S_ij_plus_1 * E_S_ij_plus_1 + (1 - P_S_ij_plus_1) * E_S_ij_minus_1
+                    S[i, j] = E_S_ij
+
+        # Ensure diagonal is zero
         np.fill_diagonal(S, 0)
 
         self.num_clusters = np.unique(self.al.Y_train).size
