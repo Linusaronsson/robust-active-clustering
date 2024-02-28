@@ -98,7 +98,8 @@ class QueryStrategyAL:
 
         pool_qs = q[len(self.al.Y_train):]
         I = scipy_entropy(pool_qs, axis=1) 
-        return I
+        I2 = self.compute_entropy()
+        return I + I2
 
 
             
