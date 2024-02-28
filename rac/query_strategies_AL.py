@@ -5,7 +5,7 @@ from scipy.special import softmax as scipy_softmax
 from scipy.stats import entropy as scipy_entropy
 from scipy import sparse
 from rac.correlation_clustering import mean_field_clustering
-from rac.correlation_clustering import max_correlation, max_correlation_dynamic_K, mean_field_clustering
+from rac.correlation_clustering import max_correlation, fast_max_correlation, max_correlation_dynamic_K, mean_field_clustering
 import scipy
 
 class QueryStrategyAL:
@@ -83,12 +83,17 @@ class QueryStrategyAL:
         np.fill_diagonal(S, 0)
 
         self.num_clusters = np.unique(self.al.Y_train).size
-        self.clustering_solution, _ = max_correlation_dynamic_K(S, self.num_clusters, 5)
+        #self.clustering_solution, _ = max_correlation_dynamic_K(S, self.num_clusters, 5)
+        self.clustering_solution, _ = fast_max_correlation(S, self.num_clusters, 5)
         self.num_clusters = np.unique(self.clustering_solution).size
         clust_sol, q, h = mean_field_clustering(
             S=S, K=self.num_clusters, betas=[self.al.mean_field_beta], max_iter=100, tol=1e-10, 
             predicted_labels=self.clustering_solution
         )
+
+        #print("HERE: ", self.num_clusters)
+        #print(np.max(self.al.Y))
+        #print(q.shape)
 
 
         pool_qs = q[len(self.al.Y_train):]
