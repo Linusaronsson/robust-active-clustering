@@ -56,7 +56,10 @@ class QueryStrategyAL:
 
     def compute_cc_entropy(self):
         # Probabilities for X_train (one-hot encode Y_train)
-        prob_all = scipy_softmax(20*self.al.queried_labels, axis=1)
+        #prob_all = scipy_softmax(100000*self.al.queried_labels, axis=1)
+        max_indices = np.argmax(self.al.queried_labels, axis=1)
+        prob_all = np.zeros(self.al.queried_labels.shape)
+        prob_all[np.arange(len(max_indices)), max_indices] = 1
         #prob_train = np.zeros((self.al.Y_train.size, self.al.Y.max()+1))
         #prob_train[np.arange(self.al.Y_train.size), self.al.Y_train] = 1
 
@@ -85,7 +88,7 @@ class QueryStrategyAL:
 
         self.num_clusters = np.unique(self.al.Y_train).size
         #self.clustering_solution, _ = max_correlation_dynamic_K(S, self.num_clusters, 5)
-        self.clustering_solution, _ = fast_max_correlation(S, self.num_clusters, 5)
+        self.clustering_solution, _ = max_correlation(S, self.num_clusters, 5)
         self.num_clusters = np.unique(self.clustering_solution).size
         clust_sol, q, h = mean_field_clustering(
             S=S, K=self.num_clusters, betas=[self.al.mean_field_beta], max_iter=100, tol=1e-10, 
@@ -97,8 +100,7 @@ class QueryStrategyAL:
         #print(q.shape)
 
 
-        pool_qs = q[len(self.al.Y_train):]
-        I = scipy_entropy(pool_qs, axis=1) 
+        I = scipy_entropy(q, axis=1) 
         return I
 
 
