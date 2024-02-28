@@ -48,7 +48,7 @@ class QueryStrategyAL:
             informative_scores = informative_scores + np.random.uniform(-noise_level, noise_level, informative_scores.shape)
 
         top_B_indices = np.argpartition(informative_scores, -batch_size)[-batch_size:]
-        return self.al.pool_indices[top_B_indices]
+        return top_B_indices
 
     def compute_entropy(self):
         probs = self.al.model.predict_proba(self.al.X_pool)
@@ -56,14 +56,15 @@ class QueryStrategyAL:
 
     def compute_cc_entropy(self):
         # Probabilities for X_train (one-hot encode Y_train)
-        prob_train = np.zeros((self.al.Y_train.size, self.al.Y.max()+1))
-        prob_train[np.arange(self.al.Y_train.size), self.al.Y_train] = 1
+        prob_all = scipy_softmax(20*self.al.queried_labels, axis=1)
+        #prob_train = np.zeros((self.al.Y_train.size, self.al.Y.max()+1))
+        #prob_train[np.arange(self.al.Y_train.size), self.al.Y_train] = 1
 
         # Predict probabilities for X_pool
         prob_pool = self.al.model.predict_proba(self.al.X_pool)
 
-        # Combine into a single probability matrix
-        prob_all = np.vstack([prob_train, prob_pool])
+        unqueried_indices = np.where(np.sum(self.al.queried_labels, axis=1) == 0)[0]
+        prob_all[unqueried_indices] = prob_pool[unqueried_indices]
 
         # Initialize similarity matrix
         N = prob_all.shape[0]
@@ -98,8 +99,7 @@ class QueryStrategyAL:
 
         pool_qs = q[len(self.al.Y_train):]
         I = scipy_entropy(pool_qs, axis=1) 
-        I2 = self.compute_entropy()
-        return I + I2
+        return I
 
 
             

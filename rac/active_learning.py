@@ -100,28 +100,28 @@ class ActiveLearning:
     def initialize_al_procedure(self):
         self.N = len(self.Y)
         indices = range(self.N)
-        train_indices_initial, self.test_indices = train_test_split(
-        indices, test_size=0.2, stratify=self.Y, random_state=self._seed)
-        
-        # Convert train_indices_initial to actual labels for stratification in next split
-        train_labels_initial = self.Y[train_indices_initial]
-        
-        # Second split with stratification
-        self.train_indices, self.pool_indices = train_test_split(
-            train_indices_initial,
-            test_size=1-self.warm_start,
-            stratify=train_labels_initial,  # Stratify based on the initial train set labels
-            random_state=self._seed
+        self.pool_indices, self.test_indices = train_test_split(
+            indices, test_size=0.2, stratify=self.Y, random_state=self._seed
         )
-
-        self.train_indices = np.array(self.train_indices)
-        self.test_indices = np.array(self.test_indices)
-        self.pool_indices = np.array(self.pool_indices)
-        self.X_train, self.Y_train = self.X[self.train_indices], self.Y[self.train_indices]
+        self.N_pt = len(self.pool_indices)
         self.X_test, self.Y_test = self.X[self.test_indices], self.Y[self.test_indices]
         self.X_pool, self.Y_pool = self.X[self.pool_indices], self.Y[self.pool_indices]
-        self.N_pt = len(self.Y_pool) + len(self.Y_train)
-        self.total_queries = len(self.Y_train)
+
+        self.initial_train_indices, _ = train_test_split(
+            range(len(self.pool_indices)), test_size=1-self.warm_start, stratify=self.Y_pool, random_state=self._seed
+        )
+
+        self.X_train, self.Y_train = self.X_pool[self.initial_train_indices], self.Y_pool[self.initial_train_indices]
+        
+        # Convert train_indices_initial to actual labels for stratification in next split
+        #init_size = int(self.warm_start * self.N_pt)
+        #self.initial_train_indices = np.random.choice(self.N_pt, size=init_size, replace=False)
+        self.total_queries = len(self.initial_train_indices)
+        self.initial_train_indices = np.array(self.initial_train_indices)
+
+        self.n_classes = np.max(self.Y) + 1
+        self.queried_labels = np.zeros((self.N_pt, self.n_classes))
+        self.queried_labels[self.initial_train_indices, self.Y_train] = 1
 
         self.initialize_model()
         self.update_model()
@@ -132,14 +132,22 @@ class ActiveLearning:
             self.model = GaussianProcessClassifier(kernel=kernel, random_state=self._seed, n_restarts_optimizer=5)
         elif self.model_name == "MLP":
             self.model = MLPClassifier(random_state=self._seed, max_iter=300)
+        elif self.model_name == "CNN":
+            pass
         else:
             raise ValueError("Invalid model name: {}".format(self.model_name))
     
     def update_indices(self):
-        self.pool_indices = np.setdiff1d(self.pool_indices, self.selected_indices)
-        self.train_indices = np.concatenate((self.train_indices, self.selected_indices))
-        self.X_pool, self.Y_pool = self.X[self.pool_indices], self.Y[self.pool_indices]
-        self.X_train, self.Y_train = self.X[self.train_indices], self.Y[self.train_indices]
+        for i in self.selected_indices:
+            if np.random.rand() < self.noise_level:
+                rand_label = np.random.choice(self.n_classes)
+                self.queried_labels[i, rand_label] += 1
+            else:
+                self.queried_labels[i, self.Y_pool[i]] += 1
+                
+        queried_indices = np.where(np.sum(self.queried_labels, axis=1) > 0)[0]
+        self.X_train = self.X_pool[queried_indices]
+        self.Y_train = np.argmax(self.queried_labels[queried_indices], axis=1)
 
     def update_model(self):
         if self.model_name == "GP":
@@ -152,6 +160,8 @@ class ActiveLearning:
             self.model = MLPClassifier(random_state=self._seed, max_iter=300)
             gpc = self.model.fit(self.X_train, self.Y_train)
             self.predictions = gpc.predict(self.X_test)
+        elif self.model_name == "CNN":
+            pass
         else:
             pass
         

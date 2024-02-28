@@ -61,6 +61,9 @@ def get_dataset(**options):
     elif dataset == "mnist":
         X = np.load("datasets/mnist_data/X.npy")
         Y = np.load("datasets/mnist_data/Y.npy")
+    elif dataset == "mnist_original":
+        X = np.load("datasets/mnist_data/full_train_data.npy")
+        Y = np.load("datasets/mnist_data/full_train_data_labels.npy")
     elif dataset == "breast_cancer":
         X = np.load("datasets/breast_cancer_data/X.npy")
         Y = np.load("datasets/breast_cancer_data/Y.npy")
