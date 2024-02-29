@@ -51,8 +51,22 @@ class QueryStrategyAL:
         return top_B_indices
 
     def compute_entropy(self):
-        probs = self.al.model.predict_proba(self.al.X_pool)
-        return scipy_entropy(probs.T)
+        #probs = self.al.model.predict_proba(self.al.X_pool)
+        # Probabilities for X_train (one-hot encode Y_train)
+        #prob_all = scipy_softmax(100000*self.al.queried_labels, axis=1)
+        max_indices = np.argmax(self.al.queried_labels, axis=1)
+        prob_all = np.zeros(self.al.queried_labels.shape)
+        prob_all[np.arange(len(max_indices)), max_indices] = 1
+        #prob_train = np.zeros((self.al.Y_train.size, self.al.Y.max()+1))
+        #prob_train[np.arange(self.al.Y_train.size), self.al.Y_train] = 1
+
+        # Predict probabilities for X_pool
+        prob_pool = self.al.model.predict_proba(self.al.X_pool)
+
+        unqueried_indices = np.where(np.sum(self.al.queried_labels, axis=1) == 0)[0]
+        prob_all[unqueried_indices] = prob_pool[unqueried_indices]
+        I = scipy_entropy(prob_all, axis=1)
+        return I
 
     def compute_cc_entropy(self):
         # Probabilities for X_train (one-hot encode Y_train)
