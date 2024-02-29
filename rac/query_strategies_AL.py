@@ -15,8 +15,6 @@ class QueryStrategyAL:
     def select_batch(self, acq_fn, batch_size):
         if acq_fn == "uniform":
             self.info_matrix = np.random.rand(len(self.al.Y_pool))
-            queried_indices = np.where(np.sum(self.al.queried_labels, axis=1) > 0)[0]
-            self.info_matrix[queried_indices] = 0
         elif acq_fn == "entropy":
             self.info_matrix = self.compute_entropy()
         elif acq_fn == "cc_entropy":
@@ -24,6 +22,9 @@ class QueryStrategyAL:
         else:
             raise ValueError("Invalid acquisition function: {}".format(acq_fn))
 
+        if not self.al.allow_requery:
+            queried_indices = np.where(np.sum(self.al.queried_labels, axis=1) > 0)[0]
+            self.info_matrix[queried_indices] = 0
         return self.select_objects(batch_size, self.info_matrix, acq_noise=self.al.acq_noise)
 
     def select_objects(self, batch_size, I, acq_noise=False):
@@ -104,10 +105,10 @@ class QueryStrategyAL:
 
         self.num_clusters = np.unique(self.al.Y_train).size
         #self.clustering_solution, _ = max_correlation_dynamic_K(S, self.num_clusters, 5)
-        self.clustering_solution, _ = max_correlation(S, self.num_clusters, 10)
+        self.clustering_solution, _ = max_correlation(S, self.num_clusters, 5)
         self.num_clusters = np.unique(self.clustering_solution).size
         clust_sol, q, h = mean_field_clustering(
-            S=S, K=self.num_clusters, betas=[self.al.mean_field_beta], max_iter=200, tol=1e-12, 
+            S=S, K=self.num_clusters, betas=[self.al.mean_field_beta], max_iter=100, tol=1e-10, 
             predicted_labels=self.clustering_solution
         )
 
