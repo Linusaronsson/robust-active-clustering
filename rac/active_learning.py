@@ -37,7 +37,7 @@ class ActiveLearning:
         self.start_time = time.time()
         self.initialize_al_procedure()
         self.store_experiment_data(initial=True)
-        stopping_criteria = self.N_pt
+        stopping_criteria = 2*self.N_pt
 
         ii = 1
         while self.total_queries < stopping_criteria: 

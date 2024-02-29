@@ -104,10 +104,10 @@ class QueryStrategyAL:
 
         self.num_clusters = np.unique(self.al.Y_train).size
         #self.clustering_solution, _ = max_correlation_dynamic_K(S, self.num_clusters, 5)
-        self.clustering_solution, _ = max_correlation(S, self.num_clusters, 5)
+        self.clustering_solution, _ = max_correlation(S, self.num_clusters, 10)
         self.num_clusters = np.unique(self.clustering_solution).size
         clust_sol, q, h = mean_field_clustering(
-            S=S, K=self.num_clusters, betas=[self.al.mean_field_beta], max_iter=100, tol=1e-10, 
+            S=S, K=self.num_clusters, betas=[self.al.mean_field_beta], max_iter=200, tol=1e-12, 
             predicted_labels=self.clustering_solution
         )
 
