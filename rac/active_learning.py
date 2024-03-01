@@ -15,6 +15,9 @@ from sklearn.gaussian_process import GaussianProcessClassifier
 from sklearn.gaussian_process.kernels import RBF
 from sklearn.neural_network import MLPClassifier
 
+from rac.utils.models.resnet import ResNet18
+from rac.utils.models.vgg import VGG
+
 from scipy import sparse
 
 #import warnings
@@ -122,20 +125,7 @@ class ActiveLearning:
         self.n_classes = np.max(self.Y) + 1
         self.queried_labels = np.zeros((self.N_pt, self.n_classes))
         self.queried_labels[self.initial_train_indices, self.Y_train] = 1
-
-        self.initialize_model()
         self.update_model()
-
-    def initialize_model(self):
-        if self.model_name == "GP":
-            kernel = 1.0 * RBF(1.0)
-            self.model = GaussianProcessClassifier(kernel=kernel, random_state=self._seed, n_restarts_optimizer=5)
-        elif self.model_name == "MLP":
-            self.model = MLPClassifier(random_state=self._seed, max_iter=300)
-        elif self.model_name == "CNN":
-            pass
-        else:
-            raise ValueError("Invalid model name: {}".format(self.model_name))
     
     def update_indices(self):
         for i in self.selected_indices:
@@ -160,7 +150,8 @@ class ActiveLearning:
             self.model = MLPClassifier(random_state=self._seed, max_iter=300)
             gpc = self.model.fit(self.X_train, self.Y_train)
             self.predictions = gpc.predict(self.X_test)
-        elif self.model_name == "CNN":
+        elif self.model_name == "VGG16":
+            self.model = VGG('VGG16')
             pass
         else:
             pass

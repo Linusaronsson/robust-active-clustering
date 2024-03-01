@@ -389,8 +389,9 @@ class ExperimentReader:
                 else:
                     raise ValueError("incorrect dataset!")
 
-                cut_threshold = 50
-                df_filtered = df_filtered[df_filtered[vary[0]] < cut_threshold]
+                #cut_threshold = 50
+                #df_filtered = df_filtered[df_filtered[vary[0]] < cut_threshold]
+
                 metric_map = {
                     "ami": "AMI", "rand": "ARI", "time": "Time (s)", "num_violations": "Num. violations",
                     "time_select_batch": "Time (s)", "time_update_clustering": "Time (s)",
@@ -425,7 +426,8 @@ class ExperimentReader:
                 #plt.setp(ax.lines, markeredgecolor='none')  # Removes the border of the markers
                 #plt.setp(ax.lines, alpha=0.7)  # Adjusts the transparency of the markers
                 plt.setp(ax.lines, markeredgewidth=0.5)  # Adjusts the transparency of the markers
-                plt.setp(ax.lines, markersize=7)  # Adjusts the transparency of the markers
+                #plt.setp(ax.lines, markersize=7)  # Adjusts the transparency of the markers
+                plt.setp(ax.lines, markersize=0)  # Adjusts the transparency of the markers
 
                 plt.ylabel(metric_map[metric])
 

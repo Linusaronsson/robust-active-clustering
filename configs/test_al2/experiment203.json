@@ -7,8 +7,8 @@
     "_overwrite": false,
     "_mode": "al",
     "seed": 14,
-    "batch_size": 25,
-    "noise_level": 0.3,
+    "batch_size": 100,
+    "noise_level": 0.1,
     "warm_start": 0.05,
     "acq_fn": "uniform",
     "model_name": "MLP",
@@ -18,8 +18,8 @@
     "mean_field_beta": 3,
     "allow_requery": false,
     "dataset_name": "synthetic",
-    "dataset_n_samples": 500,
-    "dataset_n_clusters": 10,
+    "dataset_n_samples": 3000,
+    "dataset_n_clusters": 20,
     "dataset_class_balance": null,
-    "dataset_class_sep": 0.7
+    "dataset_class_sep": 1.5
 }
