@@ -311,6 +311,7 @@ class ExperimentReader:
 
             for metric in self.metrics:
                 exp_kwargs["metric"] = metric
+                print(exp_kwargs)
                 df_filtered = self.filter_dataframe(data, exp_kwargs)
 
                 path = save_location + "/" + metric + "/"
@@ -409,6 +410,7 @@ class ExperimentReader:
                 if "x" in vary:
                     var = "total_queries"
                 var = vary[0]
+                print(data)
                 ax = sns.lineplot(
                     x=vary[0],
                     y="y",

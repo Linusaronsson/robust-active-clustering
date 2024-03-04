@@ -42,12 +42,12 @@ class ActiveLearning:
         self.store_experiment_data(initial=True)
         stopping_criteria = 2*self.N_pt
 
-        ii = 1
+        self.ii = 1
         while self.total_queries < stopping_criteria: 
         #while True:
             batch_size = np.minimum(self.batch_size, stopping_criteria - self.total_queries)
             self.start = time.time()
-            ii += 1
+            self.ii += 1
             start_selct_batch = time.time()
             self.selected_indices = self.qs.select_batch(
                 acq_fn=self.acq_fn,
@@ -73,7 +73,7 @@ class ActiveLearning:
             #    break
 
             if self._verbose:
-                print("iteration: ", ii)
+                print("iteration: ", self.ii)
                 print("prop_queried: ", self.total_queries/self.N_pt)
                 print("acc: ", accuracy_score(self.Y_test, self.predictions))
                 print("time: ", time.time()-self.start)
@@ -147,7 +147,7 @@ class ActiveLearning:
             self.predictions = gpc.predict(self.X_test)
             #self.pred_probs = gpc.predict_proba(self.X_test)
         elif self.model_name == "MLP":
-            self.model = MLPClassifier(random_state=self._seed, max_iter=300)
+            self.model = MLPClassifier(random_state=self._seed, max_iter=500)
             gpc = self.model.fit(self.X_train, self.Y_train)
             self.predictions = gpc.predict(self.X_test)
         elif self.model_name == "VGG16":

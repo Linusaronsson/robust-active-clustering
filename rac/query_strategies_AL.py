@@ -7,6 +7,8 @@ from scipy import sparse
 from rac.correlation_clustering import mean_field_clustering
 from rac.correlation_clustering import max_correlation, fast_max_correlation, max_correlation_dynamic_K, mean_field_clustering
 import scipy
+import matplotlib.pyplot as plt
+
 
 class QueryStrategyAL:
     def __init__(self, al):
@@ -106,8 +108,11 @@ class QueryStrategyAL:
         np.fill_diagonal(S, 0)
 
         self.num_clusters = np.unique(self.al.Y_train).size
-        self.clustering_solution, _ = max_correlation_dynamic_K(S, self.num_clusters, 5)
-        #self.clustering_solution, _ = max_correlation(S, self.num_clusters, 5)
+
+        if self.al.dynamic_K:
+            self.clustering_solution, _ = max_correlation_dynamic_K(S, self.num_clusters, 5)
+        else:
+            self.clustering_solution, _ = max_correlation(S, self.num_clusters, 5)
         self.num_clusters = np.unique(self.clustering_solution).size
         clust_sol, q, h = mean_field_clustering(
             S=S, K=self.num_clusters, betas=[self.al.mean_field_beta], max_iter=100, tol=1e-10, 
@@ -117,6 +122,34 @@ class QueryStrategyAL:
         #print("HERE: ", self.num_clusters)
         #print(np.max(self.al.Y))
         #print(q.shape)
+
+        #p = prob_pool
+        ## Calculate entropy for each data point in p and q
+        #entropy_p = scipy_entropy(p, axis=1)
+        #entropy_q = scipy_entropy(q, axis=1)
+
+        ## Rank data points by entropy
+        #rank_p = np.argsort(entropy_p)
+        ##rank_q = np.argsort(entropy_q)
+        #N_large = len(rank_p)
+        ## Visualization for large number of data points
+        ## Adjust visualization for large number of data points to display a subset of data point numbers on the x-axis
+        #plt.figure(figsize=(12, 7))
+        #plt.plot(entropy_p[rank_p], label='Entropy of p', marker='', linestyle='-', linewidth=1)
+        #plt.plot(entropy_q[rank_p], label='Entropy of q', marker='', linestyle='-', linewidth=1)
+        #plt.title("Iteration " + str(self.al.ii))
+        #plt.xlabel('Data Point')
+        #plt.ylabel('Entropy')
+        #plt.legend()
+        #plt.grid(True)
+
+        ## Choose a subset of data point numbers for the x-axis
+        #x_ticks = np.arange(0, N_large, N_large // 10)  # Display every 10th of the total number of data points
+        #plt.xticks(x_ticks)
+
+        #file_path = "plots/entropy_comparison + " + str(self.al.ii) + ".png"
+        #plt.savefig(file_path)
+
 
 
         I = scipy_entropy(q, axis=1) 
