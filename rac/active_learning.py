@@ -235,6 +235,34 @@ class ActiveLearning:
                             predicted_labels[i] = max(class_similarities, key=class_similarities.get)
                         # Optional: Handle the case with no reference labeled points in a special manner, e.g., assign a default label
         elif self.predictor == "CC2":
+            max_indices = np.argmax(self.queried_labels, axis=1)
+            prob_all = np.zeros(self.queried_labels.shape)
+            prob_all[np.arange(len(max_indices)), max_indices] = 1
+            #prob_train = np.zeros((self.al.Y_train.size, self.al.Y.max()+1))
+            #prob_train[np.arange(self.al.Y_train.size), self.al.Y_train] = 1
+
+            # Predict probabilities for X_pool
+            prob_pool = self.model.predict_proba(self.X_pool)
+
+            unqueried_indices = np.where(np.sum(self.queried_labels, axis=1) == 0)[0]
+            prob_all[unqueried_indices] = prob_pool[unqueried_indices]
+
+            # Initialize similarity matrix
+            N = prob_all.shape[0]
+            S = np.zeros((N, N))
+
+            # Calculate expected similarity
+            for i in range(N):
+                for j in range(N):
+                    if i != j:
+                        P_S_ij_plus_1 = np.sum(prob_all[i, :] * prob_all[j, :])
+                        E_S_ij_plus_1 = P_S_ij_plus_1
+                        E_S_ij_minus_1 = E_S_ij_plus_1 - 1
+                        E_S_ij = P_S_ij_plus_1 * E_S_ij_plus_1 + (1 - P_S_ij_plus_1) * E_S_ij_minus_1
+                        S[i, j] = E_S_ij
+
+            # Ensure diagonal is zero
+            np.fill_diagonal(S, 0)
             predicted_labels = np.array([None]*len(self.Y_pool))
             # Initialize predicted labels for labeled points
             predicted_labels[self.queried_indices] = self.Y_train

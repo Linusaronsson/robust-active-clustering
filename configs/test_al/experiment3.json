@@ -13,7 +13,7 @@
     "warm_start": [0.025],
     "acq_fn": ["uniform"],
     "model_name": "MLP",
-    "predictor": ["CC"],
+    "predictor": ["CC2"],
     "dynamic_K": true,
 
     "acq_noise": false,

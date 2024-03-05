@@ -12,7 +12,7 @@
     "warm_start": 0.025,
     "acq_fn": "entropy",
     "model_name": "MLP",
-    "predictor": "CC2",
+    "predictor": "model",
     "dynamic_K": true,
     "acq_noise": true,
     "power_beta": 1,
@@ -23,5 +23,5 @@
     "dataset_n_samples": 1000,
     "dataset_n_clusters": 10,
     "dataset_class_balance": null,
-    "dataset_class_sep": 1
+    "dataset_class_sep": 1.3
 }

@@ -8,9 +8,9 @@
     "_mode": "al",
     "seed": 14,
     "batch_size": 150,
-    "noise_level": 0.2,
+    "noise_level": 0.0,
     "warm_start": 0.025,
-    "acq_fn": "uniform",
+    "acq_fn": "cc_entropy",
     "model_name": "MLP",
     "predictor": "CC2",
     "dynamic_K": true,
@@ -23,5 +23,5 @@
     "dataset_n_samples": 1000,
     "dataset_n_clusters": 10,
     "dataset_class_balance": null,
-    "dataset_class_sep": 1
+    "dataset_class_sep": 1.3
 }
