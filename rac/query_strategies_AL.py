@@ -103,6 +103,7 @@ class QueryStrategyAL:
                     E_S_ij_minus_1 = E_S_ij_plus_1 - 1
                     E_S_ij = P_S_ij_plus_1 * E_S_ij_plus_1 + (1 - P_S_ij_plus_1) * E_S_ij_minus_1
                     S[i, j] = E_S_ij
+                    S[j, i] = S[i, j]
 
         # Ensure diagonal is zero
         np.fill_diagonal(S, 0)

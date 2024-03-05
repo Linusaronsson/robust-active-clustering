@@ -132,6 +132,8 @@ class ActiveLearning:
         self.n_classes = np.max(self.Y) + 1
         self.queried_labels = np.zeros((self.N_pt, self.n_classes))
         self.queried_labels[self.initial_train_indices, self.Y_train] = 1
+        self.S = np.zeros((self.N_pt, self.N_pt))
+
         self.update_model()
     
     def update_indices(self):
@@ -181,27 +183,47 @@ class ActiveLearning:
 
             # Initialize similarity matrix
             N = prob_all.shape[0]
-            S = np.zeros((N, N))
-
-            # Calculate expected similarity
             for i in range(N):
                 for j in range(N):
                     if i != j:
-                        P_S_ij_plus_1 = np.sum(prob_all[i, :] * prob_all[j, :])
-                        E_S_ij_plus_1 = P_S_ij_plus_1
-                        E_S_ij_minus_1 = E_S_ij_plus_1 - 1
-                        E_S_ij = P_S_ij_plus_1 * E_S_ij_plus_1 + (1 - P_S_ij_plus_1) * E_S_ij_minus_1
-                        S[i, j] = E_S_ij
+                        if self.sim_init == "t1" or self.sim_init == "t3":
+                            if i in self.queried_indices and j in self.queried_indices:
+                                i_ind = np.where(self.queried_indices == i)[0][0]
+                                j_ind = np.where(self.queried_indices == j)[0][0]
+                                self.S[i, j] = 1 if self.Y_train[i_ind] == self.Y_train[j_ind] else -1
+                                self.S[j, i] = self.S[i, j]
+                            else:
+                                self.S[i, j] = 0
+                                self.S[i, j] = 0
+                        else:
+                            P_S_ij_plus_1 = np.sum(prob_all[i, :] * prob_all[j, :])
+                            E_S_ij_plus_1 = P_S_ij_plus_1
+                            E_S_ij_minus_1 = E_S_ij_plus_1 - 1
+                            E_S_ij = P_S_ij_plus_1 * E_S_ij_plus_1 + (1 - P_S_ij_plus_1) * E_S_ij_minus_1
+                            self.S[i, j] = E_S_ij
+                            self.S[j, i] = self.S[i, j]
 
             # Ensure diagonal is zero
-            np.fill_diagonal(S, 0)
+            np.fill_diagonal(self.S, 0)
 
-            self.clustering_solution, _ = max_correlation(S, self.n_classes, 5)
-            #clust_sol, q, h = mean_field_clustering(
-            #    S=S, K=self.n_classes, betas=[self.al.mean_field_beta], max_iter=100, tol=1e-10, 
-            #    predicted_labels=self.clustering_solution
-            #)
-            #self.X_train = self.X_pool[queried_indices]
+            self.clustering_solution, _ = max_correlation(self.S, self.n_classes, 5)
+            clust_sol, q, h = mean_field_clustering(
+                S=self.S, K=self.n_classes, betas=[self.mean_field_beta], max_iter=150, tol=1e-10, 
+                predicted_labels=self.clustering_solution
+            )
+
+            if self.sim_init == "t3":
+                for i in range(N):
+                    for j in range(N):
+                        if i != j:
+                            if i not in self.queried_indices or j not in self.queried_indices:
+                                P_S_ij_plus_1 = np.sum(q[i, :] * q[j, :])
+                                E_S_ij_plus_1 = P_S_ij_plus_1
+                                E_S_ij_minus_1 = E_S_ij_plus_1 - 1
+                                E_S_ij = P_S_ij_plus_1 * E_S_ij_plus_1 + (1 - P_S_ij_plus_1) * E_S_ij_minus_1
+                                self.S[i, j] = E_S_ij
+                                self.S[j, i] = self.S[i, j]
+
             predicted_labels = np.array([None]*len(self.Y_pool))  # Initialize all predictions as None
             predicted_labels[self.queried_indices] = self.Y_train
 
@@ -228,7 +250,7 @@ class ActiveLearning:
                         # Compute summed similarity for each class and assign the class with the highest summed similarity
                         class_similarities = defaultdict(float)
                         for idx in self.queried_indices:
-                            class_similarities[self.Y_pool[idx]] += S[i, idx]
+                            class_similarities[self.Y_pool[idx]] += self.S[i, idx]
                         
                         # Assign the class with the highest total similarity if there are any labeled points to compare with
                         if class_similarities:
@@ -247,22 +269,50 @@ class ActiveLearning:
             unqueried_indices = np.where(np.sum(self.queried_labels, axis=1) == 0)[0]
             prob_all[unqueried_indices] = prob_pool[unqueried_indices]
 
-            # Initialize similarity matrix
             N = prob_all.shape[0]
-            S = np.zeros((N, N))
-
-            # Calculate expected similarity
             for i in range(N):
                 for j in range(N):
                     if i != j:
-                        P_S_ij_plus_1 = np.sum(prob_all[i, :] * prob_all[j, :])
-                        E_S_ij_plus_1 = P_S_ij_plus_1
-                        E_S_ij_minus_1 = E_S_ij_plus_1 - 1
-                        E_S_ij = P_S_ij_plus_1 * E_S_ij_plus_1 + (1 - P_S_ij_plus_1) * E_S_ij_minus_1
-                        S[i, j] = E_S_ij
+                        if self.sim_init == "t1" or self.sim_init == "t3":
+                            if i in self.queried_indices and j in self.queried_indices:
+                                i_ind = np.where(self.queried_indices == i)[0][0]
+                                j_ind = np.where(self.queried_indices == j)[0][0]
+                                self.S[i, j] = 1 if self.Y_train[i_ind] == self.Y_train[j_ind] else -1
+                                self.S[j, i] = self.S[i, j]
+                            else:
+                                self.S[i, j] = 0
+                                self.S[i, j] = 0
+                        else:
+                            P_S_ij_plus_1 = np.sum(prob_all[i, :] * prob_all[j, :])
+                            E_S_ij_plus_1 = P_S_ij_plus_1
+                            E_S_ij_minus_1 = E_S_ij_plus_1 - 1
+                            E_S_ij = P_S_ij_plus_1 * E_S_ij_plus_1 + (1 - P_S_ij_plus_1) * E_S_ij_minus_1
+                            self.S[i, j] = E_S_ij
+                            self.S[j, i] = self.S[i, j]
 
             # Ensure diagonal is zero
-            np.fill_diagonal(S, 0)
+            np.fill_diagonal(self.S, 0)
+
+            self.clustering_solution, _ = max_correlation(self.S, self.n_classes, 5)
+            clust_sol, q, h = mean_field_clustering(
+                S=self.S, K=self.n_classes, betas=[self.mean_field_beta], max_iter=150, tol=1e-10, 
+                predicted_labels=self.clustering_solution
+            )
+
+            if self.sim_init == "t3":
+                for i in range(N):
+                    for j in range(N):
+                        if i != j:
+                            if i not in self.queried_indices or j not in self.queried_indices:
+                                P_S_ij_plus_1 = np.sum(q[i, :] * q[j, :])
+                                E_S_ij_plus_1 = P_S_ij_plus_1
+                                E_S_ij_minus_1 = E_S_ij_plus_1 - 1
+                                E_S_ij = P_S_ij_plus_1 * E_S_ij_plus_1 + (1 - P_S_ij_plus_1) * E_S_ij_minus_1
+                                self.S[i, j] = E_S_ij
+                                self.S[j, i] = self.S[i, j]
+
+            # Ensure diagonal is zero
+            np.fill_diagonal(self.S, 0)
             predicted_labels = np.array([None]*len(self.Y_pool))
             # Initialize predicted labels for labeled points
             predicted_labels[self.queried_indices] = self.Y_train
@@ -278,7 +328,7 @@ class ActiveLearning:
                     class_similarities = {}
                     for class_label, indices in class_to_indices.items():
                         # Sum of similarities between i and all labeled objects of class_label
-                        class_similarities[class_label] = S[i, indices].sum()
+                        class_similarities[class_label] = self.S[i, indices].sum()
 
                     # Assign the class with the highest total similarity
                     if class_similarities:  # Check if we have any class similarities computed
