@@ -17,6 +17,10 @@ from sklearn.neural_network import MLPClassifier
 
 from rac.utils.models.resnet import ResNet18
 from rac.utils.models.vgg import VGG
+from rac.correlation_clustering import max_correlation, fast_max_correlation, max_correlation_dynamic_K, mean_field_clustering
+
+from collections import Counter
+from collections import defaultdict
 
 from scipy import sparse
 
@@ -75,7 +79,7 @@ class ActiveLearning:
             if self._verbose:
                 print("iteration: ", self.ii)
                 print("prop_queried: ", self.total_queries/self.N_pt)
-                print("acc: ", accuracy_score(self.Y_test, self.predictions))
+                print("acc: ", accuracy_score(self.Y_pool, self.predictions))
                 print("time: ", time.time()-self.start)
                 print("num queries: ", len(self.selected_indices))
                 print("TIME SELECT BATCH: ", self.time_select_batch)
@@ -88,8 +92,10 @@ class ActiveLearning:
                 
         return self.ac_data
 
+
+
     def store_experiment_data(self, initial=False):
-        self.ac_data.accuracy.append(accuracy_score(self.Y_test, self.predictions))
+        self.ac_data.accuracy.append(accuracy_score(self.Y_pool, self.predictions))
         time_now = time.time() 
         if initial:
             self.ac_data.time_select_batch.append(0.0)
@@ -121,6 +127,7 @@ class ActiveLearning:
         #self.initial_train_indices = np.random.choice(self.N_pt, size=init_size, replace=False)
         self.total_queries = len(self.initial_train_indices)
         self.initial_train_indices = np.array(self.initial_train_indices)
+        self.queried_indices = self.initial_train_indices
 
         self.n_classes = np.max(self.Y) + 1
         self.queried_labels = np.zeros((self.N_pt, self.n_classes))
@@ -135,26 +142,127 @@ class ActiveLearning:
             else:
                 self.queried_labels[i, self.Y_pool[i]] += 1
                 
-        queried_indices = np.where(np.sum(self.queried_labels, axis=1) > 0)[0]
-        self.X_train = self.X_pool[queried_indices]
-        self.Y_train = np.argmax(self.queried_labels[queried_indices], axis=1)
+        self.queried_indices = np.where(np.sum(self.queried_labels, axis=1) > 0)[0]
+        self.X_train = self.X_pool[self.queried_indices]
+        self.Y_train = np.argmax(self.queried_labels[self.queried_indices], axis=1)
 
     def update_model(self):
         if self.model_name == "GP":
             kernel = 1.0 * RBF(1.0)
             self.model = GaussianProcessClassifier(kernel=kernel, random_state=self._seed)
-            gpc = self.model.fit(self.X_train, self.Y_train)
-            self.predictions = gpc.predict(self.X_test)
+            self.predictions = self._predict()
             #self.pred_probs = gpc.predict_proba(self.X_test)
         elif self.model_name == "MLP":
             self.model = MLPClassifier(random_state=self._seed, max_iter=500)
-            gpc = self.model.fit(self.X_train, self.Y_train)
-            self.predictions = gpc.predict(self.X_test)
+            self.model.fit(self.X_train, self.Y_train)
+            self.predictions = self._predict()
         elif self.model_name == "VGG16":
             self.model = VGG('VGG16')
             pass
         else:
             pass
+
+    def _predict(self):
+        if self.predictor == "model":
+            predicted_labels = self.model.predict(self.X_pool)
+            predicted_labels[self.queried_indices] = self.Y_train
+        elif self.predictor == "CC":
+            max_indices = np.argmax(self.queried_labels, axis=1)
+            prob_all = np.zeros(self.queried_labels.shape)
+            prob_all[np.arange(len(max_indices)), max_indices] = 1
+            #prob_train = np.zeros((self.al.Y_train.size, self.al.Y.max()+1))
+            #prob_train[np.arange(self.al.Y_train.size), self.al.Y_train] = 1
+
+            # Predict probabilities for X_pool
+            prob_pool = self.model.predict_proba(self.X_pool)
+
+            unqueried_indices = np.where(np.sum(self.queried_labels, axis=1) == 0)[0]
+            prob_all[unqueried_indices] = prob_pool[unqueried_indices]
+
+            # Initialize similarity matrix
+            N = prob_all.shape[0]
+            S = np.zeros((N, N))
+
+            # Calculate expected similarity
+            for i in range(N):
+                for j in range(N):
+                    if i != j:
+                        P_S_ij_plus_1 = np.sum(prob_all[i, :] * prob_all[j, :])
+                        E_S_ij_plus_1 = P_S_ij_plus_1
+                        E_S_ij_minus_1 = E_S_ij_plus_1 - 1
+                        E_S_ij = P_S_ij_plus_1 * E_S_ij_plus_1 + (1 - P_S_ij_plus_1) * E_S_ij_minus_1
+                        S[i, j] = E_S_ij
+
+            # Ensure diagonal is zero
+            np.fill_diagonal(S, 0)
+
+            self.clustering_solution, _ = max_correlation(S, self.n_classes, 5)
+            #clust_sol, q, h = mean_field_clustering(
+            #    S=S, K=self.n_classes, betas=[self.al.mean_field_beta], max_iter=100, tol=1e-10, 
+            #    predicted_labels=self.clustering_solution
+            #)
+            #self.X_train = self.X_pool[queried_indices]
+            predicted_labels = np.array([None]*len(self.Y_pool))  # Initialize all predictions as None
+            predicted_labels[self.queried_indices] = self.Y_train
+
+            cluster_labels = {}
+            for cluster in np.unique(self.clustering_solution):
+                indices_in_cluster = np.where(self.clustering_solution == cluster)[0]
+                labeled_indices_in_cluster = np.intersect1d(indices_in_cluster, self.queried_indices)
+                
+                if labeled_indices_in_cluster.size > 0:
+                    labels_in_cluster = self.Y_pool[labeled_indices_in_cluster]
+                    most_common_label, _ = Counter(labels_in_cluster).most_common(1)[0]
+                    cluster_labels[cluster] = most_common_label
+                else:
+                    cluster_labels[cluster] = None  # Mark for special handling
+
+            # For each unlabeled data point, either use the cluster's common label or compute similarity
+            for i, label in enumerate(predicted_labels):
+                if label is None:  # Unlabeled data point
+                    cluster = self.clustering_solution[i]
+                    if cluster_labels[cluster] is not None:
+                        # Use the most common label if the cluster has labeled data
+                        predicted_labels[i] = cluster_labels[cluster]
+                    else:
+                        # Compute summed similarity for each class and assign the class with the highest summed similarity
+                        class_similarities = defaultdict(float)
+                        for idx in self.queried_indices:
+                            class_similarities[self.Y_pool[idx]] += S[i, idx]
+                        
+                        # Assign the class with the highest total similarity if there are any labeled points to compare with
+                        if class_similarities:
+                            predicted_labels[i] = max(class_similarities, key=class_similarities.get)
+                        # Optional: Handle the case with no reference labeled points in a special manner, e.g., assign a default label
+        elif self.predictor == "CC2":
+            predicted_labels = np.array([None]*len(self.Y_pool))
+            # Initialize predicted labels for labeled points
+            predicted_labels[self.queried_indices] = self.Y_train
+            
+            # Map each class to its labeled indices
+            class_to_indices = defaultdict(list)
+            for index in self.queried_indices:
+                class_to_indices[self.Y_pool[index]].append(index)
+
+            for i in range(len(self.Y_pool)):
+                if predicted_labels[i] is None:  # If unlabeled
+                    # Compute total similarity to all labeled objects of each class
+                    class_similarities = {}
+                    for class_label, indices in class_to_indices.items():
+                        # Sum of similarities between i and all labeled objects of class_label
+                        class_similarities[class_label] = S[i, indices].sum()
+
+                    # Assign the class with the highest total similarity
+                    if class_similarities:  # Check if we have any class similarities computed
+                        predicted_labels[i] = max(class_similarities, key=class_similarities.get)
+                    else:
+                        raise ValueError("No class similarities computed for data point {}!")
+                        # Handle the case where there might be no labeled data at all to compare with
+                        # This could be set to a default value or handled in another specific way
+        return predicted_labels.astype(np.int32)
+            
+
+
         
 
 
