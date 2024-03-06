@@ -45,6 +45,8 @@ class ExperimentData:
         self.v_measure = []
         self.num_clusters = []
         self.accuracy = []
+        self.train_accuracy = []
+        self.pool_accuracy = []
 
         # info about bad triangles
         self.num_violations = []
@@ -427,14 +429,19 @@ class ExperimentReader:
                 #plt.setp(ax.lines, alpha=0.7)  # Adjusts the transparency of the markers
                 plt.setp(ax.lines, markeredgewidth=0.5)  # Adjusts the transparency of the markers
                 #plt.setp(ax.lines, markersize=7)  # Adjusts the transparency of the markers
-                plt.setp(ax.lines, markersize=0)  # Adjusts the transparency of the markers
+                plt.setp(ax.lines, markersize=10)  # Adjusts the transparency of the markers
 
                 plt.ylabel(metric_map[metric])
 
                 #labels = self.construct_x_ticks(ax, prop)
-                #ax.set_xticklabels(labels)
+                ws = 1-exp_kwargs["warm_start"]
+                N_pool = int(len(self.Y)*ws)
+                labels = []
+                for item in ax.get_xticks():
+                    labels.append(round((int(item)*self.batch_size)/N_pool, 2))
+                ax.set_xticklabels(labels)
 
-                plt.xlabel("Proportion of pairs queried")
+                plt.xlabel("Proportion of objects queried")
                 #ax.legend(loc='lower right')
                 ax.legend(loc='best')
 
@@ -494,6 +501,7 @@ class ExperimentReader:
             for item in ax.get_xticks():
                 labels.append(round((int(item)*batch_size)/n_edges, 2))
                 #labels = np.array(list(range(0, n_iterations))) * batch_size
+            
             
         return labels
 

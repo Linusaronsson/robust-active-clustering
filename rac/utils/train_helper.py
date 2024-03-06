@@ -3,6 +3,7 @@ from torch import nn
 import torch
 import torch.optim as optim
 import sys
+import numpy as np
 sys.path.append('../')  
 
 def init_weights(m):
@@ -140,6 +141,47 @@ class data_train:
                 accFinal += torch.sum(1.0*(torch.max(out,1)[1] == y)).item() #.data.item()
 
         return accFinal / len(test_dataset)
+
+
+    def get_predictions(self, test_dataset):
+        
+        """
+        Calculates and returns the accuracy on the given dataset to test
+        
+        Parameters
+        ----------
+        test_dataset: torch.utils.data.Dataset
+            The dataset to test
+        Returns
+        -------
+        accFinal: float
+            The fraction of data points whose predictions by the current model match their targets
+        """	
+        
+        try:
+            self.clf
+        except:
+            self.clf = self.net
+
+        if test_dataset is None:
+            raise ValueError("Test data not present")
+        
+        if 'batch_size' in self.args:
+            batch_size = self.args['batch_size']
+        else:
+            batch_size = 1 
+        
+        loader_te = DataLoader(test_dataset, shuffle=False, pin_memory=True, batch_size=batch_size)
+        self.clf.eval()
+
+        preds = []
+        with torch.no_grad():        
+            self.clf = self.clf.to(device=self.device)
+            for batch_id, (x,y) in enumerate(loader_te):     
+                x, y = x.to(device=self.device), y.to(device=self.device)
+                out = self.clf(x)
+                preds.extend(list(torch.max(out, 1)[1].cpu().numpy()))
+        return np.array(preds).astype(np.int32)
 
     def _train_weighted(self, epoch, loader_tr, optimizer, gradient_weights):
         self.clf.train()

@@ -15,8 +15,12 @@ from sklearn.gaussian_process import GaussianProcessClassifier
 from sklearn.gaussian_process.kernels import RBF
 from sklearn.neural_network import MLPClassifier
 
+from torchvision import datasets, transforms
+from torch.utils.data import Dataset, DataLoader
+
 from rac.utils.models.resnet import ResNet18
 from rac.utils.models.vgg import VGG
+from rac.utils.train_helper import data_train
 from rac.correlation_clustering import max_correlation, fast_max_correlation, max_correlation_dynamic_K, mean_field_clustering
 
 from collections import Counter
@@ -27,18 +31,66 @@ from scipy import sparse
 #import warnings
 #warnings.filterwarnings("once") 
 
+class CustomDataset(Dataset):
+    def __init__(self, X, Y, transform=None):
+        self.X = X
+        self.Y = Y
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.Y)
+
+    def __getitem__(self, idx):
+        image = self.X[idx]
+        label = self.Y[idx]
+
+        # Convert image back to PIL Image to apply torchvision transforms
+        image = transforms.ToPILImage()(image)
+
+        if self.transform:
+            image = self.transform(image)
+
+        # If you want the image to be a tensor again, ensure transform includes ToTensor()
+        return image, label
+
 class ActiveLearning:
-    def __init__(self, X, Y, repeat_id, **kwargs):
+    def __init__(
+            self, 
+            repeat_id, 
+            X, 
+            Y, 
+            X_test=None, 
+            Y_test=None, 
+            transform=None,
+            test_transform=None,
+            **kwargs
+        ):
         self.__dict__.update(kwargs)
 
-        self.X, self.Y = X, Y
+        self.X, self.Y = self.random_data_sample(X, Y, self.sample_size)
+        self.X_test = X_test
+        self.Y_test = Y_test
+        self.transform = transform
+        self.test_transform = test_transform
+
+        if self.X_test is not None and self.Y_test is not None:
+            self.X_test, self.Y_test = self.random_data_sample(X_test, Y_test, self.test_sample_size)
+
         self.repeat_id = repeat_id
-        self.ac_data = ExperimentData(Y, repeat_id, **kwargs)
+        self.ac_data = ExperimentData(self.Y, repeat_id, **kwargs)
         self.qs = QueryStrategyAL(self)
         self._seed = self.repeat_id+self.seed+317421
         self.N = len(self.Y)
         self.n_edges = (self.N*(self.N-1))/2
         np.random.seed(self._seed)
+
+    def random_data_sample(self, X, Y, size):
+        if size <= 1:
+            num_samples = int(len(Y)*size)
+        else:
+            num_samples = np.minimum(size, len(Y))
+        inds = np.random.choice(len(Y), num_samples)
+        return X[inds], Y[inds]
 
     def run_AL_procedure(self):
         self.start_time = time.time()
@@ -47,6 +99,7 @@ class ActiveLearning:
         stopping_criteria = 2*self.N_pt
 
         self.ii = 1
+        self.num_perfect = 0
         while self.total_queries < stopping_criteria: 
         #while True:
             batch_size = np.minimum(self.batch_size, stopping_criteria - self.total_queries)
@@ -79,7 +132,7 @@ class ActiveLearning:
             if self._verbose:
                 print("iteration: ", self.ii)
                 print("prop_queried: ", self.total_queries/self.N_pt)
-                print("acc: ", accuracy_score(self.Y_pool, self.predictions))
+                #print("acc: ", accuracy_score(self.Y_pool, self.predictions))
                 print("time: ", time.time()-self.start)
                 print("num queries: ", len(self.selected_indices))
                 print("TIME SELECT BATCH: ", self.time_select_batch)
@@ -89,13 +142,19 @@ class ActiveLearning:
                 print("X_test: ", len(self.X_test))
                 print("total queries: ", self.total_queries)
                 #print("-----------------")
+            
+            if accuracy_score(self.Y_pool, self.pool_predictions) == 1.0:
+                self.num_perfect += 1
+            
+            if self.num_perfect > 5:
+                break
                 
         return self.ac_data
 
-
-
     def store_experiment_data(self, initial=False):
-        self.ac_data.accuracy.append(accuracy_score(self.Y_pool, self.predictions))
+        #self.ac_data.train_accuracy.append(accuracy_score(self.Y_train, self.train_predictions))
+        self.ac_data.accuracy.append(accuracy_score(self.Y_pool, self.pool_predictions))
+        #self.ac_data.accuracy.append(accuracy_score(self.Y_test, self.test_predictions))
         time_now = time.time() 
         if initial:
             self.ac_data.time_select_batch.append(0.0)
@@ -109,15 +168,19 @@ class ActiveLearning:
     def initialize_al_procedure(self):
         self.N = len(self.Y)
         indices = range(self.N)
-        self.pool_indices, self.test_indices = train_test_split(
-            indices, test_size=0.2, stratify=self.Y, random_state=self._seed
-        )
-        self.N_pt = len(self.pool_indices)
-        self.X_test, self.Y_test = self.X[self.test_indices], self.Y[self.test_indices]
-        self.X_pool, self.Y_pool = self.X[self.pool_indices], self.Y[self.pool_indices]
+
+        if self.X_test is None:
+            self.pool_indices, self.test_indices = train_test_split(
+                indices, test_size=0.2, stratify=self.Y, random_state=self._seed
+            )
+            self.X_test, self.Y_test = self.X[self.test_indices], self.Y[self.test_indices]
+            self.X_pool, self.Y_pool = self.X[self.pool_indices], self.Y[self.pool_indices]
+        else:
+            self.X_pool, self.Y_pool = self.X, self.Y
+        self.N_pt = len(self.Y_pool)
 
         self.initial_train_indices, _ = train_test_split(
-            range(len(self.pool_indices)), test_size=1-self.warm_start, stratify=self.Y_pool, random_state=self._seed
+            range(len(self.X_pool)), test_size=1-self.warm_start, stratify=self.Y_pool, random_state=self._seed
         )
 
         self.X_train, self.Y_train = self.X_pool[self.initial_train_indices], self.Y_pool[self.initial_train_indices]
@@ -133,6 +196,8 @@ class ActiveLearning:
         self.queried_labels = np.zeros((self.N_pt, self.n_classes))
         self.queried_labels[self.initial_train_indices, self.Y_train] = 1
         self.S = np.zeros((self.N_pt, self.N_pt))
+        self.Y_pool_queried = self.Y_pool
+        self.Y_pool_queried[self.queried_indices] = self.Y_train
 
         self.update_model()
     
@@ -145,22 +210,30 @@ class ActiveLearning:
                 self.queried_labels[i, self.Y_pool[i]] += 1
                 
         self.queried_indices = np.where(np.sum(self.queried_labels, axis=1) > 0)[0]
+        self.unqueried_indices = np.where(np.sum(self.queried_labels, axis=1) == 0)[0]
         self.X_train = self.X_pool[self.queried_indices]
         self.Y_train = np.argmax(self.queried_labels[self.queried_indices], axis=1)
+        self.Y_pool_queried = self.Y_pool
+        self.Y_pool_queried[self.queried_indices] = self.Y_train
 
     def update_model(self):
-        if self.model_name == "GP":
-            kernel = 1.0 * RBF(1.0)
-            self.model = GaussianProcessClassifier(kernel=kernel, random_state=self._seed)
-            self.predictions = self._predict()
-            #self.pred_probs = gpc.predict_proba(self.X_test)
-        elif self.model_name == "MLP":
+        if self.model_name == "MLP":
             self.model = MLPClassifier(random_state=self._seed, max_iter=500)
             self.model.fit(self.X_train, self.Y_train)
-            self.predictions = self._predict()
+            self.pool_predictions = self._predict()
         elif self.model_name == "VGG16":
             self.model = VGG('VGG16')
-            pass
+            dataset = CustomDataset(self.X_train, self.Y_train, transform=self.transform)
+            test_dataset = CustomDataset(self.X_test, self.Y_test, transform=self.test_transform)
+            pool_dataset = CustomDataset(self.X_pool, self.Y_pool_queried, transform=self.test_transform)
+            args = {'n_epoch':300, 'lr':float(0.01), 'batch_size':20, 'max_accuracy':0.99, 'optimizer':'sgd'} 
+            dt = data_train(dataset, self.model, args)
+            clf = dt.train()
+            dataset.transform = self.test_transform
+            self.train_predictions = dt.get_predictions(dataset)
+            self.test_predictions = dt.get_predictions(test_dataset)
+            self.pool_predictions = dt.get_predictions(pool_dataset)
+            raise ValueError("VGG16 not implemented yet!")
         else:
             pass
 
@@ -188,9 +261,7 @@ class ActiveLearning:
                     if i != j:
                         if self.sim_init == "t1" or self.sim_init == "t3":
                             if i in self.queried_indices and j in self.queried_indices:
-                                i_ind = np.where(self.queried_indices == i)[0][0]
-                                j_ind = np.where(self.queried_indices == j)[0][0]
-                                self.S[i, j] = 1 if self.Y_train[i_ind] == self.Y_train[j_ind] else -1
+                                self.S[i, j] = 1 if self.Y_pool_queried[i] == self.Y_pool_queried[j] else -1
                                 self.S[j, i] = self.S[i, j]
                             else:
                                 self.S[i, j] = 0
@@ -233,7 +304,7 @@ class ActiveLearning:
                 labeled_indices_in_cluster = np.intersect1d(indices_in_cluster, self.queried_indices)
                 
                 if labeled_indices_in_cluster.size > 0:
-                    labels_in_cluster = self.Y_pool[labeled_indices_in_cluster]
+                    labels_in_cluster = self.Y_pool_queried[labeled_indices_in_cluster]
                     most_common_label, _ = Counter(labels_in_cluster).most_common(1)[0]
                     cluster_labels[cluster] = most_common_label
                 else:
@@ -250,7 +321,7 @@ class ActiveLearning:
                         # Compute summed similarity for each class and assign the class with the highest summed similarity
                         class_similarities = defaultdict(float)
                         for idx in self.queried_indices:
-                            class_similarities[self.Y_pool[idx]] += self.S[i, idx]
+                            class_similarities[self.Y_pool_queried[idx]] += self.S[i, idx]
                         
                         # Assign the class with the highest total similarity if there are any labeled points to compare with
                         if class_similarities:
@@ -275,9 +346,7 @@ class ActiveLearning:
                     if i != j:
                         if self.sim_init == "t1" or self.sim_init == "t3":
                             if i in self.queried_indices and j in self.queried_indices:
-                                i_ind = np.where(self.queried_indices == i)[0][0]
-                                j_ind = np.where(self.queried_indices == j)[0][0]
-                                self.S[i, j] = 1 if self.Y_train[i_ind] == self.Y_train[j_ind] else -1
+                                self.S[i, j] = 1 if self.Y_pool_queried[i] == self.Y_pool_queried[j] else -1
                                 self.S[j, i] = self.S[i, j]
                             else:
                                 self.S[i, j] = 0
@@ -320,7 +389,7 @@ class ActiveLearning:
             # Map each class to its labeled indices
             class_to_indices = defaultdict(list)
             for index in self.queried_indices:
-                class_to_indices[self.Y_pool[index]].append(index)
+                class_to_indices[self.Y_pool_queried[index]].append(index)
 
             for i in range(len(self.Y_pool)):
                 if predicted_labels[i] is None:  # If unlabeled

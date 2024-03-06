@@ -11,6 +11,8 @@ from sklearn import preprocessing
 from sklearn.cluster import KMeans
 from sklearn.datasets import make_classification
 from hashlib import sha256
+from torchvision import datasets, transforms
+from torch.utils.data import Dataset, DataLoader
 
 import itertools
 from rac.active_clustering import ActiveClustering
@@ -21,6 +23,8 @@ def get_dataset(**options):
     dataset = options["dataset_name"]
     seed = options["seed"]
     normalize = False
+    X_test, Y_test = None, None
+    transform, test_transform = None, None
     if dataset == "synthetic":
         class_balance = options["dataset_class_balance"]
         n_clusters = options["dataset_n_clusters"]
@@ -56,8 +60,21 @@ def get_dataset(**options):
         X = np.load("datasets/cifar10_data/X.npy")
         Y = np.load("datasets/cifar10_data/Y.npy")
     elif dataset == "cifar10_original":
-        X = np.load("datasets/cifar10_original_data/X.npy")
-        Y = np.load("datasets/cifar10_original_data/Y.npy")
+        X = np.load("datasets/cifar10_original_data/X_train.npy")
+        Y = np.load("datasets/cifar10_original_data/Y_train.npy")
+        X_test = np.load("datasets/cifar10_original_data/X_test.npy")
+        Y_test = np.load("datasets/cifar10_original_data/Y_test.npy")
+        transform = transforms.Compose([
+            transforms.RandomCrop(32, padding=4),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+        ])
+
+        test_transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+        ])
     elif dataset == "mnist":
         X = np.load("datasets/mnist_data/X.npy")
         Y = np.load("datasets/mnist_data/Y.npy")
@@ -90,7 +107,7 @@ def get_dataset(**options):
     if normalize:
         X = preprocessing.StandardScaler().fit_transform(X)
         #X = preprocessing.MinMaxScaler().fit_transform(X)
-    return X, Y
+    return X, Y, X_test, Y_test, transform, test_transform
 
 def gather_results(result_queue, path):
     try:
@@ -186,7 +203,6 @@ def run_experiments(config):
         options_keys.append(key)
         options_values.append(value)
 
-    all_options = config.keys()
     saved_datasets = {}
     for repeat_id in range(config["_num_repeats"]):
         for exp_vals in itertools.product(*options_values):
@@ -216,8 +232,16 @@ def run_experiments(config):
 
                 ac = ActiveClustering(X, Y, repeat_id, initial_labels, **exp_kwargs)
             else:
-                X, Y = get_dataset(**exp_kwargs)
-                ac = ActiveLearning(X, Y, repeat_id, **exp_kwargs)
+                X, Y, X_test, Y_test, transform, test_transform = get_dataset(**exp_kwargs)
+                ac = ActiveLearning(
+                    repeat_id,
+                    X, 
+                    Y, 
+                    X_test=X_test,
+                    Y_test=Y_test,
+                    transform=transform,
+                    test_transform=test_transform,
+                    **exp_kwargs)
             experiment_queue.put(ac)
 
             if config["_overwrite"] and os.path.exists(completed_experiments_path):

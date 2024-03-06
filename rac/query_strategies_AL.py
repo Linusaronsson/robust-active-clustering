@@ -17,8 +17,7 @@ class QueryStrategyAL:
     def select_batch(self, acq_fn, batch_size):
         if acq_fn == "uniform":
             self.info_matrix = np.random.rand(len(self.al.Y_pool))
-            queried_indices = np.where(np.sum(self.al.queried_labels, axis=1) > 0)[0]
-            self.info_matrix[queried_indices] = 0
+            self.info_matrix[self.al.queried_indices] = 0
         elif acq_fn == "entropy":
             self.info_matrix = self.compute_entropy()
         elif acq_fn == "cc_entropy":
