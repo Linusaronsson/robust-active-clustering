@@ -11,7 +11,7 @@
     "noise_level": 0.0,
     "warm_start": 0.025,
     "acq_fn": "entropy_mc",
-    "model_name": "MLP",
+    "model_name": "VGG16",
     "predictor": "model",
     "dynamic_K": false,
     "sim_init": "t2",

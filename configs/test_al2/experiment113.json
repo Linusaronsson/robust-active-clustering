@@ -11,7 +11,7 @@
     "noise_level": 0.0,
     "warm_start": 0.1,
     "acq_fn": "coreset",
-    "model_name": "MLP",
+    "model_name": "VGG16",
     "predictor": "model",
     "dynamic_K": true,
     "sim_init": "t1",
