@@ -75,7 +75,7 @@ class ActiveLearning:
         self.start_time = time.time()
         self.initialize_al_procedure()
         self.store_experiment_data(initial=True)
-        stopping_criteria = 100*self.N_pt
+        stopping_criteria = 1*self.N_pt
 
         self.ii = 1
         self.num_perfect = 0
@@ -124,18 +124,18 @@ class ActiveLearning:
                 print("total queries: ", self.total_queries)
                 #print("-----------------")
             
-            if accuracy_score(self.Y_pool, self.pool_predictions) == 1.0:
-                self.num_perfect += 1
+            #if accuracy_score(self.Y_pool, self.pool_predictions) == 1.0:
+                #self.num_perfect += 1
             
-            if self.num_perfect > 5:
-                break
+            #if self.num_perfect > 5:
+                #break
                 
         return self.ac_data
 
     def store_experiment_data(self, initial=False):
-        #self.ac_data.train_accuracy.append(accuracy_score(self.Y_train, self.train_predictions))
+        self.ac_data.train_accuracy.append(accuracy_score(self.Y_train, self.train_predictions))
         self.ac_data.accuracy.append(accuracy_score(self.Y_pool, self.pool_predictions))
-        #self.ac_data.accuracy.append(accuracy_score(self.Y_test, self.test_predictions))
+        self.ac_data.accuracy.append(accuracy_score(self.Y_test, self.test_predictions))
         time_now = time.time() 
         if initial:
             self.ac_data.time_select_batch.append(0.0)
@@ -172,13 +172,14 @@ class ActiveLearning:
         self.total_queries = len(self.initial_train_indices)
         self.initial_train_indices = np.array(self.initial_train_indices)
         self.queried_indices = self.initial_train_indices
+        self.unqueried_indices = np.setdiff1d(range(self.N_pt), self.queried_indices)
 
         self.n_classes = np.max(self.Y) + 1
         self.queried_labels = np.zeros((self.N_pt, self.n_classes))
         self.queried_labels[self.initial_train_indices, self.Y_train] = 1
 
         # change this @@@@@@@@@@@@@@@@@@@@@@@@
-        self.S = np.zeros((self.N_pt, self.N_pt))
+        #self.S = np.zeros((self.N_pt, self.N_pt))
 
         self.Y_pool_queried = np.copy(self.Y_pool)
         self.Y_pool_queried[self.queried_indices] = self.Y_train

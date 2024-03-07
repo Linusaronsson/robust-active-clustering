@@ -68,7 +68,6 @@ class Strategy:
         
         with torch.no_grad():
             for elements_to_predict in to_predict_dataloader:
-                
                 # Predict the most likely class
                 if type(elements_to_predict) == dict:
                     elements_to_predict = dict_to(elements_to_predict, self.device)
@@ -102,7 +101,6 @@ class Strategy:
         
         with torch.no_grad():
             for elements_to_predict in to_predict_dataloader:
-                
                 # Calculate softmax (probabilities) of predictions
                 if type(elements_to_predict) == dict:
                     elements_to_predict = dict_to(elements_to_predict, self.device)

@@ -35,11 +35,11 @@ class QueryStrategyAL:
             self.info_matrix = self.compute_cc_entropy_mc()
         elif acq_fn == "coreset":
             #self.info_matrix = self.compute_coreset()
-            X_pool_no_train = self.X_pool[self.al.unqueried_indices]
-            Y_pool_no_train = self.Y_pool_queried[self.al.unqueried_indices]
-            pool_dataset = CustomDataset(X_pool_no_train, Y_pool_no_train, transform=self.test_transform)
-            train_dataset = CustomDataset(self.X_train, self.Y_train, transform=self.test_transform)
-            es = CoreSet(train_dataset, pool_dataset, self.al.model, self.al.n_classes)
+            X_pool_no_train = self.al.X_pool[self.al.unqueried_indices]
+            Y_pool_no_train = self.al.Y_pool_queried[self.al.unqueried_indices]
+            pool_dataset = CustomDataset(X_pool_no_train, Y_pool_no_train, transform=self.al.test_transform)
+            train_dataset = CustomDataset(self.al.X_train, self.al.Y_train, transform=self.al.test_transform)
+            es = CoreSet(train_dataset, LabeledToUnlabeledDataset(pool_dataset), self.al.model, self.al.n_classes)
             idxs = es.select(batch_size)
             return self.al.unqueried_indices[idxs]
         elif acq_fn == "badge":
@@ -48,8 +48,11 @@ class QueryStrategyAL:
             #Y_pool_no_train = self.Y_pool_queried[self.al.unqueried_indices]
             #pool_dataset = CustomDataset(X_pool_no_train, Y_pool_no_train, transform=self.test_transform)
             #train_dataset = CustomDataset(self.X_train, self.Y_train, transform=self.test_transform)
-            pool_dataset = CustomDataset(self.X_pool, self.Y_pool_queried, transform=self.test_transform)
-            es = BADGE(pool_dataset, pool_dataset, self.al.model, self.al.n_classes)
+            X_pool_no_train = self.al.X_pool[self.al.unqueried_indices]
+            Y_pool_no_train = self.al.Y_pool_queried[self.al.unqueried_indices]
+            pool_dataset = CustomDataset(X_pool_no_train, Y_pool_no_train, transform=self.al.test_transform)
+            train_dataset = CustomDataset(self.al.X_train, self.al.Y_train, transform=self.al.test_transform)
+            es = BADGE(train_dataset, LabeledToUnlabeledDataset(pool_dataset), self.al.model, self.al.n_classes)
             idxs = es.select(batch_size)
             return self.al.unqueried_indices[idxs]
         else:
@@ -89,9 +92,9 @@ class QueryStrategyAL:
     def compute_entropy(self):
         #dataset = CustomDataset(self.X_train, self.Y_train, transform=self.transform)
         #test_dataset = CustomDataset(self.X_test, self.Y_test, transform=self.test_transform)
-        pool_dataset = CustomDataset(self.X_pool, self.Y_pool_queried, transform=self.test_transform)
-        es = EntropySampling(pool_dataset, pool_dataset, self.al.model, self.al.n_classes)
-        I = es.acquire_scores(pool_dataset)
+        pool_dataset = CustomDataset(self.al.X_pool, self.al.Y_pool_queried, transform=self.al.test_transform)
+        es = EntropySampling(pool_dataset, LabeledToUnlabeledDataset(pool_dataset), self.al.model, self.al.n_classes)
+        I = es.acquire_scores(LabeledToUnlabeledDataset(pool_dataset))
 
         #max_indices = np.argmax(self.al.queried_labels, axis=1)
         #prob_all = np.zeros(self.al.queried_labels.shape)
@@ -104,7 +107,7 @@ class QueryStrategyAL:
 
         #prob_all[unqueried_indices] = prob_pool[unqueried_indices]
         #I = scipy_entropy(prob_all, axis=1)
-        return I
+        return I.cpu()
 
     def compute_cc_entropy(self):
         # Probabilities for X_train (one-hot encode Y_train)
@@ -117,15 +120,15 @@ class QueryStrategyAL:
 
         # Predict probabilities for X_pool
         #prob_pool = self.al.model.predict_proba(self.al.X_pool)
-        pool_dataset = CustomDataset(self.X_pool, self.Y_pool_queried, transform=self.test_transform)
-        es = EntropySampling(pool_dataset, pool_dataset, self.al.model, self.al.n_classes)
+        pool_dataset = CustomDataset(self.al.X_pool, self.al.Y_pool_queried, transform=self.al.test_transform)
+        es = EntropySampling(pool_dataset, LabeledToUnlabeledDataset(pool_dataset), self.al.model, self.al.n_classes)
         #I = es.acquire_scores(pool_dataset)
-        prob_pool = es.predict_prob(pool_dataset)
+        prob_pool = es.predict_prob(LabeledToUnlabeledDataset(pool_dataset))
+        prob_pool = prob_pool.cpu().numpy()
         #log_probs = torch.log(probs)
         #U = -(probs*log_probs).sum(1)
 
-        unqueried_indices = np.where(np.sum(self.al.queried_labels, axis=1) == 0)[0]
-        prob_all[unqueried_indices] = prob_pool[unqueried_indices]
+        prob_all[self.al.unqueried_indices] = prob_pool[self.al.unqueried_indices]
 
         # Initialize similarity matrix
         N = prob_all.shape[0]
@@ -135,13 +138,13 @@ class QueryStrategyAL:
         for i in range(N):
             for j in range(N):
                 if i != j:
-                    if self.sim_init == "t1":
-                        if i in self.queried_indices and j in self.queried_indices:
-                            self.S[i, j] = 1 if self.Y_pool_queried[i] == self.Y_pool_queried[j] else -1
-                            self.S[j, i] = self.S[i, j]
+                    if self.al.sim_init == "t1":
+                        if i in self.al.queried_indices and j in self.al.queried_indices:
+                            S[i, j] = 1 if self.al.Y_pool_queried[i] == self.al.Y_pool_queried[j] else -1
+                            S[j, i] = S[i, j]
                         else:
-                            self.S[i, j] = 0
-                            self.S[i, j] = 0
+                            S[i, j] = 0
+                            S[j, i] = 0
                     else:
                         P_S_ij_plus_1 = np.sum(prob_all[i, :] * prob_all[j, :])
                         E_S_ij_plus_1 = P_S_ij_plus_1
@@ -202,16 +205,16 @@ class QueryStrategyAL:
         return I
     
     def compute_entropy_mc(self):
-        pool_dataset = CustomDataset(self.X_pool, self.Y_pool_queried, transform=self.test_transform)
-        es = EntropySamplingDropout(pool_dataset, pool_dataset, self.al.model, self.al.n_classes)
-        I = es.acquire_scores(pool_dataset)
-        return I
+        pool_dataset = CustomDataset(self.al.X_pool, self.al.Y_pool_queried, transform=self.al.test_transform)
+        es = EntropySamplingDropout(pool_dataset, LabeledToUnlabeledDataset(pool_dataset), self.al.model, self.al.n_classes)
+        I = es.acquire_scores(LabeledToUnlabeledDataset(pool_dataset))
+        return I.cpu()
 
     def compute_bald(self):
-        pool_dataset = CustomDataset(self.X_pool, self.Y_pool_queried, transform=self.test_transform)
-        es = BALDDropout(pool_dataset, pool_dataset, self.al.model, self.al.n_classes)
-        I = es.acquire_scores(pool_dataset)
-        return I
+        pool_dataset = CustomDataset(self.al.X_pool, self.al.Y_pool_queried, transform=self.al.test_transform)
+        es = BALDDropout(pool_dataset, LabeledToUnlabeledDataset(pool_dataset), self.al.model, self.al.n_classes)
+        I = es.acquire_scores(LabeledToUnlabeledDataset(pool_dataset))
+        return I.cpu()
 
     def compute_cc_entropy_mc(self):
                 # Probabilities for X_train (one-hot encode Y_train)
@@ -224,15 +227,15 @@ class QueryStrategyAL:
 
         # Predict probabilities for X_pool
         #prob_pool = self.al.model.predict_proba(self.al.X_pool)
-        pool_dataset = CustomDataset(self.X_pool, self.Y_pool_queried, transform=self.test_transform)
-        es = EntropySamplingDropout(pool_dataset, pool_dataset, self.al.model, self.al.n_classes)
+        pool_dataset = CustomDataset(self.al.X_pool, self.al.Y_pool_queried, transform=self.al.test_transform)
+        es = EntropySamplingDropout(pool_dataset, LabeledToUnlabeledDataset(pool_dataset), self.al.model, self.al.n_classes)
         #I = es.acquire_scores(pool_dataset)
-        prob_pool = es.predict_prob_dropout(pool_dataset, 10)
+        prob_pool = es.predict_prob_dropout(LabeledToUnlabeledDataset(pool_dataset), 10)
+        prob_pool = prob_pool.cpu().numpy()
         #log_probs = torch.log(probs)
         #U = -(probs*log_probs).sum(1)
 
-        unqueried_indices = np.where(np.sum(self.al.queried_labels, axis=1) == 0)[0]
-        prob_all[unqueried_indices] = prob_pool[unqueried_indices]
+        prob_all[self.al.unqueried_indices] = prob_pool[self.al.unqueried_indices]
 
         # Initialize similarity matrix
         N = prob_all.shape[0]
@@ -242,13 +245,13 @@ class QueryStrategyAL:
         for i in range(N):
             for j in range(N):
                 if i != j:
-                    if self.sim_init == "t1":
-                        if i in self.queried_indices and j in self.queried_indices:
-                            self.S[i, j] = 1 if self.Y_pool_queried[i] == self.Y_pool_queried[j] else -1
-                            self.S[j, i] = self.S[i, j]
+                    if self.al.sim_init == "t1":
+                        if i in self.al.queried_indices and j in self.al.queried_indices:
+                            S[i, j] = 1 if self.al.Y_pool_queried[i] == self.al.Y_pool_queried[j] else -1
+                            S[j, i] = S[i, j]
                         else:
-                            self.S[i, j] = 0
-                            self.S[i, j] = 0
+                            S[i, j] = 0
+                            S[j, i] = 0
                     else:
                         P_S_ij_plus_1 = np.sum(prob_all[i, :] * prob_all[j, :])
                         E_S_ij_plus_1 = P_S_ij_plus_1
@@ -305,11 +308,5 @@ class QueryStrategyAL:
 
         I = scipy_entropy(q, axis=1) 
         return I
-
-    def compute_coreset(self):
-        pass
-
-    def compute_badge(self):
-        pass
 
     
