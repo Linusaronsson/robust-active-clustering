@@ -18,6 +18,7 @@ from sklearn.neural_network import MLPClassifier
 from torchvision import datasets, transforms
 from torch.utils.data import Dataset, DataLoader
 
+from rac.utils.utils import CustomDataset
 from rac.utils.models.resnet import ResNet18
 from rac.utils.models.vgg import VGG
 from rac.utils.train_helper import data_train
@@ -30,28 +31,6 @@ from scipy import sparse
 
 #import warnings
 #warnings.filterwarnings("once") 
-
-class CustomDataset(Dataset):
-    def __init__(self, X, Y, transform=None):
-        self.X = X
-        self.Y = Y
-        self.transform = transform
-
-    def __len__(self):
-        return len(self.Y)
-
-    def __getitem__(self, idx):
-        image = self.X[idx]
-        label = self.Y[idx]
-
-        # Convert image back to PIL Image to apply torchvision transforms
-        image = transforms.ToPILImage()(image)
-
-        if self.transform:
-            image = self.transform(image)
-
-        # If you want the image to be a tensor again, ensure transform includes ToTensor()
-        return image, label
 
 class ActiveLearning:
     def __init__(
@@ -103,6 +82,8 @@ class ActiveLearning:
         while self.total_queries < stopping_criteria: 
         #while True:
             batch_size = np.minimum(self.batch_size, stopping_criteria - self.total_queries)
+            if batch_size != self.batch_size:
+                break
             self.start = time.time()
             self.ii += 1
             start_selct_batch = time.time()
@@ -195,8 +176,11 @@ class ActiveLearning:
         self.n_classes = np.max(self.Y) + 1
         self.queried_labels = np.zeros((self.N_pt, self.n_classes))
         self.queried_labels[self.initial_train_indices, self.Y_train] = 1
+
+        # change this @@@@@@@@@@@@@@@@@@@@@@@@
         self.S = np.zeros((self.N_pt, self.N_pt))
-        self.Y_pool_queried = self.Y_pool
+
+        self.Y_pool_queried = np.copy(self.Y_pool)
         self.Y_pool_queried[self.queried_indices] = self.Y_train
 
         self.update_model()
@@ -211,9 +195,10 @@ class ActiveLearning:
                 
         self.queried_indices = np.where(np.sum(self.queried_labels, axis=1) > 0)[0]
         self.unqueried_indices = np.where(np.sum(self.queried_labels, axis=1) == 0)[0]
+
         self.X_train = self.X_pool[self.queried_indices]
         self.Y_train = np.argmax(self.queried_labels[self.queried_indices], axis=1)
-        self.Y_pool_queried = self.Y_pool
+        self.Y_pool_queried = np.copy(self.Y_pool)
         self.Y_pool_queried[self.queried_indices] = self.Y_train
 
     def update_model(self):
@@ -226,14 +211,15 @@ class ActiveLearning:
             dataset = CustomDataset(self.X_train, self.Y_train, transform=self.transform)
             test_dataset = CustomDataset(self.X_test, self.Y_test, transform=self.test_transform)
             pool_dataset = CustomDataset(self.X_pool, self.Y_pool_queried, transform=self.test_transform)
-            args = {'n_epoch':300, 'lr':float(0.01), 'batch_size':20, 'max_accuracy':0.99, 'optimizer':'sgd'} 
+            args = {'n_epoch':150, 'lr':float(0.01), 'batch_size':20, 'max_accuracy':0.99, 'optimizer':'sgd'} 
             dt = data_train(dataset, self.model, args)
-            clf = dt.train()
+            self.model = dt.train()
             dataset.transform = self.test_transform
             self.train_predictions = dt.get_predictions(dataset)
             self.test_predictions = dt.get_predictions(test_dataset)
             self.pool_predictions = dt.get_predictions(pool_dataset)
-            raise ValueError("VGG16 not implemented yet!")
+            dataset.transform = self.transform
+            #raise ValueError("VGG16 not implemented yet!")
         else:
             pass
 

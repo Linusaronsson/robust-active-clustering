@@ -1,5 +1,6 @@
 import torch
 from torch.utils.data import Dataset
+from torchvision import transforms
 
 class SubsetWithTargets(Dataset):
     r"""
@@ -72,3 +73,25 @@ class LabeledToUnlabeledDataset(Dataset):
 
     def __len__(self):
         return len(self.wrapped_dataset)
+
+class CustomDataset(Dataset):
+    def __init__(self, X, Y, transform=None):
+        self.X = X
+        self.Y = Y
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.Y)
+
+    def __getitem__(self, idx):
+        image = self.X[idx]
+        label = self.Y[idx]
+
+        # Convert image back to PIL Image to apply torchvision transforms
+        image = transforms.ToPILImage()(image)
+
+        if self.transform:
+            image = self.transform(image)
+
+        # If you want the image to be a tensor again, ensure transform includes ToTensor()
+        return image, label
