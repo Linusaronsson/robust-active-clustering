@@ -398,7 +398,7 @@ class ExperimentReader:
                     "ami": "AMI", "rand": "ARI", "time": "Time (s)", "num_violations": "Num. violations",
                     "time_select_batch": "Time (s)", "time_update_clustering": "Time (s)",
                     "num_repeat_queries": "Num. pairs re-queried", "accuracy": "Accuracy", 
-                    "v_measure": "V-measure"
+                    "v_measure": "V-measure", "train_accuracy": "Train accuracy", "pool_accuracy": "Pool accuracy"
                 }
 
                 acq_fn_map = {

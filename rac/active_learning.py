@@ -134,7 +134,7 @@ class ActiveLearning:
 
     def store_experiment_data(self, initial=False):
         self.ac_data.train_accuracy.append(accuracy_score(self.Y_train, self.train_predictions))
-        self.ac_data.accuracy.append(accuracy_score(self.Y_pool, self.pool_predictions))
+        self.ac_data.pool_accuracy.append(accuracy_score(self.Y_pool, self.pool_predictions))
         self.ac_data.accuracy.append(accuracy_score(self.Y_test, self.test_predictions))
         time_now = time.time() 
         if initial:
