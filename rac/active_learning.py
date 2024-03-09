@@ -75,7 +75,7 @@ class ActiveLearning:
         self.start_time = time.time()
         self.initialize_al_procedure()
         self.store_experiment_data(initial=True)
-        stopping_criteria = 1*self.N_pt
+        stopping_criteria = 100*self.N_pt
 
         self.ii = 1
         self.num_perfect = 0
@@ -124,11 +124,11 @@ class ActiveLearning:
                 print("total queries: ", self.total_queries)
                 #print("-----------------")
             
-            #if accuracy_score(self.Y_pool, self.pool_predictions) == 1.0:
-                #self.num_perfect += 1
+            if accuracy_score(self.Y_pool, self.pool_predictions) == 1.0:
+                self.num_perfect += 1
             
-            #if self.num_perfect > 5:
-                #break
+            if self.num_perfect > 5:
+                break
                 
         return self.ac_data
 
