@@ -92,9 +92,12 @@ class QueryStrategyAL:
     def compute_entropy(self):
         #dataset = CustomDataset(self.X_train, self.Y_train, transform=self.transform)
         #test_dataset = CustomDataset(self.X_test, self.Y_test, transform=self.test_transform)
-        pool_dataset = CustomDataset(self.al.X_pool, self.al.Y_pool_queried, transform=self.al.test_transform)
-        es = EntropySampling(pool_dataset, LabeledToUnlabeledDataset(pool_dataset), self.al.model, self.al.n_classes)
-        I = es.acquire_scores(LabeledToUnlabeledDataset(pool_dataset))
+
+        #@@@@@@@@@
+        #pool_dataset = CustomDataset(self.al.X_pool, self.al.Y_pool_queried, transform=self.al.test_transform)
+        #es = EntropySampling(pool_dataset, LabeledToUnlabeledDataset(pool_dataset), self.al.model, self.al.n_classes)
+        #I = es.acquire_scores(LabeledToUnlabeledDataset(pool_dataset))
+        #@@@@@@@@@@
 
         #max_indices = np.argmax(self.al.queried_labels, axis=1)
         #prob_all = np.zeros(self.al.queried_labels.shape)
@@ -102,34 +105,34 @@ class QueryStrategyAL:
         #prob_train = np.zeros((self.al.Y_train.size, self.al.Y.max()+1))
         #prob_train[np.arange(self.al.Y_train.size), self.al.Y_train] = 1
 
-        # Predict probabilities for X_pool
-        #prob_pool = self.al.model.predict_proba(self.al.X_pool)
+        #Predict probabilities for X_pool
+        prob_pool = self.al.model.predict_proba(self.al.X_pool)
 
-        #prob_all[unqueried_indices] = prob_pool[unqueried_indices]
-        #I = scipy_entropy(prob_all, axis=1)
-        return I.cpu()
+        #prob_all[self.al.unqueried_indices] = prob_pool[self.al.unqueried_indices]
+        I = scipy_entropy(prob_pool, axis=1)
+        return I
+        #return I.cpu()
 
     def compute_cc_entropy(self):
         print("SELECTING")
         # Probabilities for X_train (one-hot encode Y_train)
         #prob_all = scipy_softmax(100000*self.al.queried_labels, axis=1)
-        max_indices = np.argmax(self.al.queried_labels, axis=1)
-        prob_all = np.zeros(self.al.queried_labels.shape)
-        prob_all[np.arange(len(max_indices)), max_indices] = 1
+        #max_indices = np.argmax(self.al.queried_labels, axis=1)
+        #prob_all = np.zeros(self.al.queried_labels.shape)
+        #prob_all[np.arange(len(max_indices)), max_indices] = 1
         #prob_train = np.zeros((self.al.Y_train.size, self.al.Y.max()+1))
         #prob_train[np.arange(self.al.Y_train.size), self.al.Y_train] = 1
 
         # Predict probabilities for X_pool
-        #prob_pool = self.al.model.predict_proba(self.al.X_pool)
-        pool_dataset = CustomDataset(self.al.X_pool, self.al.Y_pool_queried, transform=self.al.test_transform)
-        es = EntropySampling(pool_dataset, LabeledToUnlabeledDataset(pool_dataset), self.al.model, self.al.n_classes)
-        #I = es.acquire_scores(pool_dataset)
-        prob_pool = es.predict_prob(LabeledToUnlabeledDataset(pool_dataset))
-        prob_pool = prob_pool.cpu().numpy()
-        #log_probs = torch.log(probs)
-        #U = -(probs*log_probs).sum(1)
+        #pool_dataset = CustomDataset(self.al.X_pool, self.al.Y_pool_queried, transform=self.al.test_transform)
+        #es = EntropySampling(pool_dataset, LabeledToUnlabeledDataset(pool_dataset), self.al.model, self.al.n_classes)
+        #prob_pool = es.predict_prob(LabeledToUnlabeledDataset(pool_dataset))
+        #prob_pool = prob_pool.cpu().numpy()
 
-        prob_all[self.al.unqueried_indices] = prob_pool[self.al.unqueried_indices]
+        prob_pool = self.al.model.predict_proba(self.al.X_pool)
+        prob_all = prob_pool
+
+        #prob_all[self.al.unqueried_indices] = prob_pool[self.al.unqueried_indices]
 
         print("hello")
 
@@ -145,39 +148,39 @@ class QueryStrategyAL:
         S = np.zeros((N, N))
 
         # Case when sim_init == "t1"
-        if self.al.sim_init == "t1":
-            queried_matrix = np.outer(queried_indices_mask, queried_indices_mask)
-            equality_matrix = self.al.Y_pool_queried[:, None] == self.al.Y_pool_queried
-            # Apply queried_indices_mask to filter out unqueried indices
-            S = np.where(queried_matrix & equality_matrix, 1, -1)
-            # Set to 0 where either i or j is not in queried_indices
-            S = np.where(queried_matrix, S, 0)
-        else:
-            # Vectorize the 'else' block calculations
-            P_S_ij_plus_1 = np.dot(prob_all, prob_all.T)
-            E_S_ij_plus_1 = P_S_ij_plus_1
-            E_S_ij_minus_1 = E_S_ij_plus_1 - 1
-            E_S_ij = P_S_ij_plus_1 * E_S_ij_plus_1 + (1 - P_S_ij_plus_1) * E_S_ij_minus_1
-            S = E_S_ij
+#        if self.al.sim_init == "t1":
+#            queried_matrix = np.outer(queried_indices_mask, queried_indices_mask)
+#            equality_matrix = self.al.Y_pool_queried[:, None] == self.al.Y_pool_queried
+#            # Apply queried_indices_mask to filter out unqueried indices
+#            S = np.where(queried_matrix & equality_matrix, 1, -1)
+#            # Set to 0 where either i or j is not in queried_indices
+#            S = np.where(queried_matrix, S, 0)
+#        else:
+#            # Vectorize the 'else' block calculations
+#            P_S_ij_plus_1 = np.dot(prob_all, prob_all.T)
+#            E_S_ij_plus_1 = P_S_ij_plus_1
+#            E_S_ij_minus_1 = E_S_ij_plus_1 - 1
+#            E_S_ij = P_S_ij_plus_1 * E_S_ij_plus_1 + (1 - P_S_ij_plus_1) * E_S_ij_minus_1
+#            S = E_S_ij
 
-        # Calculate expected similarity
-        #for i in range(N):
-        #    for j in range(0, i):
-        #        if i != j:
-        #            if self.al.sim_init == "t1":
-        #                if i in self.al.queried_indices and j in self.al.queried_indices:
-        #                    S[i, j] = 1 if self.al.Y_pool_queried[i] == self.al.Y_pool_queried[j] else -1
-        #                    S[j, i] = S[i, j]
-        #                else:
-        #                    S[i, j] = 0
-        #                    S[j, i] = 0
-        #            else:
-        #                P_S_ij_plus_1 = np.sum(prob_all[i, :] * prob_all[j, :])
-        #                E_S_ij_plus_1 = P_S_ij_plus_1
-        #                E_S_ij_minus_1 = E_S_ij_plus_1 - 1
-        #                E_S_ij = P_S_ij_plus_1 * E_S_ij_plus_1 + (1 - P_S_ij_plus_1) * E_S_ij_minus_1
-        #                S[i, j] = E_S_ij
-        #                S[j, i] = S[i, j]
+        #Calculate expected similarity
+        for i in range(N):
+            for j in range(0, i):
+                if i != j:
+                    if self.al.sim_init_qs == "t1":
+                        if i in self.al.queried_indices and j in self.al.queried_indices:
+                            S[i, j] = 1 if self.al.Y_pool_queried[i] == self.al.Y_pool_queried[j] else -1
+                            S[j, i] = S[i, j]
+                        else:
+                            S[i, j] = 0
+                            S[j, i] = 0
+                    else:
+                        P_S_ij_plus_1 = np.sum(prob_all[i, :] * prob_all[j, :])
+                        E_S_ij_plus_1 = P_S_ij_plus_1
+                        E_S_ij_minus_1 = E_S_ij_plus_1 - 1
+                        E_S_ij = P_S_ij_plus_1 * E_S_ij_plus_1 + (1 - P_S_ij_plus_1) * E_S_ij_minus_1
+                        S[i, j] = E_S_ij
+                        S[j, i] = S[i, j]
 
         print("hello2")
         # Ensure diagonal is zero
@@ -228,8 +231,6 @@ class QueryStrategyAL:
 
         #file_path = "plots/entropy_comparison + " + str(self.al.ii) + ".png"
         #plt.savefig(file_path)
-
-
 
         I = scipy_entropy(q, axis=1) 
         return I

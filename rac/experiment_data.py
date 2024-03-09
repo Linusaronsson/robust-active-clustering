@@ -11,6 +11,8 @@ from pathlib import Path
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+from matplotlib.ticker import MaxNLocator
+
 
 import json
 import copy
@@ -429,16 +431,19 @@ class ExperimentReader:
                 #plt.setp(ax.lines, alpha=0.7)  # Adjusts the transparency of the markers
                 plt.setp(ax.lines, markeredgewidth=0.5)  # Adjusts the transparency of the markers
                 #plt.setp(ax.lines, markersize=7)  # Adjusts the transparency of the markers
-                plt.setp(ax.lines, markersize=0)  # Adjusts the transparency of the markers
+                plt.setp(ax.lines, markersize=10)  # Adjusts the transparency of the markers
+                plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
+
 
                 plt.ylabel(metric_map[metric])
 
                 #labels = self.construct_x_ticks(ax, prop)
                 ws = 1-exp_kwargs["warm_start"]
                 N_pool = int(len(self.Y)*ws)
+                rest = len(self.Y) - N_pool
                 labels = []
                 for item in ax.get_xticks():
-                    labels.append(round((int(item)*self.batch_size)/N_pool, 2))
+                    labels.append(round((int(item)*self.batch_size+rest), 2))
                 ax.set_xticklabels(labels)
 
                 plt.xlabel("Proportion of objects queried")

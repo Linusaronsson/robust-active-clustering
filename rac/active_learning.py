@@ -135,7 +135,7 @@ class ActiveLearning:
     def store_experiment_data(self, initial=False):
         self.ac_data.train_accuracy.append(accuracy_score(self.Y_train, self.train_predictions))
         self.ac_data.pool_accuracy.append(accuracy_score(self.Y_pool, self.pool_predictions))
-        self.ac_data.accuracy.append(accuracy_score(self.Y_test, self.test_predictions))
+        #self.ac_data.accuracy.append(accuracy_score(self.Y_test, self.test_predictions))
         time_now = time.time() 
         if initial:
             self.ac_data.time_select_batch.append(0.0)
@@ -179,7 +179,7 @@ class ActiveLearning:
         self.queried_labels[self.initial_train_indices, self.Y_train] = 1
 
         # change this @@@@@@@@@@@@@@@@@@@@@@@@
-        #self.S = np.zeros((self.N_pt, self.N_pt))
+        self.S = np.zeros((self.N_pt, self.N_pt))
 
         self.Y_pool_queried = np.copy(self.Y_pool)
         self.Y_pool_queried[self.queried_indices] = self.Y_train
@@ -206,7 +206,7 @@ class ActiveLearning:
         if self.model_name == "MLP":
             self.model = MLPClassifier(random_state=self._seed, max_iter=500)
             self.model.fit(self.X_train, self.Y_train)
-            self.pool_predictions = self._predict()
+            self.pool_predictions, self.train_predictions = self._predict()
         elif self.model_name == "VGG16":
             self.model = VGG('VGG16')
             dataset = CustomDataset(self.X_train, self.Y_train, transform=self.transform)
@@ -227,7 +227,7 @@ class ActiveLearning:
     def _predict(self):
         if self.predictor == "model":
             predicted_labels = self.model.predict(self.X_pool)
-            predicted_labels[self.queried_indices] = self.Y_train
+            #predicted_labels[self.queried_indices] = self.Y_train
         elif self.predictor == "CC":
             max_indices = np.argmax(self.queried_labels, axis=1)
             prob_all = np.zeros(self.queried_labels.shape)
@@ -244,7 +244,7 @@ class ActiveLearning:
             # Initialize similarity matrix
             N = prob_all.shape[0]
             for i in range(N):
-                for j in range(N):
+                for j in range(0, i):
                     if i != j:
                         if self.sim_init == "t1" or self.sim_init == "t3":
                             if i in self.queried_indices and j in self.queried_indices:
@@ -272,7 +272,7 @@ class ActiveLearning:
 
             if self.sim_init == "t3":
                 for i in range(N):
-                    for j in range(N):
+                    for j in range(0, i):
                         if i != j:
                             if i not in self.queried_indices or j not in self.queried_indices:
                                 P_S_ij_plus_1 = np.sum(q[i, :] * q[j, :])
@@ -329,7 +329,7 @@ class ActiveLearning:
 
             N = prob_all.shape[0]
             for i in range(N):
-                for j in range(N):
+                for j in range(0, i):
                     if i != j:
                         if self.sim_init == "t1" or self.sim_init == "t3":
                             if i in self.queried_indices and j in self.queried_indices:
@@ -337,7 +337,7 @@ class ActiveLearning:
                                 self.S[j, i] = self.S[i, j]
                             else:
                                 self.S[i, j] = 0
-                                self.S[i, j] = 0
+                                self.S[j, i] = 0
                         else:
                             P_S_ij_plus_1 = np.sum(prob_all[i, :] * prob_all[j, :])
                             E_S_ij_plus_1 = P_S_ij_plus_1
@@ -357,7 +357,7 @@ class ActiveLearning:
 
             if self.sim_init == "t3":
                 for i in range(N):
-                    for j in range(N):
+                    for j in range(0, i):
                         if i != j:
                             if i not in self.queried_indices or j not in self.queried_indices:
                                 P_S_ij_plus_1 = np.sum(q[i, :] * q[j, :])
@@ -393,7 +393,9 @@ class ActiveLearning:
                         raise ValueError("No class similarities computed for data point {}!")
                         # Handle the case where there might be no labeled data at all to compare with
                         # This could be set to a default value or handled in another specific way
-        return predicted_labels.astype(np.int32)
+        pool_predictions = predicted_labels.astype(np.int32)
+        train_predictions = predicted_labels[self.queried_indices].astype(np.int32)
+        return pool_predictions, train_predictions
             
 
 
