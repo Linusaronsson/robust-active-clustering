@@ -127,7 +127,7 @@ class ActiveLearning:
             if accuracy_score(self.Y_pool, self.pool_predictions) == 1.0:
                 self.num_perfect += 1
             
-            if self.num_perfect > 5:
+            if self.num_perfect >= 5:
                 break
                 
         return self.ac_data
@@ -174,6 +174,7 @@ class ActiveLearning:
         self.queried_indices = self.initial_train_indices
         self.unqueried_indices = np.setdiff1d(range(self.N_pt), self.queried_indices)
 
+        # labels must be in range {0, ..., n_classes-1} !!!
         self.n_classes = np.max(self.Y) + 1
         self.queried_labels = np.zeros((self.N_pt, self.n_classes))
         self.queried_labels[self.initial_train_indices, self.Y_train] = 1
@@ -200,7 +201,7 @@ class ActiveLearning:
         self.X_train = self.X_pool[self.queried_indices]
         self.Y_train = np.argmax(self.queried_labels[self.queried_indices], axis=1)
         self.Y_pool_queried = np.copy(self.Y_pool)
-        self.Y_pool_queried[self.queried_indices] = self.Y_train
+        self.Y_pool_queried[self.queried_indices] = np.copy(self.Y_train)
 
     def update_model(self):
         if self.model_name == "MLP":
@@ -238,52 +239,38 @@ class ActiveLearning:
             # Predict probabilities for X_pool
             prob_pool = self.model.predict_proba(self.X_pool)
 
-            unqueried_indices = np.where(np.sum(self.queried_labels, axis=1) == 0)[0]
-            prob_all[unqueried_indices] = prob_pool[unqueried_indices]
+            prob_all[self.unqueried_indices] = prob_pool[self.unqueried_indices]
 
             # Initialize similarity matrix
-            N = prob_all.shape[0]
+            N = len(self.N_pt)
             for i in range(N):
                 for j in range(0, i):
-                    if i != j:
-                        if self.sim_init == "t1" or self.sim_init == "t3":
-                            if i in self.queried_indices and j in self.queried_indices:
-                                self.S[i, j] = 1 if self.Y_pool_queried[i] == self.Y_pool_queried[j] else -1
-                                self.S[j, i] = self.S[i, j]
-                            else:
-                                self.S[i, j] = 0
-                                self.S[i, j] = 0
-                        else:
-                            P_S_ij_plus_1 = np.sum(prob_all[i, :] * prob_all[j, :])
-                            E_S_ij_plus_1 = P_S_ij_plus_1
-                            E_S_ij_minus_1 = E_S_ij_plus_1 - 1
-                            E_S_ij = P_S_ij_plus_1 * E_S_ij_plus_1 + (1 - P_S_ij_plus_1) * E_S_ij_minus_1
-                            self.S[i, j] = E_S_ij
+                    if self.sim_init == "t1":
+                        if i in self.queried_indices and j in self.queried_indices:
+                            self.S[i, j] = 1 if self.Y_pool_queried[i] == self.Y_pool_queried[j] else -1
                             self.S[j, i] = self.S[i, j]
+                        else:
+                            self.S[i, j] = 0
+                            self.S[j, i] = 0
+                    else:
+                        P_S_ij_plus_1 = np.sum(prob_all[i, :] * prob_all[j, :])
+                        E_S_ij_plus_1 = P_S_ij_plus_1
+                        E_S_ij_minus_1 = E_S_ij_plus_1 - 1
+                        E_S_ij = P_S_ij_plus_1 * E_S_ij_plus_1 + (1 - P_S_ij_plus_1) * E_S_ij_minus_1
+                        self.S[i, j] = E_S_ij
+                        self.S[j, i] = self.S[i, j]
 
             # Ensure diagonal is zero
             np.fill_diagonal(self.S, 0)
 
             self.clustering_solution, _ = max_correlation(self.S, self.n_classes, 5)
-            clust_sol, q, h = mean_field_clustering(
-                S=self.S, K=self.n_classes, betas=[self.mean_field_beta], max_iter=150, tol=1e-10, 
-                predicted_labels=self.clustering_solution
-            )
-
-            if self.sim_init == "t3":
-                for i in range(N):
-                    for j in range(0, i):
-                        if i != j:
-                            if i not in self.queried_indices or j not in self.queried_indices:
-                                P_S_ij_plus_1 = np.sum(q[i, :] * q[j, :])
-                                E_S_ij_plus_1 = P_S_ij_plus_1
-                                E_S_ij_minus_1 = E_S_ij_plus_1 - 1
-                                E_S_ij = P_S_ij_plus_1 * E_S_ij_plus_1 + (1 - P_S_ij_plus_1) * E_S_ij_minus_1
-                                self.S[i, j] = E_S_ij
-                                self.S[j, i] = self.S[i, j]
+            #clust_sol, q, h = mean_field_clustering(
+            #    S=self.S, K=self.n_classes, betas=[self.mean_field_beta], max_iter=150, tol=1e-10, 
+            #    predicted_labels=self.clustering_solution
+            #)
 
             predicted_labels = np.array([None]*len(self.Y_pool))  # Initialize all predictions as None
-            predicted_labels[self.queried_indices] = self.Y_train
+            predicted_labels[self.queried_indices] = np.copy(self.Y_train)
 
             cluster_labels = {}
             for cluster in np.unique(self.clustering_solution):
@@ -331,7 +318,7 @@ class ActiveLearning:
             for i in range(N):
                 for j in range(0, i):
                     if i != j:
-                        if self.sim_init == "t1" or self.sim_init == "t3":
+                        if self.sim_init == "t1":
                             if i in self.queried_indices and j in self.queried_indices:
                                 self.S[i, j] = 1 if self.Y_pool_queried[i] == self.Y_pool_queried[j] else -1
                                 self.S[j, i] = self.S[i, j]
@@ -354,18 +341,6 @@ class ActiveLearning:
                 S=self.S, K=self.n_classes, betas=[self.mean_field_beta], max_iter=150, tol=1e-10, 
                 predicted_labels=self.clustering_solution
             )
-
-            if self.sim_init == "t3":
-                for i in range(N):
-                    for j in range(0, i):
-                        if i != j:
-                            if i not in self.queried_indices or j not in self.queried_indices:
-                                P_S_ij_plus_1 = np.sum(q[i, :] * q[j, :])
-                                E_S_ij_plus_1 = P_S_ij_plus_1
-                                E_S_ij_minus_1 = E_S_ij_plus_1 - 1
-                                E_S_ij = P_S_ij_plus_1 * E_S_ij_plus_1 + (1 - P_S_ij_plus_1) * E_S_ij_minus_1
-                                self.S[i, j] = E_S_ij
-                                self.S[j, i] = self.S[i, j]
 
             # Ensure diagonal is zero
             np.fill_diagonal(self.S, 0)

@@ -59,8 +59,8 @@ class QueryStrategyAL:
             raise ValueError("Invalid acquisition function: {}".format(acq_fn))
 
         if not self.al.allow_requery:
-            queried_indices = np.where(np.sum(self.al.queried_labels, axis=1) > 0)[0]
-            self.info_matrix[queried_indices] = 0
+            query_counts = np.sum(self.al.queried_labels, axis=1)    
+            self.info_matrix[self.al.queried_indices] = -10000 * query_counts[self.al.queried_indices]
         return self.select_objects(batch_size, self.info_matrix, acq_noise=self.al.acq_noise)
 
     def select_objects(self, batch_size, I, acq_noise=False):
@@ -141,11 +141,8 @@ class QueryStrategyAL:
         S = np.zeros((N, N))
         print(S.shape)
 
-        queried_indices_mask = np.zeros(N, dtype=bool)
-        queried_indices_mask[self.al.queried_indices] = True
-
-        # Initialize S with zeros for the 'else' case to default to 0 if conditions are not met
-        S = np.zeros((N, N))
+        #queried_indices_mask = np.zeros(N, dtype=bool)
+        #queried_indices_mask[self.al.queried_indices] = True
 
         # Case when sim_init == "t1"
 #        if self.al.sim_init == "t1":
