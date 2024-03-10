@@ -75,7 +75,7 @@ class ActiveLearning:
         self.start_time = time.time()
         self.initialize_al_procedure()
         self.store_experiment_data(initial=True)
-        stopping_criteria = 100*self.N_pt
+        stopping_criteria = 50*self.N_pt
 
         self.ii = 1
         self.num_perfect = 0
