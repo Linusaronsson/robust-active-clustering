@@ -11,8 +11,6 @@ from scipy.spatial import distance
 
 from rac.query_strategies_AL import QueryStrategyAL
 from rac.experiment_data import ExperimentData
-from sklearn.gaussian_process import GaussianProcessClassifier
-from sklearn.gaussian_process.kernels import RBF
 from sklearn.neural_network import MLPClassifier
 
 from torchvision import datasets, transforms
@@ -21,6 +19,7 @@ from torch.utils.data import Dataset, DataLoader
 from rac.utils.utils import CustomDataset
 from rac.utils.models.resnet import ResNet18
 from rac.utils.models.vgg import VGG
+from rac.utils.models.simpleNN_net import ThreeLayerNet
 from rac.utils.train_helper import data_train
 from rac.correlation_clustering import max_correlation, fast_max_correlation, max_correlation_dynamic_K, mean_field_clustering
 
@@ -75,7 +74,7 @@ class ActiveLearning:
         self.start_time = time.time()
         self.initialize_al_procedure()
         self.store_experiment_data(initial=True)
-        stopping_criteria = 50*self.N_pt
+        stopping_criteria = 25*self.N_pt
 
         self.ii = 1
         self.num_perfect = 0
@@ -205,30 +204,44 @@ class ActiveLearning:
 
     def update_model(self):
         if self.model_name == "MLP":
+            #self.model = ThreeLayerNet(self.X_train.shape[1], self.n_classes, 100, 100)
             self.model = MLPClassifier(random_state=self._seed, max_iter=500)
             self.model.fit(self.X_train, self.Y_train)
             self.pool_predictions, self.train_predictions = self._predict()
         elif self.model_name == "VGG16":
             self.model = VGG('VGG16')
-            dataset = CustomDataset(self.X_train, self.Y_train, transform=self.transform)
-            test_dataset = CustomDataset(self.X_test, self.Y_test, transform=self.test_transform)
-            pool_dataset = CustomDataset(self.X_pool, self.Y_pool_queried, transform=self.test_transform)
-            args = {'n_epoch':150, 'lr':float(0.01), 'batch_size':20, 'max_accuracy':0.99, 'optimizer':'sgd'} 
-            dt = data_train(dataset, self.model, args)
-            self.model = dt.train()
-            dataset.transform = self.test_transform
-            self.train_predictions = dt.get_predictions(dataset)
-            self.test_predictions = dt.get_predictions(test_dataset)
-            self.pool_predictions = dt.get_predictions(pool_dataset)
-            dataset.transform = self.transform
-            #raise ValueError("VGG16 not implemented yet!")
+            #self.train_predictions = dt.get_predictions(dataset)
+            #self.test_predictions = dt.get_predictions(test_dataset)
+            #self.pool_predictions = dt.get_predictions(pool_dataset)
+            #dataset.transform = self.transform
         else:
             pass
+        #self._predict()
 
     def _predict(self):
-        if self.predictor == "model":
+        if self.predictor == "random":
+            predicted_labels = np.random.choice(self.n_classes, size=self.N_pt)
+            predicted_labels[self.queried_indices] = self.Y_train
+        elif self.predictor == "model":
             predicted_labels = self.model.predict(self.X_pool)
-            #predicted_labels[self.queried_indices] = self.Y_train
+            if self.use_train_pred:
+                predicted_labels[self.queried_indices] = self.Y_train
+            #dataset = CustomDataset(self.X_train, self.Y_train, transform=self.transform)
+            #test_dataset = CustomDataset(self.X_test, self.Y_test, transform=self.test_transform)
+            #pool_dataset = CustomDataset(self.X_pool, self.Y_pool_queried, transform=self.test_transform)
+            #args = {'n_epoch':150, 'lr':float(0.01), 'batch_size':20, 'max_accuracy':0.99, 'optimizer':'sgd'} 
+            #dt = data_train(dataset, self.model, args)
+            #self.model = dt.train()
+            #self.train_predictions, self.pool_predictions = self._predict()
+            ##dataset.transform = self.test_transform
+            #dataset = CustomDataset(self.X_train, self.Y_train, transform=self.transform)
+            #test_dataset = CustomDataset(self.X_test, self.Y_test, transform=self.test_transform)
+            #pool_dataset = CustomDataset(self.X_pool, self.Y_pool_queried, transform=self.test_transform)
+            #predicted_labels = self.model.predict(self.X_pool)
+            #self.train_predictions = dt.get_predictions(dataset)
+            #self.test_predictions = dt.get_predictions(test_dataset)
+            #self.pool_predictions = dt.get_predictions(pool_dataset)
+            #return self.pool_predictions, self.train_predictions
         elif self.predictor == "CC":
             max_indices = np.argmax(self.queried_labels, axis=1)
             prob_all = np.zeros(self.queried_labels.shape)
@@ -240,9 +253,11 @@ class ActiveLearning:
             prob_pool = self.model.predict_proba(self.X_pool)
 
             prob_all[self.unqueried_indices] = prob_pool[self.unqueried_indices]
+            if not self.use_train_pred:
+                prob_all = prob_pool
 
             # Initialize similarity matrix
-            N = len(self.N_pt)
+            N = self.N_pt
             for i in range(N):
                 for j in range(0, i):
                     if self.sim_init == "t1":
@@ -311,8 +326,7 @@ class ActiveLearning:
             # Predict probabilities for X_pool
             prob_pool = self.model.predict_proba(self.X_pool)
 
-            unqueried_indices = np.where(np.sum(self.queried_labels, axis=1) == 0)[0]
-            prob_all[unqueried_indices] = prob_pool[unqueried_indices]
+            prob_all[self.unqueried_indices] = prob_pool[self.unqueried_indices]
 
             N = prob_all.shape[0]
             for i in range(N):

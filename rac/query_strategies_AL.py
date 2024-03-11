@@ -99,14 +99,15 @@ class QueryStrategyAL:
         #I = es.acquire_scores(LabeledToUnlabeledDataset(pool_dataset))
         #@@@@@@@@@@
 
-        #max_indices = np.argmax(self.al.queried_labels, axis=1)
-        #prob_all = np.zeros(self.al.queried_labels.shape)
-        #prob_all[np.arange(len(max_indices)), max_indices] = 1
-        #prob_train = np.zeros((self.al.Y_train.size, self.al.Y.max()+1))
-        #prob_train[np.arange(self.al.Y_train.size), self.al.Y_train] = 1
 
         #Predict probabilities for X_pool
         prob_pool = self.al.model.predict_proba(self.al.X_pool)
+
+        if self.al.use_train_qs:
+            max_indices = np.argmax(self.al.queried_labels, axis=1)
+            prob_all = np.zeros(self.al.queried_labels.shape)
+            prob_all[np.arange(len(max_indices)), max_indices] = 1
+            prob_pool[self.al.queried_indices] = prob_all[self.al.queried_indices]
 
         #prob_all[self.al.unqueried_indices] = prob_pool[self.al.unqueried_indices]
         I = scipy_entropy(prob_pool, axis=1)
@@ -130,7 +131,13 @@ class QueryStrategyAL:
         #prob_pool = prob_pool.cpu().numpy()
 
         prob_pool = self.al.model.predict_proba(self.al.X_pool)
-        prob_all = prob_pool
+        if self.al.use_train_qs:
+            max_indices = np.argmax(self.al.queried_labels, axis=1)
+            prob_all = np.zeros(self.al.queried_labels.shape)
+            prob_all[np.arange(len(max_indices)), max_indices] = 1
+            prob_all[self.al.unqueried_indices] = prob_pool[self.al.unqueried_indices]
+        else:
+            prob_all = prob_pool
 
         #prob_all[self.al.unqueried_indices] = prob_pool[self.al.unqueried_indices]
 
