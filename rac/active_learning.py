@@ -13,14 +13,14 @@ from rac.query_strategies_AL import QueryStrategyAL
 from rac.experiment_data import ExperimentData
 from sklearn.neural_network import MLPClassifier
 
-from torchvision import datasets, transforms
-from torch.utils.data import Dataset, DataLoader
+#from torchvision import datasets, transforms
+#from torch.utils.data import Dataset, DataLoader
 
-from rac.utils.utils import CustomDataset
-from rac.utils.models.resnet import ResNet18
+#from rac.utils.utils import CustomDataset
+#from rac.utils.models.resnet import ResNet18
 from rac.utils.models.vgg import VGG
-from rac.utils.models.simpleNN_net import ThreeLayerNet
-from rac.utils.train_helper import data_train
+#from rac.utils.models.simpleNN_net import ThreeLayerNet
+#from rac.utils.train_helper import data_train
 from rac.correlation_clustering import max_correlation, fast_max_correlation, max_correlation_dynamic_K, mean_field_clustering
 
 from collections import Counter
