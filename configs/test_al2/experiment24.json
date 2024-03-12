@@ -13,7 +13,7 @@
     "acq_fn": "uniform",
     "model_name": "MLP",
     "predictor": "model",
-    "dynamic_K": false,
+    "dynamic_K": true,
     "sim_init": "t2",
     "sim_init_qs": "t2",
     "sample_size": 1,
@@ -29,5 +29,6 @@
     "dataset_n_samples": 2000,
     "dataset_n_clusters": 10,
     "dataset_class_balance": null,
-    "dataset_class_sep": 1
+    "dataset_class_sep": 1,
+    "dataset_y_flip": 0.05
 }
