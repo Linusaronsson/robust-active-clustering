@@ -443,7 +443,7 @@ class ExperimentReader:
                 rest = len(self.Y) - N_pool
                 labels = []
                 for item in ax.get_xticks():
-                    labels.append(round((int(item)*self.batch_size+rest), 2))
+                    labels.append(round((int(item)*self.batch_size+rest)/len(self.Y), 2))
                 ax.set_xticklabels(labels)
 
                 plt.xlabel("Proportion of objects queried")

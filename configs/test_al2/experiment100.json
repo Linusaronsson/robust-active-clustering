@@ -12,7 +12,7 @@
     "warm_start": 0.025,
     "acq_fn": "uniform",
     "model_name": "MLP",
-    "predictor": "random",
+    "predictor": "CC",
     "dynamic_K": true,
     "sim_init": "t1",
     "sim_init_qs": "t1",
