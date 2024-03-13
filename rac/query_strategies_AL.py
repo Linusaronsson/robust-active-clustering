@@ -101,16 +101,7 @@ class QueryStrategyAL:
 
 
         #Predict probabilities for X_pool
-        prob_pool = self.al.model.predict_proba(self.al.X_pool)
-
-        if self.al.use_train_qs:
-            max_indices = np.argmax(self.al.queried_labels, axis=1)
-            prob_all = np.zeros(self.al.queried_labels.shape)
-            prob_all[np.arange(len(max_indices)), max_indices] = 1
-            prob_pool[self.al.queried_indices] = prob_all[self.al.queried_indices]
-
-        #prob_all[self.al.unqueried_indices] = prob_pool[self.al.unqueried_indices]
-        I = scipy_entropy(prob_pool, axis=1)
+        I = scipy_entropy(self.al.probs, axis=1)
         return I
         #return I.cpu()
 
@@ -130,77 +121,22 @@ class QueryStrategyAL:
         #prob_pool = es.predict_prob(LabeledToUnlabeledDataset(pool_dataset))
         #prob_pool = prob_pool.cpu().numpy()
 
-        prob_pool = self.al.model.predict_proba(self.al.X_pool)
-        if self.al.use_train_qs:
-            max_indices = np.argmax(self.al.queried_labels, axis=1)
-            prob_all = np.zeros(self.al.queried_labels.shape)
-            prob_all[np.arange(len(max_indices)), max_indices] = 1
-            prob_all[self.al.unqueried_indices] = prob_pool[self.al.unqueried_indices]
-        else:
-            prob_all = prob_pool
-
         #prob_all[self.al.unqueried_indices] = prob_pool[self.al.unqueried_indices]
 
         print("hello")
-
-        # Initialize similarity matrix
-        N = prob_all.shape[0]
-        S = np.zeros((N, N))
-        print(S.shape)
-
-        #queried_indices_mask = np.zeros(N, dtype=bool)
-        #queried_indices_mask[self.al.queried_indices] = True
-
-        # Case when sim_init == "t1"
-#        if self.al.sim_init == "t1":
-#            queried_matrix = np.outer(queried_indices_mask, queried_indices_mask)
-#            equality_matrix = self.al.Y_pool_queried[:, None] == self.al.Y_pool_queried
-#            # Apply queried_indices_mask to filter out unqueried indices
-#            S = np.where(queried_matrix & equality_matrix, 1, -1)
-#            # Set to 0 where either i or j is not in queried_indices
-#            S = np.where(queried_matrix, S, 0)
-#        else:
-#            # Vectorize the 'else' block calculations
-#            P_S_ij_plus_1 = np.dot(prob_all, prob_all.T)
-#            E_S_ij_plus_1 = P_S_ij_plus_1
-#            E_S_ij_minus_1 = E_S_ij_plus_1 - 1
-#            E_S_ij = P_S_ij_plus_1 * E_S_ij_plus_1 + (1 - P_S_ij_plus_1) * E_S_ij_minus_1
-#            S = E_S_ij
-
-        #Calculate expected similarity
-        for i in range(N):
-            for j in range(0, i):
-                if i != j:
-                    if self.al.sim_init_qs == "t1":
-                        if i in self.al.queried_indices and j in self.al.queried_indices:
-                            S[i, j] = 1 if self.al.Y_pool_queried[i] == self.al.Y_pool_queried[j] else -1
-                            S[j, i] = S[i, j]
-                        else:
-                            S[i, j] = 0
-                            S[j, i] = 0
-                    else:
-                        P_S_ij_plus_1 = np.sum(prob_all[i, :] * prob_all[j, :])
-                        E_S_ij_plus_1 = P_S_ij_plus_1
-                        E_S_ij_minus_1 = E_S_ij_plus_1 - 1
-                        E_S_ij = P_S_ij_plus_1 * E_S_ij_plus_1 + (1 - P_S_ij_plus_1) * E_S_ij_minus_1
-                        S[i, j] = E_S_ij
-                        S[j, i] = S[i, j]
-
-        print("hello2")
         # Ensure diagonal is zero
-        np.fill_diagonal(S, 0)
 
         self.num_clusters = np.unique(self.al.Y_train).size
 
         print("here1")
         if self.al.dynamic_K:
-            self.clustering_solution, _ = max_correlation_dynamic_K(S, self.num_clusters, 5)
+            self.clustering_solution, _ = max_correlation_dynamic_K(self.al.S, self.num_clusters, 5)
         else:
-            self.clustering_solution, _ = max_correlation(S, self.num_clusters, 5)
+            self.clustering_solution, _ = max_correlation(self.al.S, self.num_clusters, 5)
         print("here2")
         self.num_clusters = np.unique(self.clustering_solution).size
         clust_sol, q, h = mean_field_clustering(
-            S=S, K=self.num_clusters, betas=[self.al.mean_field_beta], max_iter=100, tol=1e-10, 
+            S=self.al.S, K=self.num_clusters, betas=[self.al.mean_field_beta], max_iter=100, tol=1e-10, 
             predicted_labels=self.clustering_solution
         )
         print("here3")

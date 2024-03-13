@@ -178,8 +178,6 @@ class ActiveLearning:
         self.queried_labels = np.zeros((self.N_pt, self.n_classes))
         self.queried_labels[self.initial_train_indices, self.Y_train] = 1
 
-        self.wrong_labels = np.zeros((self.N_pt, self.n_classes))
-
         # change this @@@@@@@@@@@@@@@@@@@@@@@@
         self.S = np.zeros((self.N_pt, self.N_pt))
 
@@ -192,16 +190,9 @@ class ActiveLearning:
         for i in self.selected_indices:
             if np.random.rand() < self.noise_level:
                 rand_label = np.random.choice(self.n_classes)
-                if self.pool_predictions[i] == rand_label:
-                    self.queried_labels[i, rand_label] += 1
-                else:
-                    self.wrong_labels[i, self.pool_predictions[i]] += 1
+                self.queried_labels[i, rand_label] += 1
             else:
-                if self.pool_predictions[i] == self.Y_pool[i]:
-                    self.queried_labels[i, self.Y_pool[i]] += 1
-                else:
-                    self.wrong_labels[i, self.pool_predictions[i]] += 1
-
+                self.queried_labels[i, self.Y_pool[i]] += 1
                 
         self.queried_indices = np.where(np.sum(self.queried_labels, axis=1) > 0)[0]
         self.unqueried_indices = np.where(np.sum(self.queried_labels, axis=1) == 0)[0]
@@ -216,10 +207,6 @@ class ActiveLearning:
             #self.model = ThreeLayerNet(self.X_train.shape[1], self.n_classes, 100, 100)
             self.model = MLPClassifier(random_state=self._seed, max_iter=500)
             self.model.fit(self.X_train, self.Y_train)
-            self.probs = self.model.predict_proba(self.X_pool)
-            self.probs = self.renormalize_softmax(self.probs)
-            if self.predictor == "CC" or self.acq_fn == "cc_entropy":
-                self.construct_sims()
             self.pool_predictions, self.train_predictions = self._predict()
         elif self.model_name == "VGG16":
             self.model = VGG('VGG16')
@@ -231,50 +218,66 @@ class ActiveLearning:
             pass
         #self._predict()
 
-    def construct_sims(self):
-        # Initialize similarity matrix
-        N = self.N_pt
-        for i in range(N):
-            for j in range(0, i):
-                    P_S_ij_plus_1 = np.sum(self.probs[i, :] * self.probs[j, :])
-                    E_S_ij_plus_1 = P_S_ij_plus_1
-                    E_S_ij_minus_1 = E_S_ij_plus_1 - 1
-                    E_S_ij = P_S_ij_plus_1 * E_S_ij_plus_1 + (1 - P_S_ij_plus_1) * E_S_ij_minus_1
-                    self.S[i, j] = E_S_ij
-                    self.S[j, i] = self.S[i, j]
-
-        # Ensure diagonal is zero
-        np.fill_diagonal(self.S, 0)
-
-    def renormalize_softmax(self, prob):
-        # Ensure the inputs are numpy arrays
-        N_pt, n_classes = prob.shape
-        
-        for i in range(N_pt):
-            if np.sum(self.queried_labels[i, :]) > 0:
-                # Normalize queried_labels into a new probability distribution
-                new_prob = self.queried_labels[i, :] / np.sum(self.queried_labels[i, :])
-                prob[i, :] = new_prob
-            elif np.sum(self.wrong_labels[i, :]) > 0:
-                # Decrease probability of wrong labels
-                mask = self.wrong_labels[i, :] > 0
-                total_wrong_prob = np.sum(prob[i, mask])
-                prob[i, mask] = 0  # Set wrong label probabilities to 0
-                        
-                # Redistribute the total wrong probability to the remaining labels
-                remaining_indices = ~mask
-                if np.sum(prob[i, remaining_indices]) > 0:  # To avoid division by zero
-                    # Normalize the remaining probabilities so they sum to 1
-                    prob[i, remaining_indices] = prob[i, remaining_indices] / np.sum(prob[i, remaining_indices])
-        return prob
-
     def _predict(self):
         if self.predictor == "random":
             predicted_labels = np.random.choice(self.n_classes, size=self.N_pt)
             predicted_labels[self.queried_indices] = self.Y_train
         elif self.predictor == "model":
-            predicted_labels = np.argmax(self.probs, axis=1)
+            predicted_labels = self.model.predict(self.X_pool)
+            if self.use_train_pred:
+                predicted_labels[self.queried_indices] = self.Y_train
+            #dataset = CustomDataset(self.X_train, self.Y_train, transform=self.transform)
+            #test_dataset = CustomDataset(self.X_test, self.Y_test, transform=self.test_transform)
+            #pool_dataset = CustomDataset(self.X_pool, self.Y_pool_queried, transform=self.test_transform)
+            #args = {'n_epoch':150, 'lr':float(0.01), 'batch_size':20, 'max_accuracy':0.99, 'optimizer':'sgd'} 
+            #dt = data_train(dataset, self.model, args)
+            #self.model = dt.train()
+            #self.train_predictions, self.pool_predictions = self._predict()
+            ##dataset.transform = self.test_transform
+            #dataset = CustomDataset(self.X_train, self.Y_train, transform=self.transform)
+            #test_dataset = CustomDataset(self.X_test, self.Y_test, transform=self.test_transform)
+            #pool_dataset = CustomDataset(self.X_pool, self.Y_pool_queried, transform=self.test_transform)
+            #predicted_labels = self.model.predict(self.X_pool)
+            #self.train_predictions = dt.get_predictions(dataset)
+            #self.test_predictions = dt.get_predictions(test_dataset)
+            #self.pool_predictions = dt.get_predictions(pool_dataset)
+            #return self.pool_predictions, self.train_predictions
         elif self.predictor == "CC":
+            max_indices = np.argmax(self.queried_labels, axis=1)
+            prob_all = np.zeros(self.queried_labels.shape)
+            prob_all[np.arange(len(max_indices)), max_indices] = 1
+            #prob_train = np.zeros((self.al.Y_train.size, self.al.Y.max()+1))
+            #prob_train[np.arange(self.al.Y_train.size), self.al.Y_train] = 1
+
+            # Predict probabilities for X_pool
+            prob_pool = self.model.predict_proba(self.X_pool)
+
+            prob_all[self.unqueried_indices] = prob_pool[self.unqueried_indices]
+            if not self.use_train_pred:
+                prob_all = prob_pool
+
+            # Initialize similarity matrix
+            N = self.N_pt
+            for i in range(N):
+                for j in range(0, i):
+                    if self.sim_init == "t1":
+                        if i in self.queried_indices and j in self.queried_indices:
+                            self.S[i, j] = 1 if self.Y_pool_queried[i] == self.Y_pool_queried[j] else -1
+                            self.S[j, i] = self.S[i, j]
+                        else:
+                            self.S[i, j] = 0
+                            self.S[j, i] = 0
+                    else:
+                        P_S_ij_plus_1 = np.sum(prob_all[i, :] * prob_all[j, :])
+                        E_S_ij_plus_1 = P_S_ij_plus_1
+                        E_S_ij_minus_1 = E_S_ij_plus_1 - 1
+                        E_S_ij = P_S_ij_plus_1 * E_S_ij_plus_1 + (1 - P_S_ij_plus_1) * E_S_ij_minus_1
+                        self.S[i, j] = E_S_ij
+                        self.S[j, i] = self.S[i, j]
+
+            # Ensure diagonal is zero
+            np.fill_diagonal(self.S, 0)
+
             self.clustering_solution, _ = max_correlation(self.S, self.n_classes, 5)
             #clust_sol, q, h = mean_field_clustering(
             #    S=self.S, K=self.n_classes, betas=[self.mean_field_beta], max_iter=150, tol=1e-10, 
@@ -313,8 +316,72 @@ class ActiveLearning:
                         if class_similarities:
                             predicted_labels[i] = max(class_similarities, key=class_similarities.get)
                         # Optional: Handle the case with no reference labeled points in a special manner, e.g., assign a default label
+        elif self.predictor == "CC2":
+            max_indices = np.argmax(self.queried_labels, axis=1)
+            prob_all = np.zeros(self.queried_labels.shape)
+            prob_all[np.arange(len(max_indices)), max_indices] = 1
+            #prob_train = np.zeros((self.al.Y_train.size, self.al.Y.max()+1))
+            #prob_train[np.arange(self.al.Y_train.size), self.al.Y_train] = 1
 
+            # Predict probabilities for X_pool
+            prob_pool = self.model.predict_proba(self.X_pool)
 
+            prob_all[self.unqueried_indices] = prob_pool[self.unqueried_indices]
+
+            N = prob_all.shape[0]
+            for i in range(N):
+                for j in range(0, i):
+                    if i != j:
+                        if self.sim_init == "t1":
+                            if i in self.queried_indices and j in self.queried_indices:
+                                self.S[i, j] = 1 if self.Y_pool_queried[i] == self.Y_pool_queried[j] else -1
+                                self.S[j, i] = self.S[i, j]
+                            else:
+                                self.S[i, j] = 0
+                                self.S[j, i] = 0
+                        else:
+                            P_S_ij_plus_1 = np.sum(prob_all[i, :] * prob_all[j, :])
+                            E_S_ij_plus_1 = P_S_ij_plus_1
+                            E_S_ij_minus_1 = E_S_ij_plus_1 - 1
+                            E_S_ij = P_S_ij_plus_1 * E_S_ij_plus_1 + (1 - P_S_ij_plus_1) * E_S_ij_minus_1
+                            self.S[i, j] = E_S_ij
+                            self.S[j, i] = self.S[i, j]
+
+            # Ensure diagonal is zero
+            np.fill_diagonal(self.S, 0)
+
+            self.clustering_solution, _ = max_correlation(self.S, self.n_classes, 5)
+            clust_sol, q, h = mean_field_clustering(
+                S=self.S, K=self.n_classes, betas=[self.mean_field_beta], max_iter=150, tol=1e-10, 
+                predicted_labels=self.clustering_solution
+            )
+
+            # Ensure diagonal is zero
+            np.fill_diagonal(self.S, 0)
+            predicted_labels = np.array([None]*len(self.Y_pool))
+            # Initialize predicted labels for labeled points
+            predicted_labels[self.queried_indices] = self.Y_train
+            
+            # Map each class to its labeled indices
+            class_to_indices = defaultdict(list)
+            for index in self.queried_indices:
+                class_to_indices[self.Y_pool_queried[index]].append(index)
+
+            for i in range(len(self.Y_pool)):
+                if predicted_labels[i] is None:  # If unlabeled
+                    # Compute total similarity to all labeled objects of each class
+                    class_similarities = {}
+                    for class_label, indices in class_to_indices.items():
+                        # Sum of similarities between i and all labeled objects of class_label
+                        class_similarities[class_label] = self.S[i, indices].sum()
+
+                    # Assign the class with the highest total similarity
+                    if class_similarities:  # Check if we have any class similarities computed
+                        predicted_labels[i] = max(class_similarities, key=class_similarities.get)
+                    else:
+                        raise ValueError("No class similarities computed for data point {}!")
+                        # Handle the case where there might be no labeled data at all to compare with
+                        # This could be set to a default value or handled in another specific way
         pool_predictions = predicted_labels.astype(np.int32)
         train_predictions = predicted_labels[self.queried_indices].astype(np.int32)
         return pool_predictions, train_predictions
