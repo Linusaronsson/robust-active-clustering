@@ -393,7 +393,7 @@ class ExperimentReader:
                 else:
                     raise ValueError("incorrect dataset!")
 
-                cut_threshold = 60
+                cut_threshold = 100
                 df_filtered = df_filtered[df_filtered[vary[0]] < cut_threshold]
 
                 metric_map = {
@@ -431,7 +431,7 @@ class ExperimentReader:
                 #plt.setp(ax.lines, alpha=0.7)  # Adjusts the transparency of the markers
                 plt.setp(ax.lines, markeredgewidth=0.5)  # Adjusts the transparency of the markers
                 #plt.setp(ax.lines, markersize=7)  # Adjusts the transparency of the markers
-                plt.setp(ax.lines, markersize=10)  # Adjusts the transparency of the markers
+                plt.setp(ax.lines, markersize=0)  # Adjusts the transparency of the markers
                 plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
 
 
@@ -448,7 +448,8 @@ class ExperimentReader:
 
                 plt.xlabel("Proportion of objects queried")
                 #ax.legend(loc='lower right')
-                ax.legend(loc='best')
+                ax.legend(loc='upper left', bbox_to_anchor=(1,1))
+                plt.subplots_adjust(right=0.75)
 
                 #legs = ax.get_legend().get_texts()
                 #fix_legends = True
@@ -486,7 +487,8 @@ class ExperimentReader:
                 #if self.dataset != "20newsgroups":
                     #ax.get_legend().set_visible(False)
 
-                plt.savefig(file_path, bbox_extra_artists=(legend,), dpi=150, bbox_inches='tight')
+                plt.savefig(file_path, dpi=150, bbox_inches='tight')
+                #plt.savefig(file_path, bbox_extra_artists=(legend,), dpi=150, bbox_inches='tight')
                 #plt.savefig(file_path, dpi=200, bbox_inches='tight')
                 plt.clf()
     

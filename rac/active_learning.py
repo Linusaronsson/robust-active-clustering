@@ -26,6 +26,7 @@ from rac.correlation_clustering import max_correlation, fast_max_correlation, ma
 from collections import Counter
 from collections import defaultdict
 
+from scipy.stats import entropy as scipy_entropy
 from scipy import sparse
 
 #import warnings
@@ -74,7 +75,7 @@ class ActiveLearning:
         self.start_time = time.time()
         self.initialize_al_procedure()
         self.store_experiment_data(initial=True)
-        stopping_criteria = 25*self.N_pt
+        stopping_criteria = 50*self.N_pt
 
         self.ii = 1
         self.num_perfect = 0
@@ -189,18 +190,21 @@ class ActiveLearning:
         self.update_model()
     
     def update_indices(self):
+        classes = np.unique(self.Y_pool)
         for i in self.selected_indices:
             if np.random.rand() < self.noise_level:
-                rand_label = np.random.choice(self.n_classes)
-                if self.pool_predictions[i] == rand_label:
-                    self.queried_labels[i, rand_label] += 1
-                else:
-                    self.wrong_labels[i, self.pool_predictions[i]] += 1
+                true_label = np.random.choice(self.n_classes)
             else:
-                if self.pool_predictions[i] == self.Y_pool[i]:
-                    self.queried_labels[i, self.Y_pool[i]] += 1
-                else:
-                    self.wrong_labels[i, self.pool_predictions[i]] += 1
+                true_label = self.Y_pool[i]
+
+            if self.pool_predictions[i] == true_label:
+                self.queried_labels[i, true_label] += 1
+                remaining_classes = np.setdiff1d(classes, true_label)
+                self.wrong_labels[i, remaining_classes] += 1
+            else:
+                self.wrong_labels[i, self.pool_predictions[i]] += 1
+        
+        
 
                 
         self.queried_indices = np.where(np.sum(self.queried_labels, axis=1) > 0)[0]
@@ -217,7 +221,13 @@ class ActiveLearning:
             self.model = MLPClassifier(random_state=self._seed, max_iter=500)
             self.model.fit(self.X_train, self.Y_train)
             self.probs = self.model.predict_proba(self.X_pool)
+            #print(scipy_entropy(self.probs[:50,:], axis=1))
             self.probs = self.renormalize_softmax(self.probs)
+            #print(self.queried_labels[:50,:])
+            #print(self.wrong_labels[:50,:])
+            #print(scipy_entropy(self.probs[:50,:], axis=1))
+            #print(np.max(self.queried_labels))
+            #print(np.max(self.wrong_labels))
             if self.predictor == "CC" or self.acq_fn == "cc_entropy":
                 self.construct_sims()
             self.pool_predictions, self.train_predictions = self._predict()
@@ -247,27 +257,27 @@ class ActiveLearning:
         np.fill_diagonal(self.S, 0)
 
     def renormalize_softmax(self, prob):
-        # Ensure the inputs are numpy arrays
         N_pt, n_classes = prob.shape
+        adjusted_prob = np.copy(prob).astype(float)
         
         for i in range(N_pt):
-            if np.sum(self.queried_labels[i, :]) > 0:
-                # Normalize queried_labels into a new probability distribution
-                new_prob = self.queried_labels[i, :] / np.sum(self.queried_labels[i, :])
-                prob[i, :] = new_prob
-            elif np.sum(self.wrong_labels[i, :]) > 0:
-                # Decrease probability of wrong labels
-                mask = self.wrong_labels[i, :] > 0
-                total_wrong_prob = np.sum(prob[i, mask])
-                prob[i, mask] = 0  # Set wrong label probabilities to 0
-                        
-                # Redistribute the total wrong probability to the remaining labels
-                remaining_indices = ~mask
-                if np.sum(prob[i, remaining_indices]) > 0:  # To avoid division by zero
-                    # Normalize the remaining probabilities so they sum to 1
-                    prob[i, remaining_indices] = prob[i, remaining_indices] / np.sum(prob[i, remaining_indices])
-        return prob
-
+            for j in range(n_classes):
+                if self.queried_labels[i, j] > 0 and self.wrong_labels[i, j] > 0:
+                    # Handle conflict by considering the proportion between queried and wrong labels
+                    proportion = self.queried_labels[i, j] / self.wrong_labels[i, j]
+                    adjusted_prob[i, j] *= proportion
+                elif self.queried_labels[i, j] > 0:
+                    # If only queried labels are present, boost the probability
+                    adjusted_prob[i, j] *= (30 + self.queried_labels[i, j])
+                elif self.wrong_labels[i, j] > 0:
+                    # If only wrong labels are present, reduce the probability
+                    adjusted_prob[i, j] *= (1 / (30 + self.wrong_labels[i, j]))
+            
+            # Normalize to ensure the probabilities sum to 1
+            adjusted_prob[i, :] /= np.sum(adjusted_prob[i, :])
+        
+        return adjusted_prob
+                
     def _predict(self):
         if self.predictor == "random":
             predicted_labels = np.random.choice(self.n_classes, size=self.N_pt)
@@ -281,16 +291,16 @@ class ActiveLearning:
             #    predicted_labels=self.clustering_solution
             #)
 
-            predicted_labels = np.array([None]*len(self.Y_pool))  # Initialize all predictions as None
-            predicted_labels[self.queried_indices] = np.copy(self.Y_train)
+            predicted_labels = np.zeros(self.N_pt)  # Initialize all predictions as None
+            #predicted_labels[self.queried_indices] = np.copy(self.Y_train)
 
             cluster_labels = {}
             for cluster in np.unique(self.clustering_solution):
                 indices_in_cluster = np.where(self.clustering_solution == cluster)[0]
-                labeled_indices_in_cluster = np.intersect1d(indices_in_cluster, self.queried_indices)
+                #labeled_indices_in_cluster = np.intersect1d(indices_in_cluster, self.queried_indices)
                 
-                if labeled_indices_in_cluster.size > 0:
-                    labels_in_cluster = self.Y_pool_queried[labeled_indices_in_cluster]
+                if indices_in_cluster.size > 0:
+                    labels_in_cluster = self.Y_pool_queried[indices_in_cluster]
                     most_common_label, _ = Counter(labels_in_cluster).most_common(1)[0]
                     cluster_labels[cluster] = most_common_label
                 else:
