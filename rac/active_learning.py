@@ -285,7 +285,7 @@ class ActiveLearning:
         elif self.predictor == "model":
             predicted_labels = np.argmax(self.probs, axis=1)
         elif self.predictor == "CC":
-            self.clustering_solution, _ = max_correlation(self.S, self.n_classes, 5)
+            self.clustering_solution, _ = fast_max_correlation(self.S, self.n_classes, 5)
             #clust_sol, q, h = mean_field_clustering(
             #    S=self.S, K=self.n_classes, betas=[self.mean_field_beta], max_iter=150, tol=1e-10, 
             #    predicted_labels=self.clustering_solution
@@ -308,21 +308,20 @@ class ActiveLearning:
 
             # For each unlabeled data point, either use the cluster's common label or compute similarity
             for i, label in enumerate(predicted_labels):
-                if label is None:  # Unlabeled data point
-                    cluster = self.clustering_solution[i]
-                    if cluster_labels[cluster] is not None:
-                        # Use the most common label if the cluster has labeled data
-                        predicted_labels[i] = cluster_labels[cluster]
-                    else:
-                        # Compute summed similarity for each class and assign the class with the highest summed similarity
-                        class_similarities = defaultdict(float)
-                        for idx in self.queried_indices:
-                            class_similarities[self.Y_pool_queried[idx]] += self.S[i, idx]
-                        
-                        # Assign the class with the highest total similarity if there are any labeled points to compare with
-                        if class_similarities:
-                            predicted_labels[i] = max(class_similarities, key=class_similarities.get)
-                        # Optional: Handle the case with no reference labeled points in a special manner, e.g., assign a default label
+                cluster = self.clustering_solution[i]
+                if cluster_labels[cluster] is not None:
+                    # Use the most common label if the cluster has labeled data
+                    predicted_labels[i] = cluster_labels[cluster]
+                else:
+                    # Compute summed similarity for each class and assign the class with the highest summed similarity
+                    class_similarities = defaultdict(float)
+                    for idx in self.queried_indices:
+                        class_similarities[self.Y_pool_queried[idx]] += self.S[i, idx]
+                    
+                    # Assign the class with the highest total similarity if there are any labeled points to compare with
+                    if class_similarities:
+                        predicted_labels[i] = max(class_similarities, key=class_similarities.get)
+                    # Optional: Handle the case with no reference labeled points in a special manner, e.g., assign a default label
 
 
         pool_predictions = predicted_labels.astype(np.int32)

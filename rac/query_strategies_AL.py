@@ -238,7 +238,7 @@ class QueryStrategyAL:
         if self.al.dynamic_K:
             self.clustering_solution, _ = max_correlation_dynamic_K(S, self.num_clusters, 5)
         else:
-            self.clustering_solution, _ = max_correlation(S, self.num_clusters, 5)
+            self.clustering_solution, _ = fast_max_correlation(S, self.num_clusters, 5)
         self.num_clusters = np.unique(self.clustering_solution).size
         clust_sol, q, h = mean_field_clustering(
             S=S, K=self.num_clusters, betas=[self.al.mean_field_beta], max_iter=100, tol=1e-10, 
