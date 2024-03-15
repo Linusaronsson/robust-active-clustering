@@ -21,7 +21,8 @@ class QueryStrategyAL:
 
     def select_batch(self, acq_fn, batch_size):
         if acq_fn == "uniform":
-            self.info_matrix = -np.sum(self.al.queried_labels, axis=1) 
+            #self.info_matrix = -np.sum(self.al.queried_labels, axis=1) 
+            self.info_matrix = np.random.rand(self.al.N_pt)
         elif acq_fn == "entropy":
             self.info_matrix = self.compute_entropy()
         elif acq_fn == "cc_entropy":
@@ -57,7 +58,7 @@ class QueryStrategyAL:
         else:
             raise ValueError("Invalid acquisition function: {}".format(acq_fn))
 
-        if not self.al.allow_requery:
+        if not self.al.allow_requery and acq_fn != "uniform":
             self.info_matrix += 1000*(-np.sum(self.al.queried_labels, axis=1))
         return self.select_objects(batch_size, self.info_matrix, acq_noise=self.al.acq_noise)
 

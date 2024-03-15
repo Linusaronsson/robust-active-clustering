@@ -75,7 +75,7 @@ class ActiveLearning:
         self.start_time = time.time()
         self.initialize_al_procedure()
         self.store_experiment_data(initial=True)
-        stopping_criteria = 50*self.N_pt
+        stopping_criteria = 25*self.N_pt
 
         self.ii = 1
         self.num_perfect = 0
@@ -297,10 +297,10 @@ class ActiveLearning:
             cluster_labels = {}
             for cluster in np.unique(self.clustering_solution):
                 indices_in_cluster = np.where(self.clustering_solution == cluster)[0]
-                #labeled_indices_in_cluster = np.intersect1d(indices_in_cluster, self.queried_indices)
+                labeled_indices_in_cluster = np.intersect1d(indices_in_cluster, self.queried_indices)
                 
                 if indices_in_cluster.size > 0:
-                    labels_in_cluster = self.Y_pool_queried[indices_in_cluster]
+                    labels_in_cluster = self.Y_pool_queried[labeled_indices_in_cluster]
                     most_common_label, _ = Counter(labels_in_cluster).most_common(1)[0]
                     cluster_labels[cluster] = most_common_label
                 else:
