@@ -220,9 +220,9 @@ class ActiveLearning:
             #self.model = ThreeLayerNet(self.X_train.shape[1], self.n_classes, 100, 100)
             self.model = MLPClassifier(random_state=self._seed, max_iter=500)
             self.model.fit(self.X_train, self.Y_train)
-            self.probs = self.model.predict_proba(self.X_pool)
+            self.probs_pred = self.model.predict_proba(self.X_pool)
             #print(scipy_entropy(self.probs[:50,:], axis=1))
-            self.probs = self.renormalize_softmax(self.probs)
+            self.probs = self.renormalize_softmax(self.probs_pred)
             #print(self.queried_labels[:50,:])
             #print(self.wrong_labels[:50,:])
             #print(scipy_entropy(self.probs[:50,:], axis=1))
@@ -284,6 +284,8 @@ class ActiveLearning:
             predicted_labels[self.queried_indices] = self.Y_train
         elif self.predictor == "model":
             predicted_labels = np.argmax(self.probs, axis=1)
+        elif self.predictor == "model2":
+            predicted_labels = np.argmax(self.probs_pred, axis=1)
         elif self.predictor == "CC":
             self.clustering_solution, _ = fast_max_correlation(self.S, self.n_classes, 5)
             #clust_sol, q, h = mean_field_clustering(
