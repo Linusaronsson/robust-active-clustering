@@ -16,7 +16,7 @@ from torch.utils.data import Dataset, DataLoader
 
 import itertools
 from rac.active_clustering import ActiveClustering
-from rac.active_learning import ActiveLearning
+from rac.active_learning_old import ActiveLearning
 from pathlib import Path
 
 def get_dataset(**options):
