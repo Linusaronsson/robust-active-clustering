@@ -384,6 +384,8 @@ class ExperimentReader:
                     cut_threshold = 10
                 elif self.dataset == "mnist":
                     cut_threshold = 12
+                elif self.dataset == "mnist_original":
+                    cut_threshold = 10000
                 elif self.dataset == "mushrooms":
                     cut_threshold = 4
                 elif self.dataset == "user_knowledge":
@@ -393,8 +395,8 @@ class ExperimentReader:
                 else:
                     raise ValueError("incorrect dataset!")
 
-                #cut_threshold = 300
-                #df_filtered = df_filtered[df_filtered[vary[0]] < cut_threshold]
+                cut_threshold = 22
+                df_filtered = df_filtered[df_filtered[vary[0]] < cut_threshold]
 
                 metric_map = {
                     "ami": "AMI", "rand": "ARI", "time": "Time (s)", "num_violations": "Num. violations",

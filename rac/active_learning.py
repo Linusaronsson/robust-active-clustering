@@ -136,9 +136,7 @@ class ActiveLearning:
         return self.ac_data
 
     def store_experiment_data(self, initial=False):
-        y_pool_unqueried = self.Y_pool[self.unqueried_indices]
-        if len(y_pool_unqueried) > 0:
-            self.ac_data.pool_accuracy.append(accuracy_score(self.Y_pool[self.unqueried_indices], self.pool_predictions))
+        self.ac_data.pool_accuracy.append(accuracy_score(self.Y_pool, self.pool_predictions))
         self.ac_data.accuracy.append(accuracy_score(self.Y_test, self.test_predictions))
         self.ac_data.train_accuracy.append(accuracy_score(self.Y_pool[self.queried_indices], self.train_predictions))
 
@@ -198,7 +196,7 @@ class ActiveLearning:
     
     
     def get_pred(self, i):
-        probs_sorted = -np.argsort(self.probs[i])[::-1]
+        probs_sorted = np.argsort(-self.probs[i])
         for p_arg in probs_sorted:
             if self.wrong_labels[i, p_arg] == 0:
                 return p_arg
@@ -315,7 +313,7 @@ class ActiveLearning:
     def _predict(self):
         if self.predictor == "model":
             predicted_labels = np.argmax(self.probs, axis=1)
-            pool_predictions = predicted_labels[self.unqueried_indices].astype(np.int32)
+            pool_predictions = predicted_labels.astype(np.int32)
             train_predictions = predicted_labels[self.queried_indices].astype(np.int32)
             test_predictions = np.argmax(self.probs_test, axis=1).astype(np.int32)
             return pool_predictions, train_predictions, test_predictions
@@ -358,7 +356,7 @@ class ActiveLearning:
                         predicted_labels[i] = max(class_similarities, key=class_similarities.get)
                     # Optional: Handle the case with no reference labeled points in a special manner, e.g., assign a default label
 
-            pool_predictions = predicted_labels[self.unqueried_indices].astype(np.int32)
+            pool_predictions = predicted_labels.astype(np.int32)
             train_predictions = predicted_labels[self.queried_indices].astype(np.int32)
             test_predictions = predicted_labels[self.N_pt:].astype(np.int32)
             return pool_predictions, train_predictions, test_predictions
