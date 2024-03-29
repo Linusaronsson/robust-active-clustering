@@ -10,7 +10,7 @@
     "batch_size": 25,
     "noise_level": 0.0,
     "warm_start": 0.05,
-    "acq_fn": "cc_entropy",
+    "acq_fn": "badge",
     "model_name": "resnet",
     "predictor": "model",
     "dynamic_K": false,

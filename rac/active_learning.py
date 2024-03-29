@@ -136,7 +136,9 @@ class ActiveLearning:
         return self.ac_data
 
     def store_experiment_data(self, initial=False):
-        self.ac_data.pool_accuracy.append(accuracy_score(self.Y_pool[self.unqueried_indices], self.pool_predictions))
+        y_pool_unqueried = self.Y_pool[self.unqueried_indices]
+        if len(y_pool_unqueried) > 0:
+            self.ac_data.pool_accuracy.append(accuracy_score(self.Y_pool[self.unqueried_indices], self.pool_predictions))
         self.ac_data.accuracy.append(accuracy_score(self.Y_test, self.test_predictions))
         self.ac_data.train_accuracy.append(accuracy_score(self.Y_pool[self.queried_indices], self.train_predictions))
 
