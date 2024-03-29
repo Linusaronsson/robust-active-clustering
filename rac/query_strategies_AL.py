@@ -7,7 +7,7 @@ from scipy import sparse
 
 from rac.correlation_clustering import mean_field_clustering
 from rac.correlation_clustering import max_correlation, fast_max_correlation, max_correlation_dynamic_K, mean_field_clustering
-from rac.active_learning_strategies import BADGE, EntropySampling, CoreSet, BALDDropout, EntropySamplingDropout
+from rac.active_learning_strategies import BADGE, EntropySampling, CoreSet, BALDDropout, EntropySamplingDropout, MarginSampling
 from rac.utils.utils import LabeledToUnlabeledDataset, CustomDataset
 
 import torch
@@ -25,6 +25,8 @@ class QueryStrategyAL:
             self.info_matrix = np.random.rand(self.al.N_pt)
         elif acq_fn == "entropy":
             self.info_matrix = self.compute_entropy()
+        elif acq_fn == "margin":
+            self.info_matrix = self.compute_margin()
         elif acq_fn == "cc_entropy":
             self.info_matrix = self.compute_cc_entropy()
         elif acq_fn == "entropy_mc":
@@ -48,18 +50,29 @@ class QueryStrategyAL:
             #Y_pool_no_train = self.Y_pool_queried[self.al.unqueried_indices]
             #pool_dataset = CustomDataset(X_pool_no_train, Y_pool_no_train, transform=self.test_transform)
             #train_dataset = CustomDataset(self.X_train, self.Y_train, transform=self.test_transform)
-            X_pool_no_train = self.al.X_pool[self.al.unqueried_indices]
-            Y_pool_no_train = self.al.Y_pool_queried[self.al.unqueried_indices]
+
+            if self.al.allow_requery:
+                X_pool_no_train = self.al.X_pool
+                Y_pool_no_train = self.al.Y_pool_queried
+            else:
+                X_pool_no_train = self.al.X_pool[self.al.unqueried_indices]
+                Y_pool_no_train = self.al.Y_pool_queried[self.al.unqueried_indices]
+
             pool_dataset = CustomDataset(X_pool_no_train, Y_pool_no_train, transform=self.al.test_transform)
             train_dataset = CustomDataset(self.al.X_train, self.al.Y_train, transform=self.al.test_transform)
             es = BADGE(train_dataset, LabeledToUnlabeledDataset(pool_dataset), self.al.model, self.al.n_classes)
             idxs = es.select(batch_size)
-            return self.al.unqueried_indices[idxs]
+
+            if self.al.allow_requery:
+                return idxs
+            else:
+                return self.al.unqueried_indices[idxs]
         else:
             raise ValueError("Invalid acquisition function: {}".format(acq_fn))
 
-        if not self.al.allow_requery and acq_fn != "uniform":
-            self.info_matrix += 1000*(-np.sum(self.al.queried_labels, axis=1))
+        if (not self.al.allow_requery) or acq_fn == "uniform":
+            max_acq = np.max(self.info_matrix) + 1
+            self.info_matrix += max_acq*(-np.sum(self.al.queried_labels, axis=1))
         return self.select_objects(batch_size, self.info_matrix, acq_noise=self.al.acq_noise)
 
     def select_objects(self, batch_size, I, acq_noise=False):
@@ -104,6 +117,19 @@ class QueryStrategyAL:
         return I
         #return I.cpu()
 
+    def compute_margin(self):
+        #dataset = CustomDataset(self.X_train, self.Y_train, transform=self.transform)
+        #test_dataset = CustomDataset(self.X_test, self.Y_test, transform=self.test_transform)
+
+        #@@@@@@@@@
+        #pool_dataset = CustomDataset(self.al.X_pool, self.al.Y_pool_queried, transform=self.al.test_transform)
+        #es = MarginSampling(pool_dataset, LabeledToUnlabeledDataset(pool_dataset), self.al.model, self.al.n_classes)
+        #I = es.acquire_scores(LabeledToUnlabeledDataset(pool_dataset))
+        #@@@@@@@@@@
+        probs_sorted = -np.sort(-self.al.probs)
+        I = probs_sorted[:,1] - probs_sorted[:, 0] # Margin negated => Largest score corresponds to smallest margin
+        return I
+
     def compute_cc_entropy(self):
         print("SELECTING")
         # Probabilities for X_train (one-hot encode Y_train)
@@ -129,9 +155,9 @@ class QueryStrategyAL:
 
         print("here1")
         if self.al.dynamic_K:
-            self.clustering_solution, _ = max_correlation_dynamic_K(self.al.S, self.num_clusters, 5)
+            self.clustering_solution, _ = max_correlation_dynamic_K(self.al.S, self.num_clusters, 3)
         else:
-            self.clustering_solution, _ = max_correlation(self.al.S, self.num_clusters, 5)
+            self.clustering_solution, _ = fast_max_correlation(self.al.S, self.num_clusters, 3)
         print("here2")
         self.num_clusters = np.unique(self.clustering_solution).size
         clust_sol, q, h = mean_field_clustering(
@@ -172,7 +198,22 @@ class QueryStrategyAL:
         #plt.savefig(file_path)
 
         I = scipy_entropy(q, axis=1) 
-        return I
+        return I[:self.al.N_pt]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     
     def compute_entropy_mc(self):
         pool_dataset = CustomDataset(self.al.X_pool, self.al.Y_pool_queried, transform=self.al.test_transform)
@@ -215,20 +256,12 @@ class QueryStrategyAL:
         for i in range(N):
             for j in range(N):
                 if i != j:
-                    if self.al.sim_init == "t1":
-                        if i in self.al.queried_indices and j in self.al.queried_indices:
-                            S[i, j] = 1 if self.al.Y_pool_queried[i] == self.al.Y_pool_queried[j] else -1
-                            S[j, i] = S[i, j]
-                        else:
-                            S[i, j] = 0
-                            S[j, i] = 0
-                    else:
-                        P_S_ij_plus_1 = np.sum(prob_all[i, :] * prob_all[j, :])
-                        E_S_ij_plus_1 = P_S_ij_plus_1
-                        E_S_ij_minus_1 = E_S_ij_plus_1 - 1
-                        E_S_ij = P_S_ij_plus_1 * E_S_ij_plus_1 + (1 - P_S_ij_plus_1) * E_S_ij_minus_1
-                        S[i, j] = E_S_ij
-                        S[j, i] = S[i, j]
+                    P_S_ij_plus_1 = np.sum(prob_all[i, :] * prob_all[j, :])
+                    E_S_ij_plus_1 = P_S_ij_plus_1
+                    E_S_ij_minus_1 = E_S_ij_plus_1 - 1
+                    E_S_ij = P_S_ij_plus_1 * E_S_ij_plus_1 + (1 - P_S_ij_plus_1) * E_S_ij_minus_1
+                    S[i, j] = E_S_ij
+                    S[j, i] = S[i, j]
 
         # Ensure diagonal is zero
         np.fill_diagonal(S, 0)
@@ -244,38 +277,6 @@ class QueryStrategyAL:
             S=S, K=self.num_clusters, betas=[self.al.mean_field_beta], max_iter=100, tol=1e-10, 
             predicted_labels=self.clustering_solution
         )
-
-        #print("HERE: ", self.num_clusters)
-        #print(np.max(self.al.Y))
-        #print(q.shape)
-
-        #p = prob_pool
-        ## Calculate entropy for each data point in p and q
-        #entropy_p = scipy_entropy(p, axis=1)
-        #entropy_q = scipy_entropy(q, axis=1)
-
-        ## Rank data points by entropy
-        #rank_p = np.argsort(entropy_p)
-        ##rank_q = np.argsort(entropy_q)
-        #N_large = len(rank_p)
-        ## Visualization for large number of data points
-        ## Adjust visualization for large number of data points to display a subset of data point numbers on the x-axis
-        #plt.figure(figsize=(12, 7))
-        #plt.plot(entropy_p[rank_p], label='Entropy of p', marker='', linestyle='-', linewidth=1)
-        #plt.plot(entropy_q[rank_p], label='Entropy of q', marker='', linestyle='-', linewidth=1)
-        #plt.title("Iteration " + str(self.al.ii))
-        #plt.xlabel('Data Point')
-        #plt.ylabel('Entropy')
-        #plt.legend()
-        #plt.grid(True)
-
-        ## Choose a subset of data point numbers for the x-axis
-        #x_ticks = np.arange(0, N_large, N_large // 10)  # Display every 10th of the total number of data points
-        #plt.xticks(x_ticks)
-
-        #file_path = "plots/entropy_comparison + " + str(self.al.ii) + ".png"
-        #plt.savefig(file_path)
-
         I = scipy_entropy(q, axis=1) 
         return I
 

@@ -432,7 +432,8 @@ class ExperimentReader:
                 plt.setp(ax.lines, markeredgewidth=0.5)  # Adjusts the transparency of the markers
                 #plt.setp(ax.lines, markersize=7)  # Adjusts the transparency of the markers
                 plt.setp(ax.lines, markersize=0)  # Adjusts the transparency of the markers
-                plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
+                plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True, nbins=5))
+                #plt.gca().xaxis.set_major_locator(MaxNLocator(nbins=10))
 
 
                 plt.ylabel(metric_map[metric])
