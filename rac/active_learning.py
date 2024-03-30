@@ -244,7 +244,7 @@ class ActiveLearning:
         else:
             pass
 
-        args = {'n_epoch':150, 'lr':float(0.001), 'batch_size':20, 'max_accuracy':0.99, 'optimizer':'adam'} 
+        args = {'n_epoch':100, 'lr':float(0.001), 'batch_size':20, 'max_accuracy':0.99, 'optimizer':'adam'} 
         train_dataset = CustomDataset(self.X_train, self.Y_train, transform=self.transform)
         dt = data_train(train_dataset, self.model, args)
         self.model = dt.train()
