@@ -165,7 +165,7 @@ class ActiveLearning:
         self.N_pt = len(self.Y_pool)
 
         self.initial_train_indices, _ = train_test_split(
-            range(len(self.X_pool)), test_size=1-self.warm_start, stratify=self.Y_pool, random_state=self._seed
+            range(len(self.X_pool)), test_size=1-self.warm_start, stratify=self.Y_pool, random_state=14
         )
 
         self.X_train, self.Y_train = self.X_pool[self.initial_train_indices], self.Y_pool[self.initial_train_indices]
@@ -240,7 +240,7 @@ class ActiveLearning:
         if self.model_name == "MLP":
             self.model = ThreeLayerNet(self.X_train.shape[1], self.n_classes, 100, 100)
         elif self.model_name == "VGG16":
-            self.model = VGG('VGG16')
+            self.model = VGG('VGG16', channels=1)
         elif self.model_name == "resnet":
             if self.dataset_name == "mnist_original":
                 channels = 1
@@ -250,7 +250,7 @@ class ActiveLearning:
         else:
             pass
 
-        args = {'n_epoch':30, 'lr':float(0.001), 'batch_size':20, 'max_accuracy':0.99, 'optimizer':'adam'} 
+        args = {'n_epoch':100, 'lr':float(0.001), 'batch_size':20, 'max_accuracy':1.1, 'optimizer':'adam'} 
         train_dataset = CustomDataset(self.X_train, self.Y_train, transform=self.transform)
         dt = data_train(train_dataset, self.model, args)
         clf = dt.train()
@@ -356,7 +356,7 @@ class ActiveLearning:
                         predicted_labels[i] = max(class_similarities, key=class_similarities.get)
                     # Optional: Handle the case with no reference labeled points in a special manner, e.g., assign a default label
 
-            pool_predictions = predicted_labels.astype(np.int32)
+            pool_predictions = predicted_labels[:self.N_pt].astype(np.int32)
             train_predictions = predicted_labels[self.queried_indices].astype(np.int32)
             test_predictions = predicted_labels[self.N_pt:].astype(np.int32)
             return pool_predictions, train_predictions, test_predictions

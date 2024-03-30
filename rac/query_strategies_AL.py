@@ -69,18 +69,14 @@ class QueryStrategyAL:
                 return self.al.unqueried_indices[idxs]
         else:
             raise ValueError("Invalid acquisition function: {}".format(acq_fn))
-
-        if (not self.al.allow_requery) or acq_fn == "uniform":
-            max_acq = np.max(self.info_matrix) + 1
-            self.info_matrix += max_acq*(-np.sum(self.al.queried_labels, axis=1))
         return self.select_objects(batch_size, self.info_matrix, acq_noise=self.al.acq_noise)
 
     def select_objects(self, batch_size, I, acq_noise=False):
         informative_scores = I
         if acq_noise:
             num_pairs = len(informative_scores)
-            #informative_scores += np.abs(np.min(informative_scores))
-            #informative_scores[informative_scores < 0] = 0
+            #informative_scores += np.max(np.abs(informative_scores))
+            informative_scores[informative_scores < 0] = 0
             #print("max: ", np.max(informative_scores))
             #print("min: ", np.min(informative_scores))
             #informative_scores = np.abs(informative_scores)
@@ -98,7 +94,12 @@ class QueryStrategyAL:
                 noise_level = 1e-10
             informative_scores = informative_scores + np.random.uniform(-noise_level, noise_level, informative_scores.shape)
 
-        top_B_indices = np.argpartition(informative_scores, -batch_size)[-batch_size:]
+        #top_B_indices = np.argpartition(informative_scores, -batch_size)[-batch_size:]
+        if (not self.al.allow_requery) or self.al.acq_fn == "uniform":
+            max_acq = np.max(informative_scores) + 1
+            informative_scores += max_acq*(-np.sum(self.al.queried_labels, axis=1))
+        info_scores_sorted = np.argsort(-informative_scores)
+        top_B_indices = info_scores_sorted[:batch_size]
         return top_B_indices
 
     def compute_entropy(self):

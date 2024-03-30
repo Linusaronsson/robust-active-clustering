@@ -14,16 +14,16 @@ cfg = {
 
 
 class VGG(nn.Module):
-    def __init__(self, vgg_name):
+    def __init__(self, vgg_name, channels=3):
         super(VGG, self).__init__()
-        self.features = self._make_layers(cfg[vgg_name])
+        self.features = self._make_layers(cfg[vgg_name], channels=channels)
         self.embDim = 512
         self.classifier = nn.Linear(512, 10)
 
 
-    def _make_layers(self, cfg):
+    def _make_layers(self, cfg, channels):
         layers = []
-        in_channels = 3
+        in_channels = channels
         for x in cfg:
             if x == 'M':
                 layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
