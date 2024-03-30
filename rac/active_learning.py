@@ -250,10 +250,10 @@ class ActiveLearning:
         else:
             pass
 
-        args = {'n_epoch':100, 'lr':float(0.001), 'batch_size':20, 'max_accuracy':1.1, 'optimizer':'adam'} 
+        args = {'n_epoch':30, 'lr':float(0.001), 'batch_size':20, 'max_accuracy':1.1, 'optimizer':'adam'} 
         train_dataset = CustomDataset(self.X_train, self.Y_train, transform=self.transform)
         dt = data_train(train_dataset, self.model, args)
-        clf = dt.train()
+        self.model = dt.train()
         pool_dataset = CustomDataset(self.X_pool, self.Y_pool_queried, transform=self.test_transform)
         es = Strategy(None, None, self.model, self.n_classes)
         self.probs = es.predict_prob(LabeledToUnlabeledDataset(pool_dataset)).cpu().numpy()
