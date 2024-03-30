@@ -7,15 +7,15 @@
     "_overwrite": false,
     "_mode": "al",
     "seed": 14,
-    "batch_size": 10,
+    "batch_size": 250,
     "noise_level": 0.2,
-    "warm_start": 0.05,
+    "warm_start": 0.1,
     "acq_fn": "entropy",
     "model_name": "resnet",
     "predictor": "model",
     "dynamic_K": false,
-    "sample_size": 500,
-    "test_sample_size": 2000,
+    "sample_size": 3000,
+    "test_sample_size": 1000,
     "oracle": "hard",
     "sim_noise_level": 0.0,
     "n_passes": 1,
@@ -24,5 +24,5 @@
     "use_power": true,
     "mean_field_beta": 5,
     "allow_requery": false,
-    "dataset_name": "mnist_original"
+    "dataset_name": "cifar10_original"
 }

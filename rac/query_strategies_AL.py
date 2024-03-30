@@ -128,7 +128,7 @@ class QueryStrategyAL:
         #I = es.acquire_scores(LabeledToUnlabeledDataset(pool_dataset))
         #@@@@@@@@@@
         probs_sorted = -np.sort(-self.al.probs)
-        I = probs_sorted[:,1] - probs_sorted[:, 0] # Margin negated => Largest score corresponds to smallest margin
+        I = probs_sorted[:,0] - probs_sorted[:, 1] # Margin negated => Largest score corresponds to smallest margin
         return I
 
     def compute_cc_entropy(self):

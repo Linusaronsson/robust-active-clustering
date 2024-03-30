@@ -395,7 +395,7 @@ class ExperimentReader:
                 else:
                     raise ValueError("incorrect dataset!")
 
-                cut_threshold = 22
+                cut_threshold = 53
                 df_filtered = df_filtered[df_filtered[vary[0]] < cut_threshold]
 
                 metric_map = {

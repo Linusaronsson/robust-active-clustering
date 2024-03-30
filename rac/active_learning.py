@@ -30,6 +30,7 @@ from collections import defaultdict
 
 from scipy.stats import entropy as scipy_entropy
 from scipy import sparse
+from sklearn.utils.random import sample_without_replacement
 
 #import warnings
 #warnings.filterwarnings("once") 
@@ -48,14 +49,16 @@ class ActiveLearning:
         ):
         self.__dict__.update(kwargs)
 
-        self.X, self.Y = self.random_data_sample(X, Y, self.sample_size)
+        sub_inds = sample_without_replacement(len(Y), self.sample_size, random_state=10)
+        self.X, self.Y = X[sub_inds], Y[sub_inds]
         self.X_test = X_test
         self.Y_test = Y_test
         self.transform = transform
         self.test_transform = test_transform
 
         if self.X_test is not None and self.Y_test is not None:
-            self.X_test, self.Y_test = self.random_data_sample(X_test, Y_test, self.test_sample_size)
+            test_inds = sample_without_replacement(len(self.Y_test), self.test_sample_size, random_state=10)
+            self.X_test, self.Y_test = self.X_test[test_inds], self.Y_test[test_inds]
 
         self.repeat_id = repeat_id
         self.ac_data = ExperimentData(self.Y, repeat_id, **kwargs)
@@ -64,15 +67,6 @@ class ActiveLearning:
         self.N = len(self.Y)
         self.n_edges = (self.N*(self.N-1))/2
         np.random.seed(self._seed)
-
-    def random_data_sample(self, X, Y, size):
-        rs = np.random.RandomState(13)
-        if size <= 1:
-            num_samples = int(len(Y)*size)
-        else:
-            num_samples = np.minimum(size, len(Y))
-        inds = rs.choice(len(Y), num_samples)
-        return X[inds], Y[inds]
 
     def run_AL_procedure(self):
         self.start_time = time.time()
@@ -250,7 +244,7 @@ class ActiveLearning:
         else:
             pass
 
-        args = {'n_epoch':30, 'lr':float(0.001), 'batch_size':20, 'max_accuracy':1.1, 'optimizer':'adam'} 
+        args = {'n_epoch':50, 'lr':float(0.001), 'batch_size':20, 'max_accuracy':0.99, 'optimizer':'adam'} 
         train_dataset = CustomDataset(self.X_train, self.Y_train, transform=self.transform)
         dt = data_train(train_dataset, self.model, args)
         self.model = dt.train()
@@ -291,22 +285,36 @@ class ActiveLearning:
     def renormalize_softmax(self, prob):
         N_pt, n_classes = prob.shape
         adjusted_prob = np.copy(prob).astype(float)
-        
+
         for i in range(N_pt):
             for j in range(n_classes):
-                if self.queried_labels[i, j] > 0 and self.wrong_labels[i, j] > 0:
-                    # Handle conflict by considering the proportion between queried and wrong labels
-                    proportion = self.queried_labels[i, j] / self.wrong_labels[i, j]
-                    adjusted_prob[i, j] *= proportion
-                elif self.queried_labels[i, j] > 0:
+                if self.queried_labels[i, j] > 0:
                     # If only queried labels are present, boost the probability
-                    adjusted_prob[i, j] *= (30 + self.queried_labels[i, j])
+                    adjusted_prob[i, :] = 0
+                    adjusted_prob[i, j] = 1
+                    break
                 elif self.wrong_labels[i, j] > 0:
                     # If only wrong labels are present, reduce the probability
-                    adjusted_prob[i, j] *= (1 / (30 + self.wrong_labels[i, j]))
+                    adjusted_prob[i, j] = 0
             
             # Normalize to ensure the probabilities sum to 1
             adjusted_prob[i, :] /= np.sum(adjusted_prob[i, :])
+        
+        #for i in range(N_pt):
+        #    for j in range(n_classes):
+        #        if self.queried_labels[i, j] > 0 and self.wrong_labels[i, j] > 0:
+        #            # Handle conflict by considering the proportion between queried and wrong labels
+        #            proportion = self.queried_labels[i, j] / self.wrong_labels[i, j]
+        #            adjusted_prob[i, j] *= proportion
+        #        elif self.queried_labels[i, j] > 0:
+        #            # If only queried labels are present, boost the probability
+        #            adjusted_prob[i, j] *= (30 + self.queried_labels[i, j])
+        #        elif self.wrong_labels[i, j] > 0:
+        #            # If only wrong labels are present, reduce the probability
+        #            adjusted_prob[i, j] *= (1 / (30 + self.wrong_labels[i, j]))
+        #    
+        #    # Normalize to ensure the probabilities sum to 1
+        #    adjusted_prob[i, :] /= np.sum(adjusted_prob[i, :])
         
         return adjusted_prob
                 
