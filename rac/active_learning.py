@@ -49,6 +49,8 @@ class ActiveLearning:
         ):
         self.__dict__.update(kwargs)
 
+        if self.sample_size <= 1:
+            self.sample_size = int(self.sample_size * len(Y))
         sub_inds = sample_without_replacement(len(Y), self.sample_size, random_state=10)
         self.X, self.Y = X[sub_inds], Y[sub_inds]
         self.X_test = X_test
@@ -57,6 +59,8 @@ class ActiveLearning:
         self.test_transform = test_transform
 
         if self.X_test is not None and self.Y_test is not None:
+            if self.test_sample_size <= 1:
+                self.test_sample_size = int(self.test_sample_size * len(Y_test))
             test_inds = sample_without_replacement(len(self.Y_test), self.test_sample_size, random_state=10)
             self.X_test, self.Y_test = self.X_test[test_inds], self.Y_test[test_inds]
 
@@ -244,7 +248,7 @@ class ActiveLearning:
         else:
             pass
 
-        args = {'n_epoch':100, 'lr':float(0.001), 'batch_size':20, 'max_accuracy':0.99, 'optimizer':'adam'} 
+        args = {'n_epoch':50, 'lr':float(0.001), 'batch_size':20, 'max_accuracy':0.99, 'optimizer':'adam'} 
         train_dataset = CustomDataset(self.X_train, self.Y_train, transform=self.transform)
         dt = data_train(train_dataset, self.model, args)
         self.model = dt.train()
@@ -263,9 +267,7 @@ class ActiveLearning:
 
     def construct_sims(self):
         # Initialize similarity matrix
-
         probs = np.concatenate((self.probs, self.probs_test), axis=0)
-
         for i in range(self.N_total):
             for j in range(0, i):
                 P_S_ij_plus_1 = np.sum(probs[i, :] * probs[j, :])
@@ -286,19 +288,19 @@ class ActiveLearning:
         N_pt, n_classes = prob.shape
         adjusted_prob = np.copy(prob).astype(float)
 
-        for i in range(N_pt):
-            for j in range(n_classes):
-                if self.queried_labels[i, j] > 0:
-                    # If only queried labels are present, boost the probability
-                    adjusted_prob[i, :] = 0
-                    adjusted_prob[i, j] = 1
-                    break
-                elif self.wrong_labels[i, j] > 0:
-                    # If only wrong labels are present, reduce the probability
-                    adjusted_prob[i, j] = 0
-            
-            # Normalize to ensure the probabilities sum to 1
-            adjusted_prob[i, :] /= np.sum(adjusted_prob[i, :])
+        #for i in range(N_pt):
+        #    for j in range(n_classes):
+        #        if self.queried_labels[i, j] > 0:
+        #            # If only queried labels are present, boost the probability
+        #            adjusted_prob[i, :] = 0
+        #            adjusted_prob[i, j] = 1
+        #            break
+        #        elif self.wrong_labels[i, j] > 0:
+        #            # If only wrong labels are present, reduce the probability
+        #            adjusted_prob[i, j] = 0
+        #    
+        #    # Normalize to ensure the probabilities sum to 1
+        #    adjusted_prob[i, :] /= np.sum(adjusted_prob[i, :])
         
         #for i in range(N_pt):
         #    for j in range(n_classes):
@@ -315,6 +317,15 @@ class ActiveLearning:
         #    
         #    # Normalize to ensure the probabilities sum to 1
         #    adjusted_prob[i, :] /= np.sum(adjusted_prob[i, :])
+
+        for i in range(N_pt):
+            for j in range(n_classes):
+                exponent = self.scaling_factor * (self.queried_labels[i, j] - self.wrong_labels[i, j])
+                adjustment_factor = np.exp(exponent)
+                adjusted_prob[i, j] *= adjustment_factor
+            
+            # Normalize to ensure the probabilities sum to 1
+            adjusted_prob[i, :] /= np.sum(adjusted_prob[i, :])
         
         return adjusted_prob
                 

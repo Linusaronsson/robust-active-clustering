@@ -32,6 +32,7 @@ def get_dataset(**options):
         n_samples = options["dataset_n_samples"]
         class_sep = options["dataset_class_sep"]
         y_flip = options["dataset_y_flip"]
+        n_features = options["dataset_n_features"]
         if class_balance == None:
             weights = None
         else:
@@ -40,7 +41,7 @@ def get_dataset(**options):
             weights += [prop]*(n_clusters-1)
         X, Y = make_classification(
             n_samples=n_samples,
-            n_features=10,
+            n_features=n_features,
             n_informative=10,
             n_redundant=0,
             n_repeated=0,
@@ -54,6 +55,10 @@ def get_dataset(**options):
             scale=1.0,
             shuffle=True,
             random_state=seed)
+        X, X_test, Y, Y_test = train_test_split(X, Y, test_size=0.2, random_state=seed)
+        scaler = preprocessing.MinMaxScaler().fit(X)
+        X = scaler.transform(X)
+        X_test = scaler.transform(X_test)
         normalize = False
     elif dataset == "20newsgroups":
         X = np.load("datasets/20newsgroups_data/X.npy")
