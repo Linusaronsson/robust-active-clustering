@@ -78,6 +78,9 @@ class CustomDataset(Dataset):
     def __init__(self, X, Y, transform=None):
         self.X = X
         self.Y = Y
+        if len(self.X.shape) == 2:
+            self.X = torch.tensor(self.X, dtype=torch.float32)
+            self.Y = torch.tensor(self.Y, dtype=torch.long)
         self.transform = transform
 
     def __len__(self):
@@ -90,7 +93,8 @@ class CustomDataset(Dataset):
         # Convert image back to PIL Image to apply torchvision transforms
 
         if self.transform:
-            image = transforms.ToPILImage()(image)
+            if len(self.X.shape) > 2:
+                image = transforms.ToPILImage()(image)
             image = self.transform(image)
 
         # If you want the image to be a tensor again, ensure transform includes ToTensor()
