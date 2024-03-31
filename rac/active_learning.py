@@ -19,7 +19,7 @@ from torch.utils.data import Dataset, DataLoader
 from rac.utils.utils import LabeledToUnlabeledDataset, CustomDataset
 from rac.utils.models.resnet import ResNet18
 from rac.utils.models.vgg import VGG
-from rac.utils.models.simpleNN_net import ThreeLayerNet
+from rac.utils.models.simpleNN_net import TwoLayerNet
 from rac.utils.train_helper import data_train
 from rac.correlation_clustering import max_correlation, fast_max_correlation, max_correlation_dynamic_K, mean_field_clustering
 
@@ -236,7 +236,7 @@ class ActiveLearning:
 
     def update_model(self):
         if self.model_name == "MLP":
-            self.model = ThreeLayerNet(self.X_train.shape[1], self.n_classes, 100, 100)
+            self.model = TwoLayerNet(self.X_train.shape[1], self.n_classes, 50)
         elif self.model_name == "VGG16":
             self.model = VGG('VGG16', channels=1)
         elif self.model_name == "resnet":
@@ -248,7 +248,7 @@ class ActiveLearning:
         else:
             pass
 
-        args = {'n_epoch':100, 'lr':float(0.001), 'batch_size':20, 'max_accuracy':0.99, 'optimizer':'adam'} 
+        args = {'n_epoch':50, 'lr':float(0.001), 'batch_size':20, 'max_accuracy':1.1, 'optimizer':'adam'} 
         train_dataset = CustomDataset(self.X_train, self.Y_train, transform=self.transform)
         dt = data_train(train_dataset, self.model, args)
         self.model = dt.train()

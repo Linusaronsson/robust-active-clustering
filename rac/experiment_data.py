@@ -395,8 +395,8 @@ class ExperimentReader:
                 else:
                     raise ValueError("incorrect dataset!")
 
-                cut_threshold = 53
-                df_filtered = df_filtered[df_filtered[vary[0]] < cut_threshold]
+                #cut_threshold = 53
+                #df_filtered = df_filtered[df_filtered[vary[0]] < cut_threshold]
 
                 metric_map = {
                     "ami": "AMI", "rand": "ARI", "time": "Time (s)", "num_violations": "Num. violations",
@@ -446,10 +446,11 @@ class ExperimentReader:
                 rest = len(self.Y) - N_pool
                 labels = []
                 for item in ax.get_xticks():
-                    labels.append(round((int(item)*self.batch_size+rest)/len(self.Y), 2))
+                    #labels.append(round((int(item)*self.batch_size+rest)/len(self.Y), 2))
+                    labels.append(round((int(item)*self.batch_size+rest), 2))
                 ax.set_xticklabels(labels)
 
-                plt.xlabel("Proportion of objects queried")
+                plt.xlabel("Number of objects queried")
                 #ax.legend(loc='lower right')
                 ax.legend(loc='upper left', bbox_to_anchor=(1,1))
                 plt.subplots_adjust(right=0.75)
