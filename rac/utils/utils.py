@@ -88,9 +88,9 @@ class CustomDataset(Dataset):
         label = self.Y[idx]
 
         # Convert image back to PIL Image to apply torchvision transforms
-        image = transforms.ToPILImage()(image)
 
         if self.transform:
+            image = transforms.ToPILImage()(image)
             image = self.transform(image)
 
         # If you want the image to be a tensor again, ensure transform includes ToTensor()
