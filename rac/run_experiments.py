@@ -42,7 +42,7 @@ def get_dataset(**options):
         X, Y = make_classification(
             n_samples=n_samples,
             n_features=n_features,
-            n_informative=10,
+            n_informative=n_features,
             n_redundant=0,
             n_repeated=0,
             n_classes=n_clusters,
