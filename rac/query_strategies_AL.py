@@ -217,7 +217,7 @@ class QueryStrategyAL:
         #plt.savefig(file_path)
 
         I = scipy_entropy(q, axis=1) 
-        return I[:self.al.N_pt]
+        return I
 
 
 
