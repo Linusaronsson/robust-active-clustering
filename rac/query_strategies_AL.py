@@ -77,6 +77,8 @@ class QueryStrategyAL:
             num_pairs = len(informative_scores)
             #informative_scores += np.max(np.abs(informative_scores))
             informative_scores[informative_scores < 0] = 0
+            min_inf = np.min(informative_scores)
+            informative_scores[informative_scores == 0] = min_inf*0.5
             #print("max: ", np.max(informative_scores))
             #print("min: ", np.min(informative_scores))
             #informative_scores = np.abs(informative_scores)
@@ -153,16 +155,32 @@ class QueryStrategyAL:
         # Ensure diagonal is zero
 
         self.num_clusters = np.unique(self.al.Y_train).size
+        self.S = np.zeros((self.al.N_pt, self.al.N_pt))
+        for i in range(self.al.N_pt):
+            for j in range(0, i):
+                P_S_ij_plus_1 = np.sum(self.al.probs[i, :] * self.al.probs[j, :])
+                E_S_ij_plus_1 = P_S_ij_plus_1
+                E_S_ij_minus_1 = E_S_ij_plus_1 - 1
+                E_S_ij = P_S_ij_plus_1 * E_S_ij_plus_1 + (1 - P_S_ij_plus_1) * E_S_ij_minus_1
+                self.S[i, j] = E_S_ij
+                self.S[j, i] = self.S[i, j]
+                if np.random.rand() < self.al.sim_noise_level:
+                    self.S[i, j] = np.random.uniform(-0.001, 0.001)
+                    self.S[j, i] = self.S[i, j]
+
+
+        # Ensure diagonal is zero
+        np.fill_diagonal(self.S, 0)
 
         print("here1")
         if self.al.dynamic_K:
-            self.clustering_solution, _ = max_correlation_dynamic_K(self.al.S, self.num_clusters, 3)
+            self.clustering_solution, _ = max_correlation_dynamic_K(self.S, self.num_clusters, 3)
         else:
-            self.clustering_solution, _ = fast_max_correlation(self.al.S, self.num_clusters, 3)
+            self.clustering_solution, _ = fast_max_correlation(self.S, self.num_clusters, 3)
         print("here2")
         self.num_clusters = np.unique(self.clustering_solution).size
         clust_sol, q, h = mean_field_clustering(
-            S=self.al.S, K=self.num_clusters, betas=[self.al.mean_field_beta], max_iter=100, tol=1e-10, 
+            S=self.S, K=self.num_clusters, betas=[self.al.mean_field_beta], max_iter=100, tol=1e-10, 
             predicted_labels=self.clustering_solution
         )
         print("here3")
@@ -207,15 +225,9 @@ class QueryStrategyAL:
 
 
 
-
-
-
-
-
-
-
-
     
+
+
     def compute_entropy_mc(self):
         pool_dataset = CustomDataset(self.al.X_pool, self.al.Y_pool_queried, transform=self.al.test_transform)
         es = EntropySamplingDropout(pool_dataset, LabeledToUnlabeledDataset(pool_dataset), self.al.model, self.al.n_classes)
