@@ -287,19 +287,19 @@ class ActiveLearning:
         N_pt, n_classes = prob.shape
         adjusted_prob = np.copy(prob).astype(float)
 
-        #for i in range(N_pt):
-        #    for j in range(n_classes):
-        #        if self.queried_labels[i, j] > 0:
-        #            # If only queried labels are present, boost the probability
-        #            adjusted_prob[i, :] = 0
-        #            adjusted_prob[i, j] = 1
-        #            break
-        #        elif self.wrong_labels[i, j] > 0:
-        #            # If only wrong labels are present, reduce the probability
-        #            adjusted_prob[i, j] = 0
-        #    
-        #    # Normalize to ensure the probabilities sum to 1
-        #    adjusted_prob[i, :] /= np.sum(adjusted_prob[i, :])
+        for i in range(N_pt):
+            for j in range(n_classes):
+                if self.queried_labels[i, j] > 0:
+                    # If only queried labels are present, boost the probability
+                    adjusted_prob[i, :] = 0
+                    adjusted_prob[i, j] = 1
+                    break
+                elif self.wrong_labels[i, j] > 0:
+                    # If only wrong labels are present, reduce the probability
+                    adjusted_prob[i, j] = 0
+            
+            # Normalize to ensure the probabilities sum to 1
+            adjusted_prob[i, :] /= np.sum(adjusted_prob[i, :])
         
         #for i in range(N_pt):
         #    for j in range(n_classes):
@@ -317,14 +317,14 @@ class ActiveLearning:
         #    # Normalize to ensure the probabilities sum to 1
         #    adjusted_prob[i, :] /= np.sum(adjusted_prob[i, :])
 
-        for i in range(N_pt):
-            for j in range(n_classes):
-                exponent = self.scaling_factor * (self.queried_labels[i, j] - self.wrong_labels[i, j])
-                adjustment_factor = np.exp(exponent)
-                adjusted_prob[i, j] *= adjustment_factor
-            
-            # Normalize to ensure the probabilities sum to 1
-            adjusted_prob[i, :] /= np.sum(adjusted_prob[i, :])
+        #for i in range(N_pt):
+        #    for j in range(n_classes):
+        #        exponent = self.scaling_factor * (self.queried_labels[i, j] - self.wrong_labels[i, j])
+        #        adjustment_factor = np.exp(exponent)
+        #        adjusted_prob[i, j] *= adjustment_factor
+        #    
+        #    # Normalize to ensure the probabilities sum to 1
+        #    adjusted_prob[i, :] /= np.sum(adjusted_prob[i, :])
         
         return adjusted_prob
                 

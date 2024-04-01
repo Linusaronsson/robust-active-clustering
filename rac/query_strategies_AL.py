@@ -180,7 +180,7 @@ class QueryStrategyAL:
         print("here2")
         self.num_clusters = np.unique(self.clustering_solution).size
         clust_sol, q, h = mean_field_clustering(
-            S=self.S, K=self.num_clusters, betas=[self.al.mean_field_beta], max_iter=100, tol=1e-10, 
+            S=self.S, K=self.num_clusters, betas=[self.al.mean_field_beta_q], max_iter=100, tol=1e-10, 
             predicted_labels=self.clustering_solution
         )
         print("here3")
