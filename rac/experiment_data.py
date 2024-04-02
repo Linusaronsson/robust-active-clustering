@@ -299,9 +299,9 @@ class ExperimentReader:
             max_length = data['array_lengths'].max()
             data = self.extend_dataframe(data, metric, max_length)
 
-        data_column_names = self.metrics
-        non_data_column_names = list(set(data.columns) - set(data_column_names))
-        data = self.flatten_dataframe(data, non_data_column_names, data_column_names)
+        #data_column_names = self.metrics
+        #non_data_column_names = list(set(data.columns) - set(data_column_names))
+        #data = self.flatten_dataframe(data, non_data_column_names, data_column_names)
 
         for exp_vals in itertools.product(*options_values):
             exp_kwargs = dict(zip(options_keys, exp_vals))
@@ -314,8 +314,10 @@ class ExperimentReader:
                     exp_kwargs[option] = vary_options[option]
 
             for metric in self.metrics:
-                exp_kwargs["metric"] = metric
-                df_filtered = self.filter_dataframe(data, exp_kwargs)
+                df_filtered = self.filter_dataframe(data, exp_kwargs).reset_index()
+                data_column_names = [metric]
+                non_data_column_names = list(set(data.columns) - set(data_column_names))
+                df_filtered = self.flatten_dataframe(df_filtered, non_data_column_names, data_column_names)
 
                 path = save_location + "/" + metric + "/"
                 for option in categorize:
