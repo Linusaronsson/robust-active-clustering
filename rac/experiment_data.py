@@ -290,14 +290,15 @@ class ExperimentReader:
             )
         
         # extending
-        for metric in self.metrics:
-            if metric in ["time_select_batch", "time_update_clustering", "time", "num_violations", "num_repeat_queries"]:
-                continue
-            col = "mean_" + metric
-            data[col] = data[metric].apply(lambda x: np.mean(x, axis=0))
-            data['array_lengths'] = data[col].apply(lambda x: len(x))
-            max_length = data['array_lengths'].max()
-            data = self.extend_dataframe(data, metric, max_length)
+        #for metric in self.metrics:
+        #    if metric in ["time_select_batch", "time_update_clustering", "time", "num_violations", "num_repeat_queries"]:
+        #        continue
+        #    col = "mean_" + metric
+        #    data[col] = data[metric].apply(lambda x: np.mean(x, axis=0))
+        #    data['array_lengths'] = data[col].apply(lambda x: len(x))
+        #    max_length = data['array_lengths'].max()
+        #    print(max_length)
+        #    data = self.extend_dataframe(data, metric, max_length)
 
         #data_column_names = self.metrics
         #non_data_column_names = list(set(data.columns) - set(data_column_names))
@@ -315,6 +316,15 @@ class ExperimentReader:
 
             for metric in self.metrics:
                 df_filtered = self.filter_dataframe(data, exp_kwargs).reset_index()
+                if metric in ["time_select_batch", "time_update_clustering", "time", "num_violations", "num_repeat_queries"]:
+                    continue
+                col = "mean_" + metric
+                df_filtered[col] = df_filtered[metric].apply(lambda x: np.mean(x, axis=0))
+                df_filtered['array_lengths'] = df_filtered[col].apply(lambda x: len(x))
+                max_length = df_filtered['array_lengths'].max()
+                df_filtered = self.extend_dataframe(df_filtered, metric, max_length)
+
+
                 data_column_names = [metric]
                 non_data_column_names = list(set(data.columns) - set(data_column_names))
                 df_filtered = self.flatten_dataframe(df_filtered, non_data_column_names, data_column_names)
@@ -512,7 +522,7 @@ class ExperimentReader:
         else:
             labels = []
             for item in ax.get_xticks():
-                labels.append(round((int(item)*batch_size)/n_edges, 2))
+                labels.append(round((int(item)*batch_size), 2))
                 #labels = np.array(list(range(0, n_iterations))) * batch_size
             
             

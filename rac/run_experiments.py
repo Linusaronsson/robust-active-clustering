@@ -55,11 +55,13 @@ def get_dataset(**options):
             scale=1.0,
             shuffle=True,
             random_state=seed)
-        X, X_test, Y, Y_test = train_test_split(X, Y, test_size=0.2, random_state=seed)
-        scaler = preprocessing.MinMaxScaler().fit(X)
-        X = scaler.transform(X)
-        X_test = scaler.transform(X_test)
-        normalize = False
+
+        # UNCOMMENT FOR REGULAR AL!!!
+        #X, X_test, Y, Y_test = train_test_split(X, Y, test_size=0.2, random_state=seed)
+        #scaler = preprocessing.MinMaxScaler().fit(X)
+        #X = scaler.transform(X)
+        #X_test = scaler.transform(X_test)
+        #normalize = False
     elif dataset == "20newsgroups":
         X = np.load("datasets/20newsgroups_data/X.npy")
         Y = np.load("datasets/20newsgroups_data/Y.npy")
