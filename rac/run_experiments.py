@@ -233,7 +233,7 @@ def run_experiments(config):
                 seed = exp_kwargs["seed"]
                 if dataset_name not in saved_datasets:
                     saved_datasets[dataset_name] = {}
-                    X, Y = get_dataset(**exp_kwargs)
+                    X, Y, _, _, _, _ = get_dataset(**exp_kwargs)
                     saved_datasets[dataset_name]["X"] = X
                     saved_datasets[dataset_name]["Y"] = Y
                     if exp_kwargs["sim_init_type"] == "kmeans":

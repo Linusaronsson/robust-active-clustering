@@ -245,7 +245,7 @@ class ActiveClustering:
                 
         if initial:
             self.ac_data.Y = self.Y
-            self.ac_data.num_queries.append(0)
+            #self.ac_data.num_queries.append(0)
             self.ac_data.time.append(0.0)
             self.ac_data.time_select_batch.append(0.0)
             self.ac_data.time_update_clustering.append(0.0)
@@ -255,7 +255,7 @@ class ActiveClustering:
             count_non_zero_lower = np.count_nonzero(np.tril(self.violations, k=-1))
             self.ac_data.num_violations.append(count_non_zero_lower)
             self.ac_data.num_repeat_queries.append(self.num_repeat_queries)
-            self.ac_data.num_queries.append(self.batch_size) 
+            #self.ac_data.num_queries.append(self.batch_size) 
             time_now = time.time() 
             self.ac_data.time.append(time_now - self.start)
             if self.acq_fn not in ["QECC", "COBRAS", "nCOBRAS"]:

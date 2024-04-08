@@ -442,14 +442,14 @@ class ExperimentReader:
 
                 plt.ylabel(metric_map[metric])
 
-                #labels = self.construct_x_ticks(ax, prop)
-                ws = 1-exp_kwargs["warm_start"]
-                N_pool = int(len(self.Y)*ws)
-                rest = len(self.Y) - N_pool
-                labels = []
-                for item in ax.get_xticks():
-                    #labels.append(round((int(item)*self.batch_size+rest)/len(self.Y), 2))
-                    labels.append(round((int(item)*self.batch_size+rest), 2))
+                labels = self.construct_x_ticks(ax, prop)
+                #ws = 1-exp_kwargs["warm_start"]
+                #N_pool = int(len(self.Y)*ws)
+                #rest = len(self.Y) - N_pool
+                #labels = []
+                #for item in ax.get_xticks():
+                #    #labels.append(round((int(item)*self.batch_size+rest)/len(self.Y), 2))
+                #    labels.append(round((int(item)*self.batch_size+rest), 2))
                 ax.set_xticklabels(labels)
 
                 plt.xlabel("Number of objects queried")
