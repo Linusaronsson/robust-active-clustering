@@ -59,10 +59,11 @@ class QueryStrategy:
         return self.select_edges(batch_size, self.info_matrix, acq_noise=self.ac.acq_noise)
            
     def select_edges(self, batch_size, I, acq_noise=False):
+        I_local = np.copy(I)
         inds_max_query = np.where(self.ac.feedback_freq > self.ac.tau)
-        I[inds_max_query] = -np.inf
-        tri_rows, tri_cols = np.tril_indices(n=I.shape[0], k=-1)
-        informative_scores = I[tri_rows, tri_cols]
+        I_local[inds_max_query] = -np.inf
+        tri_rows, tri_cols = np.tril_indices(n=I_local.shape[0], k=-1)
+        informative_scores = I_local[tri_rows, tri_cols]
         if acq_noise and (self.ac.acq_fn == "entropy" or self.ac.acq_fn == "info_gain_object"):
             num_pairs = len(informative_scores)
             if self.ac.fix_neg:
@@ -78,15 +79,12 @@ class QueryStrategy:
             #print("min log: ", np.min(informative_scores))
             power_beta = 1
             informative_scores = informative_scores + scipy.stats.gumbel_r.rvs(loc=0, scale=1/power_beta, size=num_pairs, random_state=None)
-        else:
-            unique_diffs = np.diff(np.unique(informative_scores))
-            if unique_diffs.size > 0:
-                noise_level = np.abs(np.min(unique_diffs)) / 10
-            else:
-                noise_level = 1e-10
-            informative_scores = informative_scores + np.random.uniform(-noise_level, noise_level, informative_scores.shape)
 
-        top_B_indices = np.argpartition(informative_scores, -batch_size)[-batch_size:]
+        #top_B_indices = np.argpartition(informative_scores, -batch_size)[-batch_size:]
+        random_tie_breaker = np.random.rand(len(informative_scores))
+        sorted_indices = np.lexsort((random_tie_breaker, informative_scores))
+        top_B_indices = sorted_indices[:batch_size]
+
         top_row_indices = tri_rows[top_B_indices]
         top_col_indices = tri_cols[top_B_indices]
         top_pairs = np.stack((top_row_indices, top_col_indices), axis=-1)
