@@ -60,8 +60,8 @@ class ActiveClustering:
         else:
             stopping_criteria = self.n_edges
 
-        early_stopping = (self.n_edges/self.batch_size)*1
-        #early_stopping = (self.n_edges/self.batch_size)*0.55
+        #early_stopping = (self.n_edges/self.batch_size)*1
+        early_stopping = (self.n_edges/self.batch_size)*0.55
         #ii = 0
 
         ii = 1

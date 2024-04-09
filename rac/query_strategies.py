@@ -60,16 +60,14 @@ class QueryStrategy:
            
     def select_edges(self, batch_size, I, acq_noise=False):
         I_local = np.copy(I)
-        inds_max_query = np.where(self.ac.feedback_freq > self.ac.tau)
-        I_local[inds_max_query] = -np.inf
         tri_rows, tri_cols = np.tril_indices(n=I_local.shape[0], k=-1)
         informative_scores = I_local[tri_rows, tri_cols]
         if acq_noise and (self.ac.acq_fn == "entropy" or self.ac.acq_fn == "info_gain_object"):
             num_pairs = len(informative_scores)
             if self.ac.fix_neg:
-                informative_scores += np.abs(np.min(informative_scores))
+                informative_scores += np.abs(np.min(informative_scores)) + 1e-10
             else:
-                informative_scores[informative_scores < 0] = 0
+                informative_scores[informative_scores < 0] = 1e-10
             #print("max: ", np.max(informative_scores))
             #print("min: ", np.min(informative_scores))
             #informative_scores = np.abs(informative_scores)
@@ -81,6 +79,11 @@ class QueryStrategy:
             informative_scores = informative_scores + scipy.stats.gumbel_r.rvs(loc=0, scale=1/power_beta, size=num_pairs, random_state=None)
 
         #top_B_indices = np.argpartition(informative_scores, -batch_size)[-batch_size:]
+
+        # ensure that the query is not repeated
+        inds_max_query = np.where(self.ac.feedback_freq > self.ac.tau)
+        I_local[inds_max_query] = -np.inf
+
         random_tie_breaker = np.random.rand(len(informative_scores))
         sorted_indices = np.lexsort((random_tie_breaker, -informative_scores))
         top_B_indices = sorted_indices[:batch_size]
