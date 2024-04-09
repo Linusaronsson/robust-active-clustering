@@ -63,10 +63,12 @@ class QueryStrategy:
         I[inds_max_query] = -np.inf
         tri_rows, tri_cols = np.tril_indices(n=I.shape[0], k=-1)
         informative_scores = I[tri_rows, tri_cols]
-        if acq_noise:
+        if acq_noise and (self.ac.acq_fn == "entropy" or self.ac.acq_fn == "info_gain_object"):
             num_pairs = len(informative_scores)
-            #informative_scores += np.abs(np.min(informative_scores))
-            informative_scores[informative_scores < 0] = 0
+            if self.ac.fix_neg:
+                informative_scores += np.abs(np.min(informative_scores))
+            else:
+                informative_scores[informative_scores < 0] = 0
             #print("max: ", np.max(informative_scores))
             #print("min: ", np.min(informative_scores))
             #informative_scores = np.abs(informative_scores)

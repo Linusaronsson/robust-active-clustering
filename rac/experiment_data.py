@@ -511,6 +511,7 @@ class ExperimentReader:
     def construct_x_ticks(self, ax, prop):
         N = len(self.Y)
         n_edges = (N*(N-1))/2
+        print(N)
         if self.batch_size < 1:
             batch_size = math.ceil(n_edges * self.batch_size)
         else:
