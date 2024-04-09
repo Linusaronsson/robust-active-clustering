@@ -14,6 +14,7 @@ from rac.query_strategies import QueryStrategy
 from rac.experiment_data import ExperimentData
 
 from scipy import sparse
+from scipy.stats import entropy as scipy_entropy
 
 #import warnings
 #warnings.filterwarnings("once") 
@@ -117,6 +118,7 @@ class ActiveClustering:
                 #print("TIME CLUSTERING: ", self.time_clustering)
                 #print("time_nn: ", time.time() - time_clustering)
 
+
                 for i in range(self.N):
                     for j in range(i):
                         if self.violates_clustering(i, j):
@@ -125,6 +127,8 @@ class ActiveClustering:
                         else:
                             self.violations[i, j] = 0
                             self.violations[j, i] = 0
+
+            self.infer_similarities()
 
             self.store_experiment_data()
             total_queries += self.batch_size
@@ -425,3 +429,40 @@ class ActiveClustering:
             return np.random.uniform(-1.0, 1.0)
         else:
             return self.ground_truth_pairwise_similarities[ind1, ind2]
+    
+    def infer_similarities(self):
+        if self.infer_threshold == -1:
+            return
+
+        if self.sparse_sim_matrix and not sparse.issparse(self.pairwise_similarities):
+            S = sparse.csr_matrix(self.pairwise_similarities)
+        else:
+            S = self.pairwise_similarities
+        clust_sol, q, h = mean_field_clustering(
+            S=S, K=self.num_clusters, betas=[self.mean_field_beta], max_iter=100, tol=1e-10, 
+            predicted_labels=self.clustering_solution
+        )
+        
+        P_e1_full = np.einsum('ik,jk->ij', q, q)
+        distributions = np.stack([P_e1_full, 1 - P_e1_full], axis=-1)
+
+        # Calculating entropy for each distribution
+        E_all = scipy_entropy(distributions, base=None, axis=-1)
+
+        # Step 2: Compute E_S_ij_minus_1
+        E_S_ij_minus_1 = P_e1_full - 1
+
+        # Step 3: Compute E_S_ij
+        E_S_ij = (P_e1_full ** 2) + ((1 - P_e1_full) * E_S_ij_minus_1)
+
+        # Step 4: Construct I
+        I = E_S_ij  # This is directly E_S_ij as per the provided formula
+
+        # Step 2: Create a condition mask where E_all is smaller than the threshold
+        condition_mask = E_all < self.infer_threshold
+
+        # Step 4: Update S based on the combined mask
+        self.pairwise_similarities[condition_mask] = I[condition_mask]
+        np.fill_diagonal(self.pairwise_similarities, 0.0)
+
+        

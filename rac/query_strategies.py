@@ -82,7 +82,7 @@ class QueryStrategy:
 
         #top_B_indices = np.argpartition(informative_scores, -batch_size)[-batch_size:]
         random_tie_breaker = np.random.rand(len(informative_scores))
-        sorted_indices = np.lexsort((random_tie_breaker, informative_scores))
+        sorted_indices = np.lexsort((random_tie_breaker, -informative_scores))
         top_B_indices = sorted_indices[:batch_size]
 
         top_row_indices = tri_rows[top_B_indices]
