@@ -327,6 +327,9 @@ class ExperimentReader:
 
                 data_column_names = [metric]
                 non_data_column_names = list(set(data.columns) - set(data_column_names))
+                if df_filtered.shape[0] == 0:
+                    print("No data for these options @@@@@@@")
+                    continue
                 df_filtered = self.flatten_dataframe(df_filtered, non_data_column_names, data_column_names)
 
                 path = save_location + "/" + metric + "/"
@@ -407,8 +410,8 @@ class ExperimentReader:
                 else:
                     raise ValueError("incorrect dataset!")
 
-                #cut_threshold = 53
-                #df_filtered = df_filtered[df_filtered[vary[0]] < cut_threshold]
+                cut_threshold = 30
+                df_filtered = df_filtered[df_filtered[vary[0]] < cut_threshold]
 
                 metric_map = {
                     "ami": "AMI", "rand": "ARI", "time": "Time (s)", "num_violations": "Num. violations",

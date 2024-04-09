@@ -128,7 +128,8 @@ class ActiveClustering:
                             self.violations[i, j] = 0
                             self.violations[j, i] = 0
 
-            self.infer_similarities()
+            if ii >= self.start_inferring:
+                self.infer_similarities()
 
             self.store_experiment_data()
             total_queries += self.batch_size
@@ -463,6 +464,7 @@ class ActiveClustering:
 
         # Step 4: Update S based on the combined mask
         self.pairwise_similarities[condition_mask] = I[condition_mask]
+        self.feedback_freq[condition_mask] += 1
         np.fill_diagonal(self.pairwise_similarities, 0.0)
 
         
