@@ -83,8 +83,8 @@ class QueryStrategy:
         #top_B_indices = np.argpartition(informative_scores, -batch_size)[-batch_size:]
 
         # ensure that the query is not repeated
-        inds_max_query = np.where(self.ac.feedback_freq > self.ac.tau)
-        I_local[inds_max_query] = -np.inf
+        fq_flat = self.ac.feedback_freq[tri_rows, tri_cols]
+        informative_scores[fq_flat > self.al.tau] = -np.inf
 
         random_tie_breaker = np.random.rand(len(informative_scores))
         sorted_indices = np.lexsort((random_tie_breaker, -informative_scores))
@@ -181,68 +181,11 @@ class QueryStrategy:
         distributions = np.stack([P, 1 - P], axis=-1)
 
         # Calculating entropy for each distribution
-        I = scipy_entropy(distributions, base=None, axis=-1)
-            
-        I_all = np.zeros((self.ac.N, self.ac.N))
-
-        for i in range(self.ac.num_mc):
-            S_new = np.copy(S)
-
-            # Number of elements to select from the lower triangular part, excluding the diagonal
-            num_elements_to_select = int(self.ac.r * self.ac.n_edges)
-
-            # Indices of the lower triangular part, excluding the diagonal
-            i_lower, j_lower = np.tril_indices(self.ac.N, -1)
-
-            # Randomly select indices
-            selected = np.random.choice(i_lower.shape[0], size=num_elements_to_select, replace=False)
-
-            # Get the selected indices
-            selected_i, selected_j = i_lower[selected], j_lower[selected]
-
-            # Sample binary values for the selected indices
-            random_values = np.random.rand(num_elements_to_select)
-            selected_values = np.where(random_values < P[selected_i, selected_j], 1, -1)
-
-            # Update the S matrix
-            S_new[selected_i, selected_j] = selected_values
-            S_new[selected_j, selected_i] = selected_values
-            np.fill_diagonal(S_new, 0)
-            _, q_new, h_new = mean_field_clustering(
-                S=S_new, K=self.ac.num_clusters, betas=[self.ac.mean_field_beta], max_iter=100, tol=1e-10, 
-                predicted_labels=self.ac.clustering_solution
-            )
-            P_e1_full = np.einsum('ik,jk->ij', q_new, q_new)
-            distributions = np.stack([P_e1_full, 1 - P_e1_full], axis=-1)
-
-            # Calculating entropy for each distribution
-            I_all += scipy_entropy(distributions, base=np.e, axis=-1)
-        
-        # For each pair (x, y) in W
-        
-        return I - (I_all/self.ac.num_mc)
-        
-    def compute_info_gain_three(self, S):
-        if self.ac.sparse_sim_matrix and not sparse.issparse(S):
-            S = sparse.csr_matrix(S)
-
-        if h is None:
-            clust_sol, q, h = mean_field_clustering(
-                S=S, K=self.ac.num_clusters, betas=[self.ac.mean_field_beta], max_iter=100, tol=1e-10, 
-                predicted_labels=self.ac.clustering_solution
-            )
-
-        P = np.einsum('ik,jk->ij', q, q)
-        distributions = np.stack([P, 1 - P], axis=-1)
-
-        # Calculating entropy for each distribution
         I = scipy_entropy(distributions, base=np.e, axis=-1)
             
         I_all = np.zeros((self.ac.N, self.ac.N))
 
-        for i in range(self.ac.num_mc):
-            S_new = np.copy(S)
-
+        for i in range(self.ac.num_mc_samples):
             # Number of elements to select from the lower triangular part, excluding the diagonal
             num_elements_to_select = int(self.ac.r * self.ac.n_edges)
 
@@ -252,30 +195,36 @@ class QueryStrategy:
             # Randomly select indices
             selected = np.random.choice(i_lower.shape[0], size=num_elements_to_select, replace=False)
 
-            # Get the selected indices
-            selected_i, selected_j = i_lower[selected], j_lower[selected]
+            for i in range(self.ac.num_mc):
+                S_new = np.copy(S)
 
-            # Sample binary values for the selected indices
-            random_values = np.random.rand(num_elements_to_select)
-            selected_values = np.where(random_values < P[selected_i, selected_j], 1, -1)
+                # Get the selected indices
+                selected_i, selected_j = i_lower[selected], j_lower[selected]
 
-            # Update the S matrix
-            S_new[selected_i, selected_j] = selected_values
-            S_new[selected_j, selected_i] = selected_values
-            np.fill_diagonal(S_new, 0)
-            _, q_new, h_new = mean_field_clustering(
-                S=S_new, K=self.ac.num_clusters, betas=[self.ac.mean_field_beta], max_iter=100, tol=1e-10, 
-                predicted_labels=self.ac.clustering_solution
-            )
-            P_e1_full = np.einsum('ik,jk->ij', q_new, q_new)
-            distributions = np.stack([P_e1_full, 1 - P_e1_full], axis=-1)
+                # Sample binary values for the selected indices
+                random_values = np.random.rand(num_elements_to_select)
+                selected_values = np.where(random_values < P[selected_i, selected_j], 1, -1)
 
-            # Calculating entropy for each distribution
-            I_all += scipy_entropy(distributions, base=None, axis=-1)
+                # Update the S matrix
+                S_new[selected_i, selected_j] = selected_values
+                S_new[selected_j, selected_i] = selected_values
+                np.fill_diagonal(S_new, 0)
+                _, q_new, h_new = mean_field_clustering(
+                    S=S_new, K=self.ac.num_clusters, betas=[self.ac.mean_field_beta], max_iter=100, tol=1e-10, 
+                    predicted_labels=self.ac.clustering_solution
+                )
+                P_e1_full = np.einsum('ik,jk->ij', q_new, q_new)
+                distributions = np.stack([P_e1_full, 1 - P_e1_full], axis=-1)
+
+                # Calculating entropy for each distribution
+                I_all += scipy_entropy(distributions, base=np.e, axis=-1)
         
         # For each pair (x, y) in W
         
-        return I - (I_all/self.ac.num_mc)
+        return I - (I_all/(self.ac.num_mc_samples*self.ac.num_mc))
+        
+    def compute_info_gain_three(self, S):
+        pass
 
     def compute_cluster_informativeness(self, info_matrix):
         local_regions = []
