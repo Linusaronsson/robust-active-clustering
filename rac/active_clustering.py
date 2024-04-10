@@ -461,7 +461,7 @@ class ActiveClustering:
         distributions = np.stack([P_e1_full, 1 - P_e1_full], axis=-1)
 
         # Calculating entropy for each distribution
-        E_all = scipy_entropy(distributions, base=None, axis=-1)
+        E_all = scipy_entropy(distributions, base=np.e, axis=-1)
 
         # Step 2: Compute E_S_ij_minus_1
         E_S_ij_minus_1 = P_e1_full - 1
