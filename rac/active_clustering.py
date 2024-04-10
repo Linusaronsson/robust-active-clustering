@@ -384,6 +384,7 @@ class ActiveClustering:
             raise ValueError("Invalid sim init type in construct_initial_sim_matrix(...)")
         np.fill_diagonal(self.pairwise_similarities, 0.0)
 
+        pairs = None
         if self.warm_start > 0:
             total_flips = int(self.n_edges * self.warm_start)
             pairs = self.qs.select_batch("unif", total_flips)
@@ -395,16 +396,16 @@ class ActiveClustering:
 
         self.update_clustering() 
 
-
         if self.acq_fn == "cluster_incon" and self.sim_init_type == "zeros" and self.sim_init > 0:
             self.pairwise_similarities_new = np.random.uniform(
                 low=-self.sim_init,
                 high=self.sim_init, 
                 size=(self.N, self.N)
             )
-            for ind1, ind2 in pairs:
-                self.pairwise_similarities_new[ind1, ind2] = self.ground_truth_pairwise_similarities[ind1, ind2]
-                self.pairwise_similarities_new[ind2, ind1] = self.ground_truth_pairwise_similarities[ind1, ind2]
+            if pairs is not None:
+                for ind1, ind2 in pairs:
+                    self.pairwise_similarities_new[ind1, ind2] = self.ground_truth_pairwise_similarities[ind1, ind2]
+                    self.pairwise_similarities_new[ind2, ind1] = self.ground_truth_pairwise_similarities[ind1, ind2]
             self.pairwise_similarities = self.pairwise_similarities_new
 
     def update_clustering(self):
