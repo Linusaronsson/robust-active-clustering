@@ -30,8 +30,10 @@ class QueryStrategy:
                 self.info_matrix = self.compute_maxexp()
         elif acq_fn == "info_gain_object":
             self.info_matrix = self.compute_info_gain(S=self.ac.pairwise_similarities, mode="object")
-        elif acq_fn == "info_gain_edge":
-            self.info_matrix = self.compute_info_gain(S=self.ac.pairwise_similarities, mode="edge")
+        elif acq_fn == "info_gain_two":
+            self.info_matrix = self.compute_info_gain_two(S=self.ac.pairwise_similarities)
+        elif acq_fn == "info_gain_three":
+            self.info_matrix = self.compute_info_gain_three(S=self.ac.pairwise_similarities)
         elif acq_fn == "entropy":
             self.info_matrix = self.compute_entropy(S=self.ac.pairwise_similarities)
         elif acq_fn == "cluster_freq":
@@ -128,6 +130,48 @@ class QueryStrategy:
             raise ValueError("Invalid mode: {}".format(mode))
 
     def compute_info_gain(self, S, mode="object", h=None, q=None):
+        if self.ac.sparse_sim_matrix and not sparse.issparse(S):
+            S = sparse.csr_matrix(S)
+
+        if h is None:
+            clust_sol, q, h = mean_field_clustering(
+                S=S, K=self.ac.num_clusters, betas=[self.ac.mean_field_beta], max_iter=100, tol=1e-10, 
+                predicted_labels=self.ac.clustering_solution
+            )
+            
+        W = self.select_pairs_info_gain(mode=self.ac.info_gain_pair_mode, q=q, h=h)
+        I = np.zeros((self.ac.N, self.ac.N))
+        H_0 = np.sum(scipy_entropy(q, axis=1))
+        lmbda = self.ac.info_gain_lambda
+        
+        # For each pair (x, y) in W
+        for x, y in W:
+            h_plus = np.copy(h)
+            q_plus = np.copy(q)
+            h_minus = np.copy(h)
+            q_minus = np.copy(q)
+            S_xy = S[x, y]
+            for ii in range(self.ac.mf_iterations):
+                h_plus = -S.dot(q_plus)
+                h_plus[x, :] += q_plus[y, :] * (S_xy - lmbda)
+                h_plus[y, :] += q_plus[x, :] * (S_xy - lmbda)
+                q_plus = scipy_softmax(-self.ac.mean_field_beta*h_plus, axis=1)
+
+                h_minus = -S.dot(q_minus)
+                h_minus[x, :] += q_minus[y, :] * (S_xy + lmbda)
+                h_minus[y, :] += q_minus[x, :] * (S_xy + lmbda)
+                q_minus = scipy_softmax(-self.ac.mean_field_beta*h_minus, axis=1)
+
+                p_plus = np.sum(q[x, :] * q[y, :])
+                p_minus = 1 - p_plus
+                H_C_1 = np.sum(scipy_entropy(q_plus, axis=1))
+                H_C_2 = np.sum(scipy_entropy(q_minus, axis=1))
+                H_C_e = p_plus * H_C_1 + p_minus * H_C_2
+                I[x, y] = H_0-H_C_e
+                I[y, x] = I[x, y]
+        return I
+
+    def compute_info_gain_two(self, S):
         if self.ac.sparse_sim_matrix and not sparse.issparse(S):
             S = sparse.csr_matrix(S)
 

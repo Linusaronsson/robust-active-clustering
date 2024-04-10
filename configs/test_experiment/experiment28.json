@@ -7,7 +7,7 @@
     "_overwrite": false,
     "_mode": "ac",
     "seed": 14,
-    "batch_size": 0.001,
+    "batch_size": 0.005,
     "noise_level": 0.1,
     "clustering_alg": "CC",
     "warm_start": 0,
