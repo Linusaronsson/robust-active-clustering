@@ -395,6 +395,18 @@ class ActiveClustering:
 
         self.update_clustering() 
 
+
+        if self.acq_fn == "cluster_incon" and self.sim_init_type == "zeros" and self.sim_init > 0:
+            self.pairwise_similarities_new = np.random.uniform(
+                low=-self.sim_init,
+                high=self.sim_init, 
+                size=(self.N, self.N)
+            )
+            for ind1, ind2 in pairs:
+                self.pairwise_similarities_new[ind1, ind2] = self.ground_truth_pairwise_similarities_noisy[ind1, ind2]
+                self.pairwise_similarities_new[ind2, ind1] = self.ground_truth_pairwise_similarities_noisy[ind1, ind2]
+            self.pairwise_similarities = self.pairwise_similarities_new
+
     def update_clustering(self):
         self.clustering_solution, _ = max_correlation_dynamic_K(self.pairwise_similarities, self.num_clusters, 5)
         self.clustering = self.clustering_from_clustering_solution(self.clustering_solution)[0]
