@@ -84,7 +84,7 @@ class QueryStrategy:
 
         # ensure that the query is not repeated
         fq_flat = self.ac.feedback_freq[tri_rows, tri_cols]
-        informative_scores[fq_flat > self.al.tau] = -np.inf
+        informative_scores[fq_flat > self.ac.tau] = -np.inf
 
         random_tie_breaker = np.random.rand(len(informative_scores))
         sorted_indices = np.lexsort((random_tie_breaker, -informative_scores))
