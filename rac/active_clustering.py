@@ -403,8 +403,8 @@ class ActiveClustering:
                 size=(self.N, self.N)
             )
             for ind1, ind2 in pairs:
-                self.pairwise_similarities_new[ind1, ind2] = self.ground_truth_pairwise_similarities_noisy[ind1, ind2]
-                self.pairwise_similarities_new[ind2, ind1] = self.ground_truth_pairwise_similarities_noisy[ind1, ind2]
+                self.pairwise_similarities_new[ind1, ind2] = self.ground_truth_pairwise_similarities[ind1, ind2]
+                self.pairwise_similarities_new[ind2, ind1] = self.ground_truth_pairwise_similarities[ind1, ind2]
             self.pairwise_similarities = self.pairwise_similarities_new
 
     def update_clustering(self):
