@@ -17,7 +17,7 @@
     "sample_size": 1,
     "infer_threshold": -1,
     "start_inferring": 0,
-    "acq_fn": "maxmin",
+    "acq_fn": "maxexp",
     "eps": 0.3,
     "beta": 1,
     "tau": 3,
