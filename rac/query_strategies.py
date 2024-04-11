@@ -147,6 +147,8 @@ class QueryStrategy:
             h_minus = np.copy(h)
             q_minus = np.copy(q)
             S_xy = S[x, y]
+            print("S_xy: ", x, y)
+            print(self.ac.mf_iterations)
             for ii in range(self.ac.mf_iterations):
                 h_plus = -S.dot(q_plus)
                 h_plus[x, :] += q_plus[y, :] * (S_xy - lmbda)
@@ -158,24 +160,23 @@ class QueryStrategy:
                 h_minus[y, :] += q_minus[x, :] * (S_xy + lmbda)
                 q_minus = scipy_softmax(-self.ac.mean_field_beta*h_minus, axis=1)
 
-                p_plus = np.sum(q[x, :] * q[y, :])
-                p_minus = 1 - p_plus
-                H_C_1 = np.sum(scipy_entropy(q_plus, axis=1))
-                H_C_2 = np.sum(scipy_entropy(q_minus, axis=1))
-                H_C_e = p_plus * H_C_1 + p_minus * H_C_2
-                I[x, y] = H_0-H_C_e
-                I[y, x] = I[x, y]
+            p_plus = np.sum(q[x, :] * q[y, :])
+            p_minus = 1 - p_plus
+            H_C_1 = np.sum(scipy_entropy(q_plus, axis=1))
+            H_C_2 = np.sum(scipy_entropy(q_minus, axis=1))
+            H_C_e = p_plus * H_C_1 + p_minus * H_C_2
+            I[x, y] = H_0-H_C_e
+            I[y, x] = I[x, y]
         return I
 
     def compute_info_gain_two(self, S):
         if self.ac.sparse_sim_matrix and not sparse.issparse(S):
-            S = sparse.csr_matrix(S)
+            S_ = sparse.csr_matrix(S)
 
-        if h is None:
-            clust_sol, q, h = mean_field_clustering(
-                S=S, K=self.ac.num_clusters, betas=[self.ac.mean_field_beta], max_iter=100, tol=1e-10, 
-                predicted_labels=self.ac.clustering_solution
-            )
+        clust_sol, q, h = mean_field_clustering(
+            S=S_, K=self.ac.num_clusters, betas=[self.ac.mean_field_beta], max_iter=100, tol=1e-10, 
+            predicted_labels=self.ac.clustering_solution
+        )
 
         P = np.einsum('ik,jk->ij', q, q)
         distributions = np.stack([P, 1 - P], axis=-1)
@@ -184,18 +185,13 @@ class QueryStrategy:
         I = scipy_entropy(distributions, base=np.e, axis=-1)
             
         I_all = np.zeros((self.ac.N, self.ac.N))
+        print("starting...")
 
+        num_elements_to_select = int(self.ac.r * self.ac.n_edges)
+        i_lower, j_lower = np.tril_indices(self.ac.N, -1)
         for i in range(self.ac.num_mc_samples):
-            # Number of elements to select from the lower triangular part, excluding the diagonal
-            num_elements_to_select = int(self.ac.r * self.ac.n_edges)
-
-            # Indices of the lower triangular part, excluding the diagonal
-            i_lower, j_lower = np.tril_indices(self.ac.N, -1)
-
-            # Randomly select indices
             selected = np.random.choice(i_lower.shape[0], size=num_elements_to_select, replace=False)
-
-            for i in range(self.ac.num_mc):
+            for j in range(self.ac.num_mc):
                 S_new = np.copy(S)
 
                 # Get the selected indices
@@ -209,9 +205,11 @@ class QueryStrategy:
                 S_new[selected_i, selected_j] = selected_values
                 S_new[selected_j, selected_i] = selected_values
                 np.fill_diagonal(S_new, 0)
+                if self.ac.sparse_sim_matrix and not sparse.issparse(S_new):
+                    S_new = sparse.csr_matrix(S_new)
                 _, q_new, h_new = mean_field_clustering(
                     S=S_new, K=self.ac.num_clusters, betas=[self.ac.mean_field_beta], max_iter=100, tol=1e-10, 
-                    predicted_labels=self.ac.clustering_solution
+                    predicted_labels=self.ac.clustering_solution, h=h, q=q
                 )
                 P_e1_full = np.einsum('ik,jk->ij', q_new, q_new)
                 distributions = np.stack([P_e1_full, 1 - P_e1_full], axis=-1)
@@ -221,6 +219,7 @@ class QueryStrategy:
         
         # For each pair (x, y) in W
         
+        print("done...")
         return I - (I_all/(self.ac.num_mc_samples*self.ac.num_mc))
         
     def compute_info_gain_three(self, S):

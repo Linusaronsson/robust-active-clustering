@@ -12,6 +12,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from matplotlib.ticker import MaxNLocator
+import matplotlib as mpl
+
 
 
 import json
@@ -427,6 +429,12 @@ class ExperimentReader:
                     "cluster_incon": "IMU-C", "entropy": "Entropy"
                 }
 
+                palette = sns.color_palette("tab20", 36)  # Change 'husl' to any of the recommended palettes
+                #n_colors = 36
+                #colormap = mpl.cm.turbo
+                #color_indices = np.linspace(0, 1, n_colors)
+                #palette = [mpl.colors.rgb2hex(colormap(i)) for i in color_indices]
+
                 if "x" in vary:
                     var = "total_queries"
                 var = vary[0]
@@ -442,6 +450,7 @@ class ExperimentReader:
                     data=df_filtered,
                     linestyle=linestyle,
                     err_kws=err_kws,
+                    palette=palette
                 )
 
                 #plt.setp(ax.lines, markeredgecolor='none')  # Removes the border of the markers
