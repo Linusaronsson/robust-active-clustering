@@ -219,7 +219,7 @@ def mean_field_clustering(S, K, betas, max_iter=100, tol=1e-6, predicted_labels=
             # Check for convergence
             diff = np.linalg.norm(q_new - q)
             if diff < tol:
-                print(f'Converged after {iteration} iterations')
+                #print(f'Converged after {iteration} iterations')
                 break
 
             q = q_new
