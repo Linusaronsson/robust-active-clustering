@@ -30,6 +30,8 @@ class QueryStrategy:
                 self.info_matrix = self.compute_maxexp()
         elif acq_fn == "info_gain_object":
             self.info_matrix = self.compute_info_gain(S=self.ac.pairwise_similarities, mode="object")
+        elif acq_fn == "info_gain_object":
+            self.info_matrix = self.compute_info_gain(S=self.ac.pairwise_similarities, mode="object")
         elif acq_fn == "info_gain_objects_all":
             self.info_matrix = self.compute_info_gain_objects_all(S=self.ac.pairwise_similarities)
         elif acq_fn == "info_gain_objects_random":
@@ -40,6 +42,8 @@ class QueryStrategy:
             self.info_matrix = self.compute_info_gain_pairs_random(S=self.ac.pairwise_similarities)
         elif acq_fn == "entropy":
             self.info_matrix = self.compute_entropy(S=self.ac.pairwise_similarities)
+        elif acq_fn == "bald":
+            self.info_matrix = self.compute_bald(S=self.ac.pairwise_similarities)
         elif acq_fn == "cluster_freq":
             self.info_matrix = self.compute_cluster_informativeness(-self.ac.feedback_freq)
             self.info_matrix = self.info_matrix - self.ac.feedback_freq
@@ -102,13 +106,17 @@ class QueryStrategy:
     def compute_entropy(self, S, h=None, q=None):
         if self.ac.sparse_sim_matrix and not sparse.issparse(S):
             S = sparse.csr_matrix(S)
-        if h is None:
+
+        q_avg_accumulator = np.zeros((self.ac.N, self.ac.num_clusters))
+        for i in range(self.ac.num_mc_entropy):
             clust_sol, q, h = mean_field_clustering(
                 S=S, K=self.ac.num_clusters, betas=[self.ac.mean_field_beta], max_iter=100, tol=1e-10, 
                 predicted_labels=self.ac.clustering_solution
             )
+            q_avg_accumulator += q
+        q_avg = q_avg_accumulator / self.ac.num_mc_entropy
 
-        P_e1_full = np.einsum('ik,jk->ij', q, q)
+        P_e1_full = np.einsum('ik,jk->ij', q_avg, q_avg)
         distributions = np.stack([P_e1_full, 1 - P_e1_full], axis=-1)
         I = scipy_entropy(distributions, base=np.e, axis=-1)
         return I
@@ -129,13 +137,49 @@ class QueryStrategy:
         else:
             raise ValueError("Invalid mode: {}".format(mode))
 
-    def compute_info_gain(self, S, mode="object", h=None, q=None):
+    def compute_bald(self, S):
+        q_avg_accumulator = np.zeros((self.ac.N, self.ac.num_clusters))
+        I_all = np.zeros((self.ac.N, self.ac.N))
         if self.ac.sparse_sim_matrix and not sparse.issparse(S):
             S = sparse.csr_matrix(S)
+        # Iterate over the m runs of the clustering algorithm
+        for _ in range(self.ac.num_mc_entropy):
+            _, q, h = mean_field_clustering(
+                S=S, K=self.ac.num_clusters, betas=[self.ac.mean_field_beta], max_iter=100, tol=1e-10, 
+                predicted_labels=self.ac.clustering_solution
+            )
+            
+            # Update the running total for q_avg
+            q_avg_accumulator += q
+
+            P_e1_full = np.einsum('ik,jk->ij', q, q)
+            distributions = np.stack([P_e1_full, 1 - P_e1_full], axis=-1)
+
+            # Calculating entropy for each distribution
+            I_all += scipy_entropy(distributions, base=np.e, axis=-1)
+        
+        # Average the accumulated q values to get q_avg
+        q_avg = q_avg_accumulator / self.ac.num_mc_samples
+        q_avg = q_avg / np.sum(q_avg, axis=1, keepdims=True)
+        P_e1_full = np.einsum('ik,jk->ij', q_avg, q_avg)
+        distributions = np.stack([P_e1_full, 1 - P_e1_full], axis=-1)
+
+        I_total = scipy_entropy(distributions, base=np.e, axis=-1)
+
+        # Calculating entropy for each distribution
+        I_all = I_all / self.ac.num_mc_samples
+        
+        # Return the difference between the entropy of q_avg and the average of entropies of individual q's
+        return I_total - I_all
+            
+
+    def compute_info_gain(self, S, mode="object", h=None, q=None):
+        if self.ac.sparse_sim_matrix and not sparse.issparse(S):
+            S_ = sparse.csr_matrix(S)
 
         if h is None:
             clust_sol, q, h = mean_field_clustering(
-                S=S, K=self.ac.num_clusters, betas=[self.ac.mean_field_beta], max_iter=100, tol=1e-10, 
+                S=S_, K=self.ac.num_clusters, betas=[self.ac.mean_field_beta], max_iter=100, tol=1e-10, 
                 predicted_labels=self.ac.clustering_solution
             )
             
@@ -143,33 +187,27 @@ class QueryStrategy:
         I = np.zeros((self.ac.N, self.ac.N))
         H_0 = np.sum(scipy_entropy(q, axis=1))
         lmbda = self.ac.info_gain_lambda
-        
+
+        H_c_e = 0
+        P = np.einsum('ik,jk->ij', q, q)
         # For each pair (x, y) in W
         for x, y in W:
-            h_plus = np.copy(h)
-            q_plus = np.copy(q)
-            h_minus = np.copy(h)
-            q_minus = np.copy(q)
-            S_xy = S[x, y]
-            #print("S_xy: ", x, y)
-            #print(self.ac.mf_iterations)
-            for ii in range(self.ac.mf_iterations):
-                h_plus = -S.dot(q_plus)
-                h_plus[x, :] += q_plus[y, :] * (S_xy - lmbda)
-                h_plus[y, :] += q_plus[x, :] * (S_xy - lmbda)
-                q_plus = scipy_softmax(-self.ac.mean_field_beta*h_plus, axis=1)
+            for outcome in [+1, -1]:
+                S_new = np.copy(S)
+                S_new[x, y] = S_new[y, x] = outcome*lmbda
+                
+                np.fill_diagonal(S_new, 0)
+                if self.ac.sparse_sim_matrix and not sparse.issparse(S_new):
+                    S_new = sparse.csr_matrix(S_new)
+                _, q_new, h_new = mean_field_clustering(
+                    S=S_new, K=self.ac.num_clusters, betas=[self.ac.mean_field_beta], max_iter=100, tol=1e-10, 
+                    predicted_labels=self.ac.clustering_solution, h=h, q=q
+                )
+                H_C = np.sum(scipy_entropy(q_new, axis=1))
+                prob = P[x, y] if outcome == 1 else 1-P[x, y]
+                H_c_e += prob * H_C
 
-                h_minus = -S.dot(q_minus)
-                h_minus[x, :] += q_minus[y, :] * (S_xy + lmbda)
-                h_minus[y, :] += q_minus[x, :] * (S_xy + lmbda)
-                q_minus = scipy_softmax(-self.ac.mean_field_beta*h_minus, axis=1)
-
-            p_plus = np.sum(q[x, :] * q[y, :])
-            p_minus = 1 - p_plus
-            H_C_1 = np.sum(scipy_entropy(q_plus, axis=1))
-            H_C_2 = np.sum(scipy_entropy(q_minus, axis=1))
-            H_C_e = p_plus * H_C_1 + p_minus * H_C_2
-            I[x, y] = H_0-H_C_e
+            I[x, y] = H_0-H_c_e
             I[y, x] = I[x, y]
         return I
 
