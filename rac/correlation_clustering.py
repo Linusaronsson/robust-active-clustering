@@ -190,7 +190,7 @@ def max_correlation_dynamic_K(S, K, num_iterations):
 
 from sklearn.metrics import adjusted_rand_score
 
-def mean_field_clustering(S, K, betas, max_iter=100, tol=1e-6, predicted_labels=None, q=None, h=None):
+def mean_field_clustering(S, K, betas, max_iter=100, tol=1e-6, noise=0, reinit=False, predicted_labels=None, q=None, h=None):
     N = S.shape[0]
 
     if q is None:
@@ -211,16 +211,23 @@ def mean_field_clustering(S, K, betas, max_iter=100, tol=1e-6, predicted_labels=
         q = np.copy(q)
         h = np.copy(h)
 
+    if noise > 0:
+        q += noise*np.random.randn(*q.shape)
+        q /= np.sum(q, axis=1)[:, None]
+
+    if reinit:
+        q = np.random.dirichlet(np.ones(K), N)
+
     for beta in betas:
         for iteration in range(max_iter):
             h = -S.dot(q)
             q_new = softmax(beta*-h, axis=1)
             
             # Check for convergence
-            diff = np.linalg.norm(q_new - q)
-            if diff < tol:
+            #diff = np.linalg.norm(q_new - q)
+            #if diff < tol:
                 #print(f'Converged after {iteration} iterations')
-                break
+                #break
 
             q = q_new
 

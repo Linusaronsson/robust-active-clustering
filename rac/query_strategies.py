@@ -78,19 +78,11 @@ class QueryStrategy:
                 informative_scores += np.abs(np.min(informative_scores)) + 1e-10
             else:
                 informative_scores[informative_scores < 0] = 1e-10
-            #print("max: ", np.max(informative_scores))
-            #print("min: ", np.min(informative_scores))
-            #informative_scores = np.abs(informative_scores)
             if self.ac.use_power:
                 informative_scores = np.log(informative_scores)
-            #print("max log: ", np.max(informative_scores))
-            #print("min log: ", np.min(informative_scores))
             power_beta = 1
             informative_scores = informative_scores + scipy.stats.gumbel_r.rvs(loc=0, scale=1/power_beta, size=num_pairs, random_state=None)
 
-        #top_B_indices = np.argpartition(informative_scores, -batch_size)[-batch_size:]
-
-        # ensure that the query is not repeated
         fq_flat = self.ac.feedback_freq[tri_rows, tri_cols]
         informative_scores[fq_flat > self.ac.tau] = -np.inf
 
@@ -103,22 +95,44 @@ class QueryStrategy:
         top_pairs = np.stack((top_row_indices, top_col_indices), axis=-1)
         return top_pairs
         
-    def compute_entropy(self, S, h=None, q=None):
-        if self.ac.sparse_sim_matrix and not sparse.issparse(S):
-            S = sparse.csr_matrix(S)
-
-        q_avg_accumulator = np.zeros((self.ac.N, self.ac.num_clusters))
-        for i in range(self.ac.num_mc_entropy):
-            clust_sol, q, h = mean_field_clustering(
-                S=S, K=self.ac.num_clusters, betas=[self.ac.mean_field_beta], max_iter=100, tol=1e-10, 
-                predicted_labels=self.ac.clustering_solution
-            )
-            q_avg_accumulator += q
-        q_avg = q_avg_accumulator / self.ac.num_mc_entropy
-
-        P_e1_full = np.einsum('ik,jk->ij', q_avg, q_avg)
+    def entropy_matrix(self, q):
+        P_e1_full = np.einsum('ik,jk->ij', q, q)
         distributions = np.stack([P_e1_full, 1 - P_e1_full], axis=-1)
         I = scipy_entropy(distributions, base=np.e, axis=-1)
+        return I
+
+    def compute_mean_field(self, S):
+        q_avg_accumulator = np.zeros((self.ac.N, self.ac.num_clusters))
+        for i in range(self.ac.num_mc_mf):
+            if self.ac.vary_beta:
+                beta = i/2
+            else:
+                beta = self.ac.mean_field_beta
+            
+            if self.ac.mc_noise > 0:
+                S = S + np.random.normal(0, self.ac.mc_noise, S.shape)
+
+            if self.ac.sparse_sim_matrix:
+                S = sparse.csr_matrix(S)
+
+            clust_sol, q, h = mean_field_clustering(
+                S=S, K=self.ac.num_clusters,
+                betas=[beta], 
+                max_iter=200, 
+                tol=1e-10, 
+                noise=self.ac.mf_noise, 
+                reinit=self.ac.reinit,
+                predicted_labels=self.ac.clustering_solution
+            )
+
+            q_avg_accumulator += q
+        q_avg = q_avg_accumulator / self.ac.num_mc_mf
+        q_avg = q_avg / np.sum(q_avg, axis=1, keepdims=True)
+        return q_avg
+
+    def compute_entropy(self, S, h=None, q=None):
+        q  = self.compute_mean_field(S)
+        I = self.entropy_matrix(q)
         return I
 
     def select_pairs_info_gain(self, mode, q, h):
