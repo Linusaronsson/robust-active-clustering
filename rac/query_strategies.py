@@ -74,9 +74,9 @@ class QueryStrategy:
         if acq_noise:
             num_pairs = len(informative_scores)
             if self.ac.fix_neg:
-                informative_scores += np.abs(np.min(informative_scores)) + 1e-10
+                informative_scores += np.abs(np.min(informative_scores))
             else:
-                informative_scores[informative_scores < 0] = 1e-10
+                informative_scores[informative_scores < 0] = 0
             if self.ac.use_power:
                 informative_scores = np.log(informative_scores)
             power_beta = 1
