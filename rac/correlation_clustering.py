@@ -5,7 +5,6 @@ from scipy.special import softmax
 from scipy import sparse
 
 def max_correlation(S, K, num_iterations):
-
     N = np.size(S, 0)
 
     best_objective = -sys.float_info.max 
