@@ -71,7 +71,7 @@ class QueryStrategy:
         tri_rows, tri_cols = np.tril_indices(n=I_local.shape[0], k=-1)
         informative_scores = I_local[tri_rows, tri_cols]
         #if acq_noise and (self.ac.acq_fn == "entropy" or self.ac.acq_fn == "info_gain_object"):
-        if acq_noise:
+        if acq_noise and (not self.ac.acq_fn == "freq"):
             num_pairs = len(informative_scores)
             if self.ac.fix_neg:
                 informative_scores += np.abs(np.min(informative_scores))
