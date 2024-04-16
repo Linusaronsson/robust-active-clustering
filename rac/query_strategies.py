@@ -168,7 +168,7 @@ class QueryStrategy:
     def compute_info_gain(self, S):
         q, h = self._compute_mf(S)
         num_edges = int(self.ac.num_edges_info_gain*self.ac.N) if self.ac.num_edges_info_gain > 0 else self.ac.n_edges
-        W = self.select_pairs_info_gain(mode=self.ac.info_gain_pair_mode, q=q, num_edges=num_edges)
+        W = self.select_pairs_info_gain(mode=self.ac.info_gain_pair_mode, q=q, num_edges=num_edges, acq_noise=True)
         I = np.zeros((self.ac.N, self.ac.N))
         H_0 = np.sum(scipy_entropy(q, axis=1))
         lmbda = self.ac.info_gain_lambda
