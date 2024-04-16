@@ -27,7 +27,7 @@
     "alpha3": 1,
     "r": 0.1,
     "num_mc_samples": 1,
-    "num_mc": 300,
+    "num_mc": 10,
     "num_mc_mf": 1,
     "mc_noise": 0,
     "mf_noise": 0,
