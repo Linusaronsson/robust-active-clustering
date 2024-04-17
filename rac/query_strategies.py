@@ -117,6 +117,13 @@ class QueryStrategy:
         if self.ac.sparse_sim_matrix:
             S = sparse.csr_matrix(S)
 
+        if not self.ac.use_q:
+            q = None
+            h = None
+            pred_lab = None
+        else:
+            pred_lab = self.ac.clustering_solution
+
         clust_sol, q, h = mean_field_clustering(
             S=S, K=self.ac.num_clusters,
             betas=[beta], 
@@ -124,7 +131,7 @@ class QueryStrategy:
             tol=1e-10, 
             noise=self.ac.mf_noise, 
             reinit=self.ac.reinit,
-            predicted_labels=self.ac.clustering_solution,
+            predicted_labels=pred_lab,
             q=q,
             h=h
         )
