@@ -194,7 +194,8 @@ def mean_field_clustering(S, K, betas, max_iter=100, tol=1e-6, noise=0, reinit=F
 
     if q is None:
         if predicted_labels is None:
-            predicted_labels, _ = max_correlation_dynamic_K(S, K, 5)
+            #predicted_labels, _ = max_correlation_dynamic_K(S, K, 5)
+            predicted_labels, _ = fast_max_correlation(S, K, 5)
         beta = betas[0]
 
         K = len(np.unique(predicted_labels))
