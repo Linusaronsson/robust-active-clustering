@@ -70,8 +70,7 @@ class QueryStrategy:
         I_local = np.copy(I)
         tri_rows, tri_cols = np.tril_indices(n=I_local.shape[0], k=-1)
         informative_scores = I_local[tri_rows, tri_cols]
-        #if acq_noise and (self.ac.acq_fn == "entropy" or self.ac.acq_fn == "info_gain_object"):
-        if acq_noise and (not self.ac.acq_fn == "freq"):
+        if acq_noise and (self.ac.acq_fn == "entropy" or self.ac.acq_fn == "info_gain_object" or self.ac.acq_fn == "info_gain_pairs_random"):
             num_pairs = len(informative_scores)
             if self.ac.fix_neg:
                 informative_scores += np.abs(np.min(informative_scores))
@@ -79,7 +78,7 @@ class QueryStrategy:
                 informative_scores[informative_scores < 0] = 0
             if self.ac.use_power:
                 informative_scores = np.log(informative_scores)
-            power_beta = 1
+            power_beta = self.ac.power_beta
             informative_scores = informative_scores + scipy.stats.gumbel_r.rvs(loc=0, scale=1/power_beta, size=num_pairs, random_state=None)
 
         if use_tau:
