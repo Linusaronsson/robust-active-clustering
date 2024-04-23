@@ -318,8 +318,8 @@ class ExperimentReader:
 
             for metric in self.metrics:
                 df_filtered = self.filter_dataframe(data, exp_kwargs).reset_index()
-                if metric in ["time_select_batch", "time_update_clustering", "time", "num_violations", "num_repeat_queries"]:
-                    continue
+                #if metric in ["time_select_batch", "time_update_clustering", "time", "num_violations", "num_repeat_queries"]:
+                    #continue
                 col = "mean_" + metric
                 df_filtered[col] = df_filtered[metric].apply(lambda x: np.mean(x, axis=0))
                 df_filtered['array_lengths'] = df_filtered[col].apply(lambda x: len(x))
