@@ -132,8 +132,7 @@ class QueryStrategy:
             reinit=self.ac.reinit,
             predicted_labels=pred_lab,
             q=q,
-            h=h,
-            check_conv=self.ac.check_conv
+            h=h
         )
         return q, h
 

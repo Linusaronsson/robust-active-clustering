@@ -199,8 +199,7 @@ def mean_field_clustering(
         reinit=False,
         predicted_labels=None,
         q=None, 
-        h=None,
-        check_conv=False
+        h=None
     ):
     N = S.shape[0]
 
@@ -236,11 +235,10 @@ def mean_field_clustering(
             q_new = softmax(beta*-h, axis=1)
             
             # Check for convergence
-            if check_conv:
-                diff = np.linalg.norm(q_new - q)
-                if diff < tol:
-                    print(f'Converged after {iteration} iterations')
-                    break
+            diff = np.linalg.norm(q_new - q)
+            if diff < tol:
+                print(f'Converged after {iteration} iterations')
+                break
 
             q = q_new
 
