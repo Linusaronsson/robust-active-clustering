@@ -178,9 +178,9 @@ class QueryStrategy:
         I = np.zeros((self.ac.N, self.ac.N))
         H_0 = np.sum(scipy_entropy(q, axis=1))
         lmbda = self.ac.info_gain_lambda
-        H_c_e = 0
         P = np.einsum('ik,jk->ij', q, q)
         for x, y in W:
+            H_c_e = 0
             for outcome in [+1, -1]:
                 S_new = np.copy(S)
                 S_new[x, y] = S_new[y, x] = outcome*lmbda
