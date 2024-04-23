@@ -127,12 +127,13 @@ class QueryStrategy:
             S=S, K=self.ac.num_clusters,
             betas=[beta], 
             max_iter=self.ac.mf_iterations, 
-            tol=1e-10, 
+            tol=self.ac.conv_threshold, 
             noise=self.ac.mf_noise, 
             reinit=self.ac.reinit,
             predicted_labels=pred_lab,
             q=q,
-            h=h
+            h=h,
+            check_conv=self.ac.check_conv
         )
         return q, h
 
