@@ -6,6 +6,8 @@ import json
 import pickle
 
 import numpy as np
+#import cupy as np
+
 from sklearn import datasets
 from sklearn import preprocessing
 from sklearn.cluster import KMeans

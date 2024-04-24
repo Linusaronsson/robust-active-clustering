@@ -8,3 +8,6 @@ scp -r linaro@alvis1.c3se.chalmers.se:/mimer/NOBACKUP/groups/active-learning/exp
 
 scp -r C:\Github_projects/robust-active-clustering/datasets/ linaro@alvis1.c3se.chalmers.se:/cephyr/users/linaro/Alvis/robust-active-clustering/datasets
 scp -r /home/linaro/github_projects/robust-active-clustering/datasets/ linaro@alvis1.c3se.chalmers.se:/cephyr/users/linaro/Alvis/robust-active-clustering/datasets
+
+
+python rac/run_experiments.py --config=configs/test_experiment/experiment1.json

@@ -1,4 +1,8 @@
 import numpy as np
+#import cupy as cp
+import torch
+import torch.nn.functional as F
+
 import random 
 import sys
 from scipy.special import softmax
@@ -115,7 +119,9 @@ def fast_max_correlation(S, K, iterations):
 def max_correlation_dynamic_K(S, K, num_iterations):
     N = np.size(S, 0)
     #print("SIZE: ", N)
-    K_dyn = np.minimum(K, N)
+    K_dyn = K
+    print("running alg")
+    
     #print("NUM CLUSTERS: ", K_dyn)
 
     best_objective = -sys.float_info.max 
@@ -130,7 +136,7 @@ def max_correlation_dynamic_K(S, K, num_iterations):
             current_solution[i] = np.random.randint(0, K_dyn)
             
         # to gaurantee non-empty clusters
-        temp_indices = np.random.choice(range(0, N), K_dyn, replace=False)
+        temp_indices = np.random.choice(np.arange(0, N), K_dyn, replace=False)
         for k in range(0,K_dyn):
             current_solution[temp_indices[k]] = k
 
@@ -142,10 +148,10 @@ def max_correlation_dynamic_K(S, K, num_iterations):
 
         old_objective = current_objective - 1.0
 
-        for _ in range(30): 
+        for _ in range(N_iter): 
+            #print(current_objective-old_objective)
             if (current_objective-old_objective) <= sys.float_info.epsilon:
                 break
-            N_iter -= 1
             old_objective = current_objective
             indices = np.arange(0, N)
             np.random.shuffle(indices)
@@ -185,6 +191,7 @@ def max_correlation_dynamic_K(S, K, num_iterations):
             best_solution = np.array(current_solution)
             best_objective = current_objective
             
+    print("done")
     return best_solution, best_objective
 
 from sklearn.metrics import adjusted_rand_score
@@ -192,7 +199,7 @@ from sklearn.metrics import adjusted_rand_score
 def mean_field_clustering(
         S, 
         K, 
-        betas, 
+        beta, 
         max_iter=100,
         tol=1e-6,
         noise=0,
@@ -207,7 +214,6 @@ def mean_field_clustering(
         if predicted_labels is None:
             #predicted_labels, _ = max_correlation_dynamic_K(S, K, 5)
             predicted_labels, _ = fast_max_correlation(S, K, 5)
-        beta = betas[0]
 
         K = len(np.unique(predicted_labels))
         h = np.zeros((N, K))
@@ -216,33 +222,141 @@ def mean_field_clustering(
             cluster_indices = np.where(predicted_labels == k)[0]
             for i in range(N):
                 h[i, k] = S[i, cluster_indices].sum()
-        
-        q = softmax(beta*h, axis=1)
     else:
         q = np.copy(q)
         h = np.copy(h)
 
     if noise > 0:
-        q += noise*np.random.randn(*q.shape)
-        q /= np.sum(q, axis=1)[:, None]
+        h += np.random.rand(N, K) * noise
 
     if reinit:
-        q = np.random.dirichlet(np.ones(K), N)
+        h = np.random.rand(N, K)
 
-    for beta in betas:
-        for iteration in range(max_iter):
-            h = -S.dot(q)
-            q_new = softmax(beta*-h, axis=1)
-            
-            # Check for convergence
-            diff = np.linalg.norm(q_new - q)
-            if diff < tol:
-                print(f'Converged after {iteration} iterations')
-                break
+    q = softmax(beta*h, axis=1)
+    for iteration in range(max_iter):
+        h = -S.dot(q)
+        q_new = softmax(beta*-h, axis=1)
+        
+        # Check for convergence
+        diff = np.linalg.norm(q_new - q)
+        if diff < tol:
+            #print(f'Converged after {iteration} iterations')
+            break
 
-            q = q_new
+        q = q_new
 
     return np.argmax(q, axis=1), q, h
+
+def softmax_torch(x, axis=None):
+    return F.softmax(x, dim=axis)
+
+def mean_field_clustering_torch(
+        S, 
+        K, 
+        beta, 
+        max_iter=100,
+        tol=1e-6,
+        noise=0,
+        reinit=False,
+        predicted_labels=None,
+        q=None, 
+        h=None
+    ):
+    # Convert numpy inputs to torch tensors
+    S = torch.tensor(S, dtype=torch.float32)  # Ensure S is a float tensor for computations
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'  # Auto-detect device
+    S = S.to(device)
+    N = S.shape[0]
+
+    if q is None:
+        predicted_labels = torch.tensor(predicted_labels, device=device)
+        K = len(torch.unique(predicted_labels))
+        h = torch.zeros((N, K), device=device)
+
+        for k in range(K):
+            cluster_indices = (predicted_labels == k).nonzero(as_tuple=True)[0]
+            for i in range(N):
+                h[i, k] = S[i, cluster_indices].sum()
+    else:
+        q = torch.tensor(q, device=device, dtype=torch.float32)
+        h = torch.tensor(h, device=device, dtype=torch.float32)
+
+    if noise > 0:
+        h += torch.rand(N, K, device=device) * noise
+
+    if reinit:
+        h = torch.rand(N, K, device=device)
+
+    q = softmax_torch(beta * h, axis=1)
+    for iteration in range(max_iter):
+        h_new = -torch.matmul(S, q)
+        q_new = softmax_torch(beta * h_new, axis=1)
+        
+        # Check for convergence
+        diff = torch.norm(q_new - q).item()
+        if diff < tol:
+            break
+
+        q = q_new
+
+    # Convert outputs back to numpy arrays
+    final_labels = torch.argmax(q, axis=1).cpu().numpy()
+    q = q.cpu().numpy()
+    h = h.cpu().numpy()
+
+    return final_labels, q, h
+
+
+def mean_field_clustering_cp(
+        S, 
+        K, 
+        beta, 
+        max_iter=100,
+        tol=1e-6,
+        noise=0,
+        reinit=False,
+        predicted_labels=None,
+        q=None, 
+        h=None
+    ):
+    N = S.shape[0]
+    S = cp.asarray(S)
+    predicted_labels = cp.asarray(predicted_labels)
+
+    if q is None:
+        K = len(cp.unique(predicted_labels))
+        h = cp.zeros((N, K))
+
+        for k in range(K):
+            cluster_indices = cp.where(predicted_labels == k)[0]
+            for i in range(N):
+                h[i, k] = S[i, cluster_indices].sum()
+    else:
+        q = cp.copy(q)
+        h = cp.copy(h)
+
+    if noise > 0:
+        h += cp.random.rand(N, K) * noise
+
+    if reinit:
+        h = cp.random.rand(N, K)
+
+    q = softmax(beta*cp.asnumpy(h), axis=1)
+    q = cp.asarray(q)
+    for iteration in range(max_iter):
+        h = -S.dot(q)
+        q_new = softmax(beta*cp.asnumpy(-h), axis=1)
+        q_new = cp.asarray(q_new)
+        
+        # Check for convergence
+        diff = cp.linalg.norm(q_new - q)
+        if diff < tol:
+            #print(f'Converged after {iteration} iterations')
+            break
+
+        q = q_new
+
+    return cp.asnumpy(cp.argmax(q, axis=1)), cp.asnumpy(q), cp.asnumpy(h)
 
 if __name__ == "__main__":
 

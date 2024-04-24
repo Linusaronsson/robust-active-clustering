@@ -1,9 +1,11 @@
 import numpy as np 
+#import cupy as np
+
 from itertools import combinations, product
 from scipy.special import softmax as scipy_softmax
 from scipy.stats import entropy as scipy_entropy
 from scipy import sparse
-from rac.correlation_clustering import mean_field_clustering
+from rac.correlation_clustering import mean_field_clustering, mean_field_clustering_torch
 import scipy
 
 class QueryStrategy:
@@ -89,6 +91,11 @@ class QueryStrategy:
         sorted_indices = np.lexsort((random_tie_breaker, -informative_scores))
         top_B_indices = sorted_indices[:batch_size]
 
+        #random_tie_breaker = np.random.rand(len(informative_scores))
+        #keys = np.vstack((random_tie_breaker, -informative_scores)).T  # Transpose to make keys columns
+        #sorted_indices = np.lexsort(keys.T)  # Transpose back to make keys rows for sorting
+        #top_B_indices = sorted_indices[:batch_size]
+
         if return_indices:
             return top_B_indices
         else:
@@ -110,9 +117,6 @@ class QueryStrategy:
     def _compute_mf(self, S, q=None, h=None):
         beta = self.ac.mean_field_beta
         
-        if self.ac.mc_noise > 0:
-            S = S + np.random.normal(0, self.ac.mc_noise, S.shape)
-
         if self.ac.sparse_sim_matrix:
             S = sparse.csr_matrix(S)
 
@@ -123,9 +127,14 @@ class QueryStrategy:
         else:
             pred_lab = self.ac.clustering_solution
 
-        clust_sol, q, h = mean_field_clustering(
+        if self.ac.repeat_id == 0:
+            mf_alg = mean_field_clustering_torch
+        else:
+            mf_alg = mean_field_clustering
+
+        clust_sol, q, h = mf_alg(
             S=S, K=self.ac.num_clusters,
-            betas=[beta], 
+            beta=beta, 
             max_iter=self.ac.mf_iterations, 
             tol=self.ac.conv_threshold, 
             noise=self.ac.mf_noise, 
@@ -147,7 +156,8 @@ class QueryStrategy:
 
     def compute_entropy(self, S, q=None):
         if q is None:
-            q  = self.compute_mean_field(S)
+            #q  = self.compute_mean_field(S)
+            q, h = self._compute_mf(S)
         I = self.entropy_matrix(q)
         return I
 
