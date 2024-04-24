@@ -117,7 +117,7 @@ class QueryStrategy:
     def _compute_mf(self, S, q=None, h=None):
         beta = self.ac.mean_field_beta
         
-        if self.ac.sparse_sim_matrix:
+        if self.ac.sparse_sim_matrix and self.ac.repeat_id != 0:
             S = sparse.csr_matrix(S)
 
         if not self.ac.use_q:
