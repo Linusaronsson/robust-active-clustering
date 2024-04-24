@@ -120,7 +120,6 @@ def max_correlation_dynamic_K(S, K, num_iterations):
     N = np.size(S, 0)
     #print("SIZE: ", N)
     K_dyn = K
-    print("running alg")
     
     #print("NUM CLUSTERS: ", K_dyn)
 
