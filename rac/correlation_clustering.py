@@ -273,7 +273,7 @@ def mean_field_clustering_torch(
         h = torch.zeros((N, K), device=device)
 
         for k in range(K):
-            cluster_indices = (predicted_labels == k).nonzero(as_tuple=True)[0]
+            cluster_indices = torch.where(predicted_labels == k)[0]
             for i in range(N):
                 h[i, k] = S[i, cluster_indices].sum()
     else:
@@ -288,8 +288,8 @@ def mean_field_clustering_torch(
 
     q = softmax_torch(beta * h, axis=1)
     for iteration in range(max_iter):
-        h_new = -torch.matmul(S, q)
-        q_new = softmax_torch(beta * h_new, axis=1)
+        h = -torch.matmul(S, q)
+        q_new = softmax_torch(beta * -h, axis=1)
         
         # Check for convergence
         diff = torch.norm(q_new - q).item()
