@@ -130,8 +130,11 @@ def get_dataset(**options):
     return X, Y, X_test, Y_test, transform, test_transform
 
 def gather_results(result_queue, path):
+    num_completed = 0
     try:
         while True:
+            if num_completed == 10:
+                return
             ac_data = result_queue.get(block=True, timeout=None)
             if ac_data is None:
                 return
@@ -142,12 +145,14 @@ def gather_results(result_queue, path):
                 if os.path.exists(experiment_path):
                     with open(data_path, 'wb') as handle:
                         pickle.dump([ac_data], handle, protocol=pickle.HIGHEST_PROTOCOL)
+                        num_completed += 1
             else:
                 with open(data_path, 'rb') as handle:
                     exp = pickle.load(handle)
                 exp.append(ac_data)
                 with open(data_path, 'wb') as handle:
                     pickle.dump(exp, handle, protocol=pickle.HIGHEST_PROTOCOL)
+                    num_completed += 1
 
             completed_experiments_path = path + "completed_experiments.txt"
             with open(completed_experiments_path, "a") as file:
@@ -286,10 +291,15 @@ def run_experiments(config):
         experiment_queue.put(None)
     gather_process = mp.Process(target=gather_results, args=(result_queue, path), daemon=False)
     gather_process.start()
-    for process in processes:
-        process.join()
-    result_queue.put(None) 
     gather_process.join()
+    for process in processes:
+        process.terminate()
+    #result_queue.put(None) 
+
+    #for process in processes:
+    #    process.join()
+    #result_queue.put(None) 
+    #gather_process.join()
 
 def read_config_file(filename):
     if filename.split('.')[-1] not in ['json']:
