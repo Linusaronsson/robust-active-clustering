@@ -131,11 +131,13 @@ def get_dataset(**options):
 
 def gather_results(result_queue, path):
     num_completed = 0
+    query_stra = "unknown"
     try:
         while True:
-            if num_completed == 10:
+            if num_completed == 7 and query_stra == "info_gain_object" or query_stra == "info_gain_pairs_random":
                 return
             ac_data = result_queue.get(block=True, timeout=None)
+            query_stra = ac_data.acq_fn
             if ac_data is None:
                 return
             experiment_path = path + ac_data.dataset_full_name
