@@ -429,7 +429,7 @@ class ExperimentReader:
                     "cluster_incon": "IMU-C", "entropy": "Entropy"
                 }
 
-                #palette = sns.color_palette("tab20", 36)  # Change 'husl' to any of the recommended palettes
+                palette = sns.color_palette("tab20", 36)  # Change 'husl' to any of the recommended palettes
                 #n_colors = 36
                 #colormap = mpl.cm.turbo
                 #color_indices = np.linspace(0, 1, n_colors)
@@ -449,8 +449,8 @@ class ExperimentReader:
                     err_style=err_style,
                     data=df_filtered,
                     linestyle=linestyle,
-                    err_kws=err_kws
-                    #palette=palette
+                    err_kws=err_kws,
+                    palette=palette
                 )
 
                 #plt.setp(ax.lines, markeredgecolor='none')  # Removes the border of the markers
