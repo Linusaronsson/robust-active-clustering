@@ -62,8 +62,8 @@ class ActiveClustering:
                     noise=0, 
                     reinit=True,
                     predicted_labels=self.clustering_solution,
-                    q=q,
-                    h=h
+                    q=None,
+                    h=None
                 )
 
 
