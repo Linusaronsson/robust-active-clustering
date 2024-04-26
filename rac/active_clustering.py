@@ -12,7 +12,7 @@ from scipy.spatial import distance
 from noise_robust_cobras.cobras import COBRAS
 from noise_robust_cobras.querier.noisy_labelquerier import ProbabilisticNoisyQuerier
 
-from rac.correlation_clustering import max_correlation, max_correlation_dynamic_K, mean_field_clustering
+from rac.correlation_clustering import max_correlation, max_correlation_dynamic_K, mean_field_clustering, mean_field_clustering_torch
 from rac.query_strategies import QueryStrategy
 from rac.experiment_data import ExperimentData
 
@@ -51,6 +51,22 @@ class ActiveClustering:
         self.start_time = time.time()
         self.initialize_ac_procedure()
         self.store_experiment_data(initial=True)
+
+        if self.repeat_id == 0:
+            while True:
+                clust_sol, q, h = mean_field_clustering_torch(
+                    S=self.pairwise_similarities, K=self.num_clusters,
+                    beta=self.mean_field_beta, 
+                    max_iter=self.mf_iterations, 
+                    tol=self.conv_threshold, 
+                    noise=0, 
+                    reinit=True,
+                    predicted_labels=self.clustering_solution,
+                    q=q,
+                    h=h
+                )
+
+
         perfect_rand_count = 0
         early_stopping_count = 0
         old_rand = adjusted_rand_score(self.Y, self.clustering_solution)

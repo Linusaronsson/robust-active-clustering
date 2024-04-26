@@ -136,7 +136,7 @@ def gather_results(result_queue, path):
         while True:
             if num_completed == 7 and (query_stra == "info_gain_object" or query_stra == "info_gain_pairs_random" or query_stra == "cluster_incon"):
                 return
-            elif num_completed == 14:
+            elif num_completed == 13:
                 return
             ac_data = result_queue.get(block=True, timeout=None)
             query_stra = ac_data.acq_fn
