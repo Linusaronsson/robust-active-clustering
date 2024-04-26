@@ -130,6 +130,7 @@ class QueryStrategy:
         if self.ac.repeat_id == 0:
             mf_alg = mean_field_clustering_torch
         else:
+            print("here?")
             mf_alg = mean_field_clustering
 
         clust_sol, q, h = mf_alg(
