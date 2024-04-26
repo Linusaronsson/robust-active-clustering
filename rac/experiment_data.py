@@ -412,7 +412,7 @@ class ExperimentReader:
                 else:
                     raise ValueError("incorrect dataset!")
 
-                cut_threshold = 400
+                #cut_threshold = 400
                 df_filtered = df_filtered[df_filtered[vary[0]] < cut_threshold]
 
                 metric_map = {
@@ -425,11 +425,11 @@ class ExperimentReader:
                 acq_fn_map = {
                     "maxexp": "Maxexp", "maxmin": "Maxmin", "uncert": "Uncertainty",
                     "freq": "Frequency", "unif": "Uniform", "nCOBRAS": "nCOBRAS",
-                    "COBRAS": "COBRAS", "QECC": "QECC", "info_gain_object": "IG",
-                    "cluster_incon": "IMU-C", "entropy": "Entropy"
+                    "COBRAS": "COBRAS", "QECC": "QECC", "info_gain_object": "IGO",
+                    "cluster_incon": "IMU-C", "entropy": "Entropy", "info_gain_pairs_random": "IGP"
                 }
 
-                palette = sns.color_palette("tab20", 36)  # Change 'husl' to any of the recommended palettes
+                #palette = sns.color_palette("tab20", 36)  # Change 'husl' to any of the recommended palettes
                 #n_colors = 36
                 #colormap = mpl.cm.turbo
                 #color_indices = np.linspace(0, 1, n_colors)
@@ -441,53 +441,62 @@ class ExperimentReader:
                 ax = sns.lineplot(
                     x=vary[0],
                     y="y",
-                    hue=df_filtered[hues].apply(tuple, axis=1),
-                    #hue="acq_fn",
-                    #hue_order=["entropy", "cluster_incon", "maxexp", "maxmin", "freq"],
+                    #hue=df_filtered[hues].apply(tuple, axis=1),
+                    hue="acq_fn",
+                    hue_order=["info_gain_object", "info_gain_pairs_random", "entropy", "cluster_incon", "maxexp", "maxmin", "freq"],
                     errorbar=errorbar,
                     marker=".",
                     err_style=err_style,
                     data=df_filtered,
                     linestyle=linestyle,
-                    err_kws=err_kws,
-                    palette=palette
+                    err_kws=err_kws
+                    #palette=palette
                 )
 
                 #plt.setp(ax.lines, markeredgecolor='none')  # Removes the border of the markers
                 #plt.setp(ax.lines, alpha=0.7)  # Adjusts the transparency of the markers
                 plt.setp(ax.lines, markeredgewidth=0.5)  # Adjusts the transparency of the markers
                 #plt.setp(ax.lines, markersize=7)  # Adjusts the transparency of the markers
-                plt.setp(ax.lines, markersize=10)  # Adjusts the transparency of the markers
+                plt.setp(ax.lines, markersize=8)  # Adjusts the transparency of the markers
                 plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True, nbins=5))
                 #plt.gca().xaxis.set_major_locator(MaxNLocator(nbins=10))
 
 
                 plt.ylabel(metric_map[metric])
 
-                labels = self.construct_x_ticks(ax, prop)
-                #ws = 1-exp_kwargs["warm_start"]
-                #N_pool = int(len(self.Y)*ws)
-                #rest = len(self.Y) - N_pool
-                #labels = []
-                #for item in ax.get_xticks():
-                #    #labels.append(round((int(item)*self.batch_size+rest)/len(self.Y), 2))
-                #    labels.append(round((int(item)*self.batch_size+rest), 2))
+                #labels = self.construct_x_ticks(ax, prop)
+                ws = 1-exp_kwargs["warm_start"]
+                N = len(self.Y)
+                n_edges = (N*(N-1))/2
+                N_pool = int(n_edges*ws)
+                rest = n_edges - N_pool
+                if self.batch_size < 1:
+                    batch_size = math.ceil(n_edges * self.batch_size)
+                else:
+                    batch_size = self.batch_size
+                labels = []
+                for item in ax.get_xticks():
+                    if prop:
+                        labels.append(round((int(item)*batch_size+rest)/n_edges, 2))
+                    else:
+                        lab = int(int(item)*batch_size+rest)
+                        labels.append(lab)
                 ax.set_xticklabels(labels)
 
-                plt.xlabel("Number of objects queried")
+                plt.xlabel("Number of queries")
                 #ax.legend(loc='lower right')
                 ax.legend(loc='upper left', bbox_to_anchor=(1,1))
                 plt.subplots_adjust(right=0.75)
 
-                #legs = ax.get_legend().get_texts()
-                #fix_legends = True
-                #if fix_legends:
-                #    ax.get_legend().set_title(None)
-                #    for ll in legs:
-                #        l = ll.get_text()
-                #        for k, v in acq_fn_map.items():
-                #            if k in l:
-                #                ll.set_text(v)
+                legs = ax.get_legend().get_texts()
+                fix_legends = True
+                if fix_legends:
+                    ax.get_legend().set_title(None)
+                    for ll in legs:
+                        l = ll.get_text()
+                        for k, v in acq_fn_map.items():
+                            if k in l:
+                                ll.set_text(v)
 
 
                 #legs = ax.get_legend().get_texts()
