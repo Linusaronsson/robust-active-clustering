@@ -154,9 +154,9 @@ class ActiveClustering:
             total_queries += self.batch_size
             self.total_time_elapsed = time.time() - self.start_time
 
-            #num_hours = self.total_time_elapsed / 3600
-            #if num_hours > 60:
-            #    break
+            num_hours = self.total_time_elapsed / 3600
+            if num_hours > 3.5:
+                break
 
             if self._verbose:
                 print("iteration: ", ii)
@@ -411,14 +411,14 @@ class ActiveClustering:
             np.random.seed(specific_seed)
             pairs = self.qs.select_batch("unif", total_flips)
             for ind1, ind2 in pairs:
-                if np.random.rand() <= self.noise_level:
-                    noisy_val = np.random.uniform(0.15, 0.5)
-                    if np.random.uniform(-1.0, 1.0) > 0:
-                        query = -noisy_val
-                    else:
-                        query = noisy_val
-                else:
-                    query = self.ground_truth_pairwise_similarities[ind1, ind2]
+                #if np.random.rand() <= self.noise_level:
+                #    noisy_val = np.random.uniform(0.15, 0.5)
+                #    if np.random.uniform(-1.0, 1.0) > 0:
+                #        query = -noisy_val
+                #    else:
+                #        query = noisy_val
+                #else:
+                query = self.ground_truth_pairwise_similarities[ind1, ind2]
                 self.pairwise_similarities[ind1, ind2] = query
                 self.pairwise_similarities[ind2, ind1] = query
                 self.feedback_freq[ind1, ind2] += 1
