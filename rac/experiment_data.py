@@ -443,7 +443,7 @@ class ExperimentReader:
                     y="y",
                     #hue=df_filtered[hues].apply(tuple, axis=1),
                     hue="acq_fn",
-                    hue_order=["info_gain_object", "info_gain_pairs_random", "entropy", "cluster_incon", "maxexp", "maxmin", "freq"],
+                    hue_order=["info_gain_object", "info_gain_pairs_random", "entropy", "cluster_incon", "maxexp", "maxmin", "unif"],
                     errorbar=errorbar,
                     marker=".",
                     err_style=err_style,

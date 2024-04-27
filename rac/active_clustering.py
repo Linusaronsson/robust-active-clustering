@@ -406,10 +406,21 @@ class ActiveClustering:
         pairs = None
         if self.warm_start > 0:
             total_flips = int(self.n_edges * self.warm_start)
+            specific_seed = self.repeat_id + self.seed + 42
+            state = np.random.get_state()
+            np.random.seed(specific_seed)
             pairs = self.qs.select_batch("unif", total_flips)
             for ind1, ind2 in pairs:
-                self.pairwise_similarities[ind1, ind2] = self.ground_truth_pairwise_similarities[ind1, ind2]
-                self.pairwise_similarities[ind2, ind1] = self.ground_truth_pairwise_similarities[ind1, ind2]
+                if np.random.rand() <= self.noise_level:
+                    noisy_val = np.random.uniform(0.15, 0.5)
+                    if np.random.uniform(-1.0, 1.0) > 0:
+                        query = -noisy_val
+                    else:
+                        query = noisy_val
+                else:
+                    query = self.ground_truth_pairwise_similarities[ind1, ind2]
+                self.pairwise_similarities[ind1, ind2] = query
+                self.pairwise_similarities[ind2, ind1] = query
                 self.feedback_freq[ind1, ind2] += 1
                 self.feedback_freq[ind2, ind1] += 1
 
@@ -426,6 +437,9 @@ class ActiveClustering:
                     self.pairwise_similarities_new[ind1, ind2] = self.ground_truth_pairwise_similarities[ind1, ind2]
                     self.pairwise_similarities_new[ind2, ind1] = self.ground_truth_pairwise_similarities[ind1, ind2]
             self.pairwise_similarities = self.pairwise_similarities_new
+
+        if self.warm_start > 0:
+            np.random.set_state(state)
 
     def update_clustering(self):
         self.clustering_solution, _ = max_correlation_dynamic_K(self.pairwise_similarities, self.num_clusters, 5)
