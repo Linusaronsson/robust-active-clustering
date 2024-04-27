@@ -441,9 +441,9 @@ class ExperimentReader:
                 ax = sns.lineplot(
                     x=vary[0],
                     y="y",
-                    #hue=df_filtered[hues].apply(tuple, axis=1),
-                    hue="acq_fn",
-                    hue_order=["info_gain_object", "info_gain_pairs_random", "entropy", "cluster_incon", "maxexp", "maxmin", "unif"],
+                    hue=df_filtered[hues].apply(tuple, axis=1),
+                    #hue="acq_fn",
+                    #hue_order=["info_gain_object", "info_gain_pairs_random", "entropy", "cluster_incon", "maxexp", "maxmin", "unif"],
                     errorbar=errorbar,
                     marker=".",
                     err_style=err_style,
@@ -488,15 +488,15 @@ class ExperimentReader:
                 ax.legend(loc='upper left', bbox_to_anchor=(1,1))
                 plt.subplots_adjust(right=0.75)
 
-                legs = ax.get_legend().get_texts()
-                fix_legends = True
-                if fix_legends:
-                    ax.get_legend().set_title(None)
-                    for ll in legs:
-                        l = ll.get_text()
-                        for k, v in acq_fn_map.items():
-                            if k in l:
-                                ll.set_text(v)
+                #legs = ax.get_legend().get_texts()
+                #fix_legends = True
+                #if fix_legends:
+                #    ax.get_legend().set_title(None)
+                #    for ll in legs:
+                #        l = ll.get_text()
+                #        for k, v in acq_fn_map.items():
+                #            if k in l:
+                #                ll.set_text(v)
 
 
                 #legs = ax.get_legend().get_texts()

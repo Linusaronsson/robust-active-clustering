@@ -154,9 +154,9 @@ class ActiveClustering:
             total_queries += self.batch_size
             self.total_time_elapsed = time.time() - self.start_time
 
-            num_hours = self.total_time_elapsed / 3600
-            if num_hours > 3.5:
-                break
+            #num_hours = self.total_time_elapsed / 3600
+            #if num_hours > 3.5:
+            #    break
 
             if self._verbose:
                 print("iteration: ", ii)
