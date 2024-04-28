@@ -1,5 +1,5 @@
 {
-    "_experiment_name": "test_experiment",
+    "_experiment_name": "test_experiment2",
     "_num_repeats": 14,
     "_n_workers": 14,
     "_local": true,
@@ -26,7 +26,7 @@
     "alpha2": 0.5,
     "alpha3": 1,
     "r": 0.01,
-    "num_mc_samples": 5,
+    "num_mc_samples": 20,
     "num_mc": 10,
     "use_q": true,
     "num_mc_mf": 1,

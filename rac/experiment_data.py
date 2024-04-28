@@ -388,27 +388,27 @@ class ExperimentReader:
                 if "synthetic" in self.dataset:
                     cut_threshold = 25
                 elif self.dataset == "20newsgroups":
-                    cut_threshold = 15
+                    cut_threshold = 20
                 elif self.dataset == "breast_cancer":
-                    cut_threshold = 5
+                    cut_threshold = 10
                 elif self.dataset == "cardiotocography":
-                    cut_threshold = 10
+                    cut_threshold = 15
                 elif self.dataset == "cifar10" or self.dataset == "cifar10_original":
-                    cut_threshold = 12
+                    cut_threshold = 20
                 elif self.dataset == "ecoli":
-                    cut_threshold = 17
+                    cut_threshold = 25
                 elif self.dataset == "forest_type_mapping":
-                    cut_threshold = 10
+                    cut_threshold = 20
                 elif self.dataset == "mnist":
-                    cut_threshold = 12
+                    cut_threshold = 20
                 elif self.dataset == "mnist_original":
                     cut_threshold = 10000
                 elif self.dataset == "mushrooms":
-                    cut_threshold = 4
+                    cut_threshold = 10
                 elif self.dataset == "user_knowledge":
-                    cut_threshold = 9
+                    cut_threshold = 15
                 elif self.dataset == "yeast":
-                    cut_threshold = 9
+                    cut_threshold = 15
                 else:
                     raise ValueError("incorrect dataset!")
 
