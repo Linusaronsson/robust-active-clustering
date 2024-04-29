@@ -132,10 +132,17 @@ class QueryStrategy:
         else:
             mf_alg = mean_field_clustering
 
+        if self.ac.acq_fn == "info_gain_object":
+            n_iter = 50
+        else:
+            n_iter = self.ac.mf_iterations
+
+        
+
         clust_sol, q, h = mf_alg(
             S=S, K=self.ac.num_clusters,
             beta=beta, 
-            max_iter=self.ac.mf_iterations, 
+            max_iter=n_iter, 
             tol=self.ac.conv_threshold, 
             noise=self.ac.mf_noise, 
             reinit=self.ac.reinit,

@@ -32,7 +32,7 @@
     "num_mc_mf": 1,
     "mf_noise": 0,
     "reinit": false,
-    "mf_iterations": 50,
+    "mf_iterations": 200,
     "conv_threshold": 1e-08,
     "mf_acq_noise": true,
     "acq_noise": false,
