@@ -132,7 +132,7 @@ class QueryStrategy:
         else:
             mf_alg = mean_field_clustering
 
-        if self.ac.acq_fn == "info_gain_object" and q is None:
+        if self.ac.acq_fn == "info_gain_object" and q is not None:
             n_iter = 50
         else:
             n_iter = self.ac.mf_iterations

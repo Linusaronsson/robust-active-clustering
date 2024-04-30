@@ -190,7 +190,6 @@ def max_correlation_dynamic_K(S, K, num_iterations):
             best_solution = np.array(current_solution)
             best_objective = current_objective
             
-    print("done")
     return best_solution, best_objective
 
 from sklearn.metrics import adjusted_rand_score
