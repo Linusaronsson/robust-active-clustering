@@ -139,9 +139,9 @@ def gather_results(result_queue, path):
             elif num_completed == 13:
                 return
             ac_data = result_queue.get(block=True, timeout=None)
-            query_stra = ac_data.acq_fn
             if ac_data is None:
                 return
+            query_stra = ac_data.acq_fn
             experiment_path = path + ac_data.dataset_full_name
             data_path = experiment_path + "/" + ac_data.hashed_name
             if not os.path.exists(data_path):
@@ -295,10 +295,11 @@ def run_experiments(config):
         experiment_queue.put(None)
     gather_process = mp.Process(target=gather_results, args=(result_queue, path), daemon=False)
     gather_process.start()
+
     gather_process.join()
     for process in processes:
-        process.terminate()
-    #result_queue.put(None) 
+       process.terminate()
+    result_queue.put(None) 
 
     #for process in processes:
     #    process.join()

@@ -72,13 +72,11 @@ class QueryStrategy:
         I_local = np.copy(I)
         tri_rows, tri_cols = np.tril_indices(n=I_local.shape[0], k=-1)
         informative_scores = I_local[tri_rows, tri_cols]
+
         if acq_noise and (self.ac.acq_fn == "entropy" or self.ac.acq_fn == "info_gain_object" or self.ac.acq_fn == "info_gain_pairs_random"):
             num_pairs = len(informative_scores)
-            if self.ac.fix_neg:
-                informative_scores += np.abs(np.min(informative_scores))
-            else:
-                informative_scores[informative_scores < 0] = 0
             if self.ac.use_power:
+                informative_scores[informative_scores < 0] = 1e-16
                 informative_scores = np.log(informative_scores)
             power_beta = self.ac.power_beta
             informative_scores = informative_scores + scipy.stats.gumbel_r.rvs(loc=0, scale=1/power_beta, size=num_pairs, random_state=None)
@@ -120,13 +118,6 @@ class QueryStrategy:
         if self.ac.sparse_sim_matrix and self.ac.repeat_id != 0:
             S = sparse.csr_matrix(S)
 
-        if not self.ac.use_q:
-            q = None
-            h = None
-            pred_lab = None
-        else:
-            pred_lab = self.ac.clustering_solution
-
         if self.ac.repeat_id == 0:
             mf_alg = mean_field_clustering_torch
         else:
@@ -145,7 +136,7 @@ class QueryStrategy:
             tol=self.ac.conv_threshold, 
             noise=self.ac.mf_noise, 
             reinit=self.ac.reinit,
-            predicted_labels=pred_lab,
+            predicted_labels=self.ac.clustering_solution,
             q=q,
             h=h
         )
@@ -169,7 +160,8 @@ class QueryStrategy:
 
     def select_pairs_info_gain(self, mode, num_edges, q=None, acq_noise=False, return_indices=False, use_tau=True):
         if mode == "uniform":
-            #info_matrix = np.random.rand(self.ac.N, self.ac.N)
+            #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+            #info_matrix = np.random.rand(self.ac.N, self.ac.N) @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
             info_matrix = -self.ac.feedback_freq
         elif mode == "entropy":
             info_matrix = self.compute_entropy(S=self.ac.pairwise_similarities, q=q)
