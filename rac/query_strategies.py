@@ -132,15 +132,14 @@ class QueryStrategy:
         else:
             mf_alg = mean_field_clustering
 
-        if self.ac.acq_fn == "info_gain_object":
+        if self.ac.acq_fn == "info_gain_object" and q is None:
             n_iter = 50
         else:
             n_iter = self.ac.mf_iterations
 
-        
-
         clust_sol, q, h = mf_alg(
-            S=S, K=self.ac.num_clusters,
+            S=S,
+            K=self.ac.num_clusters,
             beta=beta, 
             max_iter=n_iter, 
             tol=self.ac.conv_threshold, 
@@ -170,7 +169,8 @@ class QueryStrategy:
 
     def select_pairs_info_gain(self, mode, num_edges, q=None, acq_noise=False, return_indices=False, use_tau=True):
         if mode == "uniform":
-            info_matrix = np.random.rand(self.ac.N, self.ac.N)
+            #info_matrix = np.random.rand(self.ac.N, self.ac.N)
+            info_matrix = -self.ac.feedback_freq
         elif mode == "entropy":
             info_matrix = self.compute_entropy(S=self.ac.pairwise_similarities, q=q)
         else:
@@ -191,6 +191,7 @@ class QueryStrategy:
     def compute_info_gain(self, S):
         q, h = self._compute_mf(S)
         num_edges = int(self.ac.num_edges_info_gain*self.ac.N) if self.ac.num_edges_info_gain > 0 else self.ac.n_edges
+        num_edges = int(np.minimum(num_edges, self.ac.n_edges))
         W = self.select_pairs_info_gain(mode=self.ac.info_gain_pair_mode, q=q, num_edges=num_edges, acq_noise=self.ac.mf_acq_noise)
         I = np.zeros((self.ac.N, self.ac.N))
         H_0 = np.sum(scipy_entropy(q, axis=1))
@@ -200,11 +201,15 @@ class QueryStrategy:
             H_c_e = 0
             for outcome in [+1, -1]:
                 S_new = np.copy(S)
-                S_new[x, y] = S_new[y, x] = outcome*lmbda
+                S_new[x, y] = outcome*lmbda 
+                S_new[y, x] = outcome*lmbda
                 np.fill_diagonal(S_new, 0)
                 q_new, h_new = self._compute_mf(S_new, q, h)
                 H_C = np.sum(scipy_entropy(q_new, axis=1))
-                prob = P[x, y] if outcome == 1 else 1-P[x, y]
+                if outcome == 1:
+                    prob = P[x, y]
+                else:
+                    prob = 1-P[x, y]
                 H_c_e += prob * H_C
             I[x, y] = H_0-H_c_e
             I[y, x] = I[x, y]
