@@ -39,9 +39,9 @@ class QueryStrategy:
         elif acq_fn == "info_gain_pairs_all":
             self.info_matrix = self.compute_info_gain_pairs_all(S=self.ac.pairwise_similarities)
         elif acq_fn == "info_gain_pairs_random":
-            self.info_matrix = self.compute_info_gain_pairs_random(S=self.ac.pairwise_similarities) - self.ac.mag_test*np.abs(self.ac.pairwise_similarities)
+            self.info_matrix = self.compute_info_gain_pairs_random(S=self.ac.pairwise_similarities)
         elif acq_fn == "entropy":
-            self.info_matrix = self.compute_entropy(S=self.ac.pairwise_similarities) - self.ac.mag_test*np.abs(self.ac.pairwise_similarities)    
+            self.info_matrix = self.compute_entropy(S=self.ac.pairwise_similarities)
         elif acq_fn == "bald":
             self.info_matrix = self.compute_bald(S=self.ac.pairwise_similarities)
         elif acq_fn == "cluster_freq":
