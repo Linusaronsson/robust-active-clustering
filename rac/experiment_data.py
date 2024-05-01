@@ -412,8 +412,8 @@ class ExperimentReader:
                 else:
                     raise ValueError("incorrect dataset!")
 
-                #cut_threshold = 500
-                #df_filtered = df_filtered[df_filtered[vary[0]] < cut_threshold]
+                cut_threshold = 50
+                df_filtered = df_filtered[df_filtered[vary[0]] < cut_threshold]
 
                 metric_map = {
                     "ami": "AMI", "rand": "ARI", "time": "Time (s)", "num_violations": "Num. violations",
@@ -429,7 +429,7 @@ class ExperimentReader:
                     "cluster_incon": "IMU-C", "entropy": "Entropy", "info_gain_pairs_random": "IGP"
                 }
 
-                palette = sns.color_palette("tab20", 36)  # Change 'husl' to any of the recommended palettes
+                #palette = sns.color_palette("tab20", 36)  # Change 'husl' to any of the recommended palettes
                 #n_colors = 36
                 #colormap = mpl.cm.turbo
                 #color_indices = np.linspace(0, 1, n_colors)
@@ -449,15 +449,15 @@ class ExperimentReader:
                     err_style=err_style,
                     data=df_filtered,
                     linestyle=linestyle,
-                    err_kws=err_kws,
-                    palette=palette
+                    err_kws=err_kws
+                    #palette=palette
                 )
 
                 #plt.setp(ax.lines, markeredgecolor='none')  # Removes the border of the markers
                 #plt.setp(ax.lines, alpha=0.7)  # Adjusts the transparency of the markers
                 plt.setp(ax.lines, markeredgewidth=0.5)  # Adjusts the transparency of the markers
                 #plt.setp(ax.lines, markersize=7)  # Adjusts the transparency of the markers
-                plt.setp(ax.lines, markersize=0)  # Adjusts the transparency of the markers
+                plt.setp(ax.lines, markersize=6)  # Adjusts the transparency of the markers
                 plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True, nbins=5))
                 #plt.gca().xaxis.set_major_locator(MaxNLocator(nbins=10))
 
