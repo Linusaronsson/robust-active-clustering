@@ -49,7 +49,10 @@ class ActiveClustering:
 
         if self.acq_fn in ["info_gain_object", "info_gain_pairs_random", "info_gain_pairs"]:
             self.tau = 1
-            #self.power_beta = 2
+            self.power_beta = 2
+
+        if self.acq_fn in ["info_gain_object", "info_gain_pairs"]:
+            self.info_gain_pair_mode = "entropy"
 
     def run_AL_procedure(self):
         self.start_time = time.time()
@@ -158,9 +161,9 @@ class ActiveClustering:
             total_queries += self.batch_size
             self.total_time_elapsed = time.time() - self.start_time
 
-            #num_hours = self.total_time_elapsed / 3600
-            #if num_hours > 10:
-            #    break
+            num_hours = self.total_time_elapsed / 3600
+            if num_hours > 10:
+                break
 
             if self._verbose:
                 print("iteration: ", ii)
