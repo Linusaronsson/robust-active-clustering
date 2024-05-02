@@ -134,7 +134,7 @@ def gather_results(result_queue, path):
     query_stra = "unknown"
     try:
         while True:
-            if num_completed == 7 and (query_stra == "info_gain_object" or query_stra == "info_gain_pairs_random" or query_stra == "cluster_incon"):
+            if num_completed == 7 and (query_stra in ["info_gain_object", "info_gain_pairs_random", "info_gain_pairs"]):
                 return
             elif num_completed == 13:
                 return

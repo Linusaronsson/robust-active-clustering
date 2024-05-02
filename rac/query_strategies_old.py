@@ -32,8 +32,12 @@ class QueryStrategy:
                 self.info_matrix = self.compute_maxexp()
         elif acq_fn == "info_gain_object":
             self.info_matrix = self.compute_info_gain(S=self.ac.pairwise_similarities)
-        elif acq_fn == "info_gain_pairs":
-            self.info_matrix = self.compute_info_gain_pairs(S=self.ac.pairwise_similarities)
+        elif acq_fn == "info_gain_objects_all":
+            self.info_matrix = self.compute_info_gain_objects_all(S=self.ac.pairwise_similarities)
+        elif acq_fn == "info_gain_objects_random":
+            self.info_matrix = self.compute_info_gain_objects_random(S=self.ac.pairwise_similarities)
+        elif acq_fn == "info_gain_pairs_all":
+            self.info_matrix = self.compute_info_gain_pairs_all(S=self.ac.pairwise_similarities)
         elif acq_fn == "info_gain_pairs_random":
             self.info_matrix = self.compute_info_gain_pairs_random(S=self.ac.pairwise_similarities)
         elif acq_fn == "entropy":
@@ -69,7 +73,7 @@ class QueryStrategy:
         tri_rows, tri_cols = np.tril_indices(n=I_local.shape[0], k=-1)
         informative_scores = I_local[tri_rows, tri_cols]
 
-        if acq_noise and (self.ac.acq_fn in ["entropy", "info_gain_object", "info_gain_pairs", "info_gain_pairs_random"]):
+        if acq_noise and (self.ac.acq_fn == "entropy" or self.ac.acq_fn == "info_gain_object" or self.ac.acq_fn == "info_gain_pairs_random"):
             num_pairs = len(informative_scores)
             if self.ac.use_power:
                 informative_scores[informative_scores < 0] = 1e-16
@@ -119,7 +123,7 @@ class QueryStrategy:
         else:
             mf_alg = mean_field_clustering
 
-        if (self.ac.acq_fn in ["info_gain_object", "info_gain_pairs"]) and q is not None:
+        if self.ac.acq_fn == "info_gain_object" and q is not None:
             n_iter = 50
         else:
             n_iter = self.ac.mf_iterations
@@ -203,36 +207,6 @@ class QueryStrategy:
             I[y, x] = I[x, y]
         return I
 
-    def compute_info_gain_pairs(self, S):
-        q, h = self._compute_mf(S)
-        num_edges = int(self.ac.num_edges_info_gain*self.ac.N) if self.ac.num_edges_info_gain > 0 else self.ac.n_edges
-        num_edges = int(np.minimum(num_edges, self.ac.n_edges))
-        W = self.select_pairs_info_gain(mode=self.ac.info_gain_pair_mode, q=q, num_edges=num_edges, acq_noise=self.ac.mf_acq_noise)
-        I = np.zeros((self.ac.N, self.ac.N))
-        lmbda = self.ac.info_gain_lambda
-        I_pairs, P = self.entropy_matrix(q, return_P=True)
-        lower_triangular = np.tril(I_pairs, k=-1)
-        H_0 = np.sum(lower_triangular)
-        for x, y in W:
-            H_c_e = 0
-            for outcome in [+1, -1]:
-                S_new = np.copy(S)
-                S_new[x, y] = outcome*lmbda 
-                S_new[y, x] = outcome*lmbda
-                np.fill_diagonal(S_new, 0)
-                q_new, h_new = self._compute_mf(S_new, q, h)
-                I_pairs, _ = self.entropy_matrix(q_new, return_P=True)
-                lower_triangular = np.tril(I_pairs, k=-1)
-                H_C = np.sum(lower_triangular)
-                if outcome == 1:
-                    prob = P[x, y]
-                else:
-                    prob = 1-P[x, y]
-                H_c_e += prob * H_C
-            I[x, y] = H_0-H_c_e
-            I[y, x] = I[x, y]
-        return I
-
     # random pairs
     def compute_info_gain_pairs_random(self, S):
         q, h = self._compute_mf(S)
@@ -263,6 +237,207 @@ class QueryStrategy:
                 I_all += self.entropy_matrix(q_new) / self.ac.num_mc
         return I - (I_all/self.ac.num_mc_samples)
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    # all pairs
+    def compute_info_gain_pairs_all(self, S):
+        if self.ac.sparse_sim_matrix and not sparse.issparse(S):
+            S_ = sparse.csr_matrix(S)
+
+        clust_sol, q, h = mean_field_clustering(
+            S=S_, K=self.ac.num_clusters, betas=[self.ac.mean_field_beta], max_iter=100, tol=1e-10, 
+            predicted_labels=self.ac.clustering_solution
+        )
+
+        P = np.einsum('ik,jk->ij', q, q)
+        distributions = np.stack([P, 1 - P], axis=-1)
+
+        # Calculating entropy for each distribution
+        I = scipy_entropy(distributions, base=np.e, axis=-1)
+        I_all = np.zeros((self.ac.N, self.ac.N))
+    
+        # Efficiently generate indices for the lower triangular part of the matrix, excluding the diagonal
+        tri_indices = np.tril_indices(self.ac.N, k=-1)
+        
+        # Randomly sample pairs from these indices
+        #if self.ac.r < 1:
+        #    num_elements_to_select = int(self.ac.r * self.ac.n_edges)
+        #else:
+        #    num_elements_to_select = self.ac.r
+
+        num_elements_to_select = int(self.ac.num_edges_info_gain*self.ac.N) if self.ac.num_edges_info_gain > 0 else self.ac.n_edges
+
+        num_elements_to_select = int(np.minimum(num_elements_to_select, self.ac.n_edges))
+        sampled_pairs = np.random.choice(len(tri_indices[0]), size=num_elements_to_select, replace=False)
+        
+        # Process each sampled pair
+        for idx in sampled_pairs:
+            i, j = tri_indices[0][idx], tri_indices[1][idx]
+            
+            # Iterate over both outcomes for the pair
+            for outcome in [+1, -1]:
+                # Initialize S_temp to ensure it's symmetric and has zeros on the diagonal after updates
+                S_new = np.copy(S)
+                S_new[i, j] = S_new[j, i] = outcome
+                
+                # Assuming a function that recalculates 'q' given the updated similarity matrix S_temp
+                # This function involves re-running the clustering algorithm for the updated S_temp
+                np.fill_diagonal(S_new, 0)
+                if self.ac.sparse_sim_matrix and not sparse.issparse(S_new):
+                    S_new = sparse.csr_matrix(S_new)
+                _, q_new, h_new = mean_field_clustering(
+                    S=S_new, K=self.ac.num_clusters, betas=[self.ac.mean_field_beta], max_iter=100, tol=1e-10, 
+                    predicted_labels=self.ac.clustering_solution, h=h, q=q
+                )
+                
+                # Calculate P_new and its entropy
+                P_new = np.einsum('ik,jk->ij', q_new, q_new)
+                distributions_new = np.stack([P_new, 1 - P_new], axis=-1)
+                I_new = scipy_entropy(distributions_new, base=np.e, axis=-1)
+                
+                # Weight the added entropy by the probability of the outcome
+                probability_weight = P[i, j] if outcome == +1 else (1 - P[i, j])
+                I_all += probability_weight * I_new
+        
+        
+        # Return the difference between the initial entropy matrix I and the accumulated one I_all
+        return I - (I_all/num_elements_to_select)
+        
+    # all objects
+    def compute_info_gain_objects_all(self, S):
+        if self.ac.sparse_sim_matrix and not sparse.issparse(S):
+            S_ = sparse.csr_matrix(S)
+
+        clust_sol, q, h = mean_field_clustering(
+            S=S_, K=self.ac.num_clusters, betas=[self.ac.mean_field_beta], max_iter=100, tol=1e-10, 
+            predicted_labels=self.ac.clustering_solution
+        )
+
+        P = np.einsum('ik,jk->ij', q, q)
+        distributions = np.stack([P, 1 - P], axis=-1)
+
+        # Calculating entropy for each distribution
+        I = scipy_entropy(distributions, base=np.e, axis=-1)
+        I_all = np.zeros((self.ac.N, self.ac.N))
+
+        for i in range(self.ac.N):  # Iterate over each data point
+            for k in range(q.shape[1]):  # Iterate over each cluster
+                # Create a temporary similarity matrix copy to modify
+                S_new = S.copy()
+
+                # Update the similarity matrix for the current data point and cluster
+                in_cluster = np.where(self.ac.clustering_solution == k)[0]
+                not_in_cluster = np.where(self.ac.clustering_solution != k)[0]
+
+                S_new[i, in_cluster] = +1
+                S_new[i, not_in_cluster] = -1
+
+                S_new[in_cluster, i] = +1
+                S_new[not_in_cluster, i] = -1
+
+                # Assume a function that recalculates 'q' given the updated similarity matrix
+                # This function would typically involve re-running the clustering algorithm
+                # For the sake of example, let's call this function recalculate_q()
+                np.fill_diagonal(S_new, 0)
+                if self.ac.sparse_sim_matrix and not sparse.issparse(S_new):
+                    S_new = sparse.csr_matrix(S_new)
+                _, q_new, h_new = mean_field_clustering(
+                    S=S_new, K=self.ac.num_clusters, betas=[self.ac.mean_field_beta], max_iter=100, tol=1e-10, 
+                    predicted_labels=self.ac.clustering_solution, h=h, q=q
+                )
+
+                # Calculate P_new and its entropy
+                P_new = np.einsum('ik,jk->ij', q_new, q_new)
+                distributions_new = np.stack([P_new, 1 - P_new], axis=-1)
+                I_new = scipy_entropy(distributions_new, base=np.e, axis=-1)
+
+                # Update I_all weighted by the probability q[i, k]
+                I_all += q[i, k] * I_new
+
+        # Return the difference between the initial entropy matrix and the accumulated one
+        return I - (I_all/self.ac.N)
+
+    # random objects
+    def compute_info_gain_objects_random(self, S):
+        if self.ac.sparse_sim_matrix and not sparse.issparse(S):
+            S_ = sparse.csr_matrix(S)
+
+        clust_sol, q, h = mean_field_clustering(
+            S=S_, K=self.ac.num_clusters, betas=[self.ac.mean_field_beta], max_iter=100, tol=1e-10, 
+            predicted_labels=self.ac.clustering_solution
+        )
+
+        P = np.einsum('ik,jk->ij', q, q)
+        distributions = np.stack([P, 1 - P], axis=-1)
+
+        # Calculating entropy for each distribution
+        I = scipy_entropy(distributions, base=np.e, axis=-1)
+        I_all = np.zeros((self.ac.N, self.ac.N))
+
+        if self.ac.r < 1:
+            num_elements_to_select = int(self.ac.r * self.ac.N)
+        else:
+            num_elements_to_select = self.ac.r
+        num_elements_to_select = np.minimum(num_elements_to_select, self.ac.N)
+
+        for iteration in range(self.ac.num_mc_samples):
+            # Sample a random subset of data points
+            sampled_indices = np.random.choice(self.ac.N, size=num_elements_to_select, replace=False)
+
+            for mc_step in range(self.ac.num_mc):
+                # Vectorized sampling of cluster outcomes for each data point in the subset
+                # Generate cumulative probabilities for vectorized sampling
+                cumulative_probabilities = np.cumsum(q[sampled_indices], axis=1)
+                random_values = np.random.rand(num_elements_to_select, 1)
+                outcomes = (random_values < cumulative_probabilities).argmax(axis=1)
+
+                S_new = np.copy(S)  # Reset S_temp for each Monte Carlo step
+                for i, sampled_cluster in zip(sampled_indices, outcomes):
+                    # Determine data points in the same cluster as the sampled outcome for i
+                    in_cluster = np.where(self.ac.clustering_solution == sampled_cluster)[0]
+                    not_in_cluster = np.where(self.ac.clustering_solution != sampled_cluster)[0]
+
+                    # Update similarities based on the current clustering
+                    S_new[i, in_cluster] = 1
+                    S_new[in_cluster, i] = 1  # Ensure symmetry
+                    S_new[i, not_in_cluster] = -1
+                    S_new[not_in_cluster, i] = -1  # Ensure symmetry
+
+                np.fill_diagonal(S_new, 0)
+                if self.ac.sparse_sim_matrix and not sparse.issparse(S_new):
+                    S_new = sparse.csr_matrix(S_new)
+                _, q_new, h_new = mean_field_clustering(
+                    S=S_new, K=self.ac.num_clusters, betas=[self.ac.mean_field_beta], max_iter=100, tol=1e-10, 
+                    predicted_labels=self.ac.clustering_solution, h=h, q=q
+                )
+
+                # Calculate P_new and entropy in a vectorized manner
+                P_new = np.einsum('ik,jk->ij', q_new, q_new)
+                distributions_new = np.stack([P_new, 1 - P_new], axis=-1)
+                I_new = scipy_entropy(distributions_new, base=np.e, axis=-1)
+
+                I_all += I_new / self.ac.num_mc
+
+        # Calculate the initial entropy matrix for comparison
+        distributions = np.stack([P, 1 - P], axis=-1)
+        I = scipy_entropy(distributions, base=np.e, axis=-1)
+
+        return I - (I_all/self.ac.num_mc_samples)
 
     def compute_cluster_informativeness(self, info_matrix):
         local_regions = []

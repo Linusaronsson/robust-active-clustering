@@ -449,8 +449,8 @@ class ExperimentReader:
                     err_style=err_style,
                     data=df_filtered,
                     linestyle=linestyle,
-                    err_kws=err_kws,
-                    palette=palette
+                    err_kws=err_kws
+                    #palette=palette
                 )
 
                 #plt.setp(ax.lines, markeredgecolor='none')  # Removes the border of the markers

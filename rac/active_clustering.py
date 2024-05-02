@@ -47,9 +47,9 @@ class ActiveClustering:
         else:
             self.tau = self.tau
 
-        if self.acq_fn == "info_gain_object" or self.acq_fn == "info_gain_pairs_random":
+        if self.acq_fn in ["info_gain_object", "info_gain_pairs_random", "info_gain_pairs"]:
             self.tau = 1
-            self.power_beta = 2
+            #self.power_beta = 2
 
     def run_AL_procedure(self):
         self.start_time = time.time()
