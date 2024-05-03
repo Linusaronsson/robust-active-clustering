@@ -47,9 +47,9 @@ class ActiveClustering:
         else:
             self.tau = self.tau
 
-        if self.acq_fn in ["info_gain_object", "info_gain_pairs_random", "info_gain_pairs"]:
-            self.tau = 1
-            self.power_beta = 2
+        #if self.acq_fn in ["info_gain_object", "info_gain_pairs_random", "info_gain_pairs"]:
+            #self.tau = 1
+            #self.power_beta = 2
 
         if self.acq_fn in ["info_gain_object", "info_gain_pairs"]:
             self.info_gain_pair_mode = "entropy"
