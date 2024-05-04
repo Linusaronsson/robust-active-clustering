@@ -73,6 +73,7 @@ class QueryStrategy:
             num_pairs = len(informative_scores)
             if self.ac.use_power:
                 informative_scores[informative_scores < 0] = 1e-16
+                informative_scores[informative_scores == 0] = 1e-16
                 informative_scores = np.log(informative_scores)
             power_beta = self.ac.power_beta
             informative_scores = informative_scores + scipy.stats.gumbel_r.rvs(loc=0, scale=1/power_beta, size=num_pairs, random_state=None)
