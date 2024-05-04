@@ -1,9 +1,9 @@
 {
     "_experiment_name": "real_world4",
-    "_num_repeats": 8,
+    "_num_repeats": 5,
     "_n_workers": 30,
     "_local": true,
-    "_verbose": true,
+    "_verbose": false,
     "_overwrite": false,
     "_mode": "ac",
     "seed": 14,
