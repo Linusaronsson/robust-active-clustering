@@ -1,7 +1,6 @@
 import numpy as np
 #import cupy as cp
 
-
 import random 
 import sys
 from scipy.special import softmax
