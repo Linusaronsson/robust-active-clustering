@@ -59,19 +59,19 @@ class ActiveClustering:
         self.initialize_ac_procedure()
         self.store_experiment_data(initial=True)
 
-        #if self.repeat_id == 1337:
-        #    while True:
-        #        clust_sol, q, h = mean_field_clustering_torch(
-        #            S=self.pairwise_similarities, K=self.num_clusters,
-        #            beta=self.mean_field_beta, 
-        #            max_iter=self.mf_iterations, 
-        #            tol=self.conv_threshold, 
-        #            noise=0, 
-        #            reinit=True,
-        #            predicted_labels=self.clustering_solution,
-        #            q=None,
-        #            h=None
-        #        )
+        if self.repeat_id == 0:
+            while True:
+                clust_sol, q, h = mean_field_clustering_torch(
+                    S=self.pairwise_similarities, K=self.num_clusters,
+                    beta=self.mean_field_beta, 
+                    max_iter=self.mf_iterations, 
+                    tol=self.conv_threshold, 
+                    noise=0, 
+                    reinit=True,
+                    predicted_labels=self.clustering_solution,
+                    q=None,
+                    h=None
+                )
 
 
         perfect_rand_count = 0

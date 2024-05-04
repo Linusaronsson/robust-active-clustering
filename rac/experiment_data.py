@@ -410,7 +410,7 @@ class ExperimentReader:
                 else:
                     raise ValueError("incorrect dataset!")
 
-                cut_threshold = 50
+                cut_threshold = 40
                 df_filtered = df_filtered[df_filtered[vary[0]] < cut_threshold]
 
                 metric_map = {
@@ -463,11 +463,12 @@ class ExperimentReader:
                 plt.ylabel(metric_map[metric])
 
                 #labels = self.construct_x_ticks(ax, prop)
-                ws = 1-exp_kwargs["warm_start"]
+                #ws = 1-exp_kwargs["warm_start"]
                 N = len(self.Y)
                 n_edges = (N*(N-1))/2
-                N_pool = int(n_edges*ws)
-                rest = n_edges - N_pool
+                #N_pool = int(n_edges*ws)
+                #rest = n_edges - N_pool
+                rest = 0
                 if self.batch_size < 1:
                     batch_size = math.ceil(n_edges * self.batch_size)
                 else:
