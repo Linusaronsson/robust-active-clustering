@@ -89,6 +89,7 @@ class ActiveClustering:
 
         ii = 1
         while total_queries < stopping_criteria: 
+            self.start = time.time()
             start_selct_batch = time.time()
             self.edges = self.qs.select_batch(
                 acq_fn=self.acq_fn,
@@ -169,73 +170,6 @@ class ActiveClustering:
                 break
         
         return self.ac_data
-
-    def QECC_heur(self, num_queries):
-        nodes = set(np.arange(0, self.N).tolist())
-        vertices = nodes.copy()
-        query_budget = num_queries
-        clusters = []
-        while len(vertices) > 1 and query_budget > (len(vertices) - 1):
-            unique_pairs = list(itertools.combinations(vertices, 2))
-            np.random.shuffle(unique_pairs)
-            for (ind1, ind2) in unique_pairs:
-                query = self.get_similarity(ind1, ind2)
-                query_budget -= 1
-                if query >= 0:
-                    break
-
-            cluster = {ind1, ind2}
-            for nd in vertices - {ind1, ind2}:
-                if self.get_similarity(ind2, nd) > 0:
-                    cluster.add(nd)
-            clusters.append(list(cluster))
-            query_budget = query_budget - len(vertices) + 2
-            vertices = vertices - cluster
-        for nd in vertices:
-            clusters.append([nd])
-        return clusters
-
-    def QECC(self, num_queries):
-        nodes = set(np.arange(0, self.N).tolist())
-        vertices = nodes.copy()
-        query_budget = num_queries
-        clusters = []
-        while len(vertices) > 1 and query_budget > (len(vertices) - 1):
-            ind1 = np.random.choice(len(vertices), 1, replace=False)[0]
-            cluster = {ind1}
-            for nd in vertices - {ind1}:
-                if self.get_similarity(ind1, nd) > 0:
-                    cluster.add(nd)
-            clusters.append(list(cluster))
-            query_budget = query_budget - len(vertices) + 1
-            vertices = vertices - cluster
-        for nd in vertices:
-            clusters.append([nd])
-        return clusters
-
-    def COBRAS(self, num_queries, mode="COBRAS"):
-        if mode == "COBRAS":
-            noisy_querier = ProbabilisticNoisyQuerier(
-                None, self.Y, (self.noise_level/2), num_queries,
-                random_seed=self.repeat_id+self.seed+3892
-            )
-            clusterer = COBRAS(correct_noise=False, seed=self.repeat_id+self.seed+4873)
-        elif mode == "nCOBRAS":
-            noise_level_cobras = (self.noise_level/2)
-            if self.noise_level == 0:
-                noise_level_cobras = 0.05
-            noisy_querier = ProbabilisticNoisyQuerier(
-                None, self.Y, (self.noise_level/2), num_queries,
-                random_seed=self.repeat_id+self.seed+3892
-            )
-            clusterer = COBRAS(
-                correct_noise=True, noise_probability=noise_level_cobras,
-                certainty_threshold=0.95, minimum_approximation_order=2,
-                maximum_approximation_order=3,
-                seed=self.repeat_id+self.seed+4873
-            )
-        all_clusters, runtimes, *_ = clusterer.fit(self.X, -1, None, noisy_querier)
-        return all_clusters[-1]
 
     def store_experiment_data(self, initial=False):
         self.ac_data.rand.append(adjusted_rand_score(self.Y, self.clustering_solution))
