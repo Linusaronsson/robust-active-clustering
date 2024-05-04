@@ -5,7 +5,7 @@ from itertools import combinations, product
 from scipy.special import softmax as scipy_softmax
 from scipy.stats import entropy as scipy_entropy
 from scipy import sparse
-from rac.correlation_clustering_awc import mean_field_clustering
+from rac.correlation_clustering_aws import mean_field_clustering
 import scipy
 
 class QueryStrategy:
