@@ -17,7 +17,7 @@ from sklearn.model_selection import train_test_split
 
 import itertools
 from rac.active_clustering_aws import ActiveClustering
-from rac.active_learning import ActiveLearning
+#from rac.active_learning import ActiveLearning
 from pathlib import Path
 
 def get_dataset(**options):
@@ -196,41 +196,30 @@ def run_experiments(config):
     for repeat_id in range(config["_num_repeats"]):
         for exp_vals in itertools.product(*options_values):
             exp_kwargs = dict(zip(options_keys, exp_vals))
-            if config["_mode"] == "ac":
-                k = exp_kwargs["K_init"]
-                dataset_name = str(k)
-                for key, value in exp_kwargs.items():
-                    if key.split("_")[0] == "dataset":
-                        dataset_name += str(value)
+            k = exp_kwargs["K_init"]
+            dataset_name = str(k)
+            for key, value in exp_kwargs.items():
+                if key.split("_")[0] == "dataset":
+                    dataset_name += str(value)
 
-                seed = exp_kwargs["seed"]
-                if dataset_name not in saved_datasets:
-                    saved_datasets[dataset_name] = {}
-                    X, Y, _, _, _, _ = get_dataset(**exp_kwargs)
-                    saved_datasets[dataset_name]["X"] = X
-                    saved_datasets[dataset_name]["Y"] = Y
-                    if exp_kwargs["sim_init_type"] == "kmeans":
-                        kmeans = KMeans(n_clusters=k, random_state=seed).fit(X)
-                        saved_datasets[dataset_name]["initial_labels"] = kmeans.labels_
-                    else:
-                        saved_datasets[dataset_name]["initial_labels"] = None
+            seed = exp_kwargs["seed"]
+            if dataset_name not in saved_datasets:
+                saved_datasets[dataset_name] = {}
+                X, Y, _, _, _, _ = get_dataset(**exp_kwargs)
+                saved_datasets[dataset_name]["X"] = X
+                saved_datasets[dataset_name]["Y"] = Y
+                if exp_kwargs["sim_init_type"] == "kmeans":
+                    kmeans = KMeans(n_clusters=k, random_state=seed).fit(X)
+                    saved_datasets[dataset_name]["initial_labels"] = kmeans.labels_
+                else:
+                    saved_datasets[dataset_name]["initial_labels"] = None
 
-                initial_labels = saved_datasets[dataset_name]["initial_labels"]
-                X = saved_datasets[dataset_name]["X"]
-                Y = saved_datasets[dataset_name]["Y"]
+            initial_labels = saved_datasets[dataset_name]["initial_labels"]
+            X = saved_datasets[dataset_name]["X"]
+            Y = saved_datasets[dataset_name]["Y"]
 
-                ac = ActiveClustering(X, Y, repeat_id, initial_labels, **exp_kwargs)
-            else:
-                X, Y, X_test, Y_test, transform, test_transform = get_dataset(**exp_kwargs)
-                ac = ActiveLearning(
-                    repeat_id,
-                    X, 
-                    Y, 
-                    X_test=X_test,
-                    Y_test=Y_test,
-                    transform=transform,
-                    test_transform=test_transform,
-                    **exp_kwargs)
+            ac = ActiveClustering(X, Y, repeat_id, initial_labels, **exp_kwargs)
+
             experiment_queue.put(ac)
 
             if config["_overwrite"] and os.path.exists(completed_experiments_path):

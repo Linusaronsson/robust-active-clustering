@@ -14,8 +14,6 @@ import seaborn as sns
 from matplotlib.ticker import MaxNLocator
 import matplotlib as mpl
 
-
-
 import json
 import copy
 

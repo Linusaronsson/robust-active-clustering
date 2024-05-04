@@ -7,3 +7,6 @@ sudo yum install python-pip -y
 pip install numpy
 pip install scipy
 pip install scikit-learn
+pip install pandas
+pip install matplotlib
+pip install seaborn
