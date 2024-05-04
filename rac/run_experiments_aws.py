@@ -13,12 +13,10 @@ from sklearn import preprocessing
 from sklearn.cluster import KMeans
 from sklearn.datasets import make_classification
 from hashlib import sha256
-from torchvision import datasets, transforms
-from torch.utils.data import Dataset, DataLoader
 from sklearn.model_selection import train_test_split
 
 import itertools
-from rac.active_clustering import ActiveClustering
+from rac.active_clustering_awc import ActiveClustering
 from rac.active_learning import ActiveLearning
 from pathlib import Path
 
@@ -70,37 +68,6 @@ def get_dataset(**options):
     elif dataset == "cifar10":
         X = np.load("datasets/cifar10_data/X.npy")
         Y = np.load("datasets/cifar10_data/Y.npy")
-    elif dataset == "cifar10_original":
-        X = np.load("datasets/cifar10_original_data/X_train.npy")
-        Y = np.load("datasets/cifar10_original_data/Y_train.npy")
-        X_test = np.load("datasets/cifar10_original_data/X_test.npy")
-        Y_test = np.load("datasets/cifar10_original_data/Y_test.npy")
-        transform = transforms.Compose([
-            transforms.RandomCrop(32, padding=4),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
-        ])
-
-        test_transform = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
-        ])
-    elif dataset == "mnist":
-        X = np.load("datasets/mnist_data/X.npy")
-        Y = np.load("datasets/mnist_data/Y.npy")
-    elif dataset == "mnist_original":
-        X = np.load("datasets/mnist_data/full_train_data.npy")
-        Y = np.load("datasets/mnist_data/full_train_data_labels.npy")
-        X, X_test, Y, Y_test = train_test_split(X, Y, test_size=0.2, random_state=13)
-        transform = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize((0.1307,), (0.3081,))
-        ])
-        test_transform = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize((0.1307,), (0.3081,))
-        ])
     elif dataset == "breast_cancer":
         X = np.load("datasets/breast_cancer_data/X.npy")
         Y = np.load("datasets/breast_cancer_data/Y.npy")
