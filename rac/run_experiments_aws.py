@@ -109,14 +109,12 @@ def gather_results(result_queue, path):
                 if os.path.exists(experiment_path):
                     with open(data_path, 'wb') as handle:
                         pickle.dump([ac_data], handle, protocol=pickle.HIGHEST_PROTOCOL)
-                        num_completed += 1
             else:
                 with open(data_path, 'rb') as handle:
                     exp = pickle.load(handle)
                 exp.append(ac_data)
                 with open(data_path, 'wb') as handle:
                     pickle.dump(exp, handle, protocol=pickle.HIGHEST_PROTOCOL)
-                    num_completed += 1
 
             completed_experiments_path = path + "completed_experiments.txt"
             with open(completed_experiments_path, "a") as file:
