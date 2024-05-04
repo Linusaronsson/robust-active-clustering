@@ -111,13 +111,14 @@ class QueryStrategy:
     def _compute_mf(self, S, q=None, h=None):
         beta = self.ac.mean_field_beta
         
-        if self.ac.sparse_sim_matrix and self.ac.repeat_id != 0:
+        if self.ac.sparse_sim_matrix:  #and self.ac.repeat_id != 0:
             S = sparse.csr_matrix(S)
 
-        if self.ac.repeat_id == 0:
-            mf_alg = mean_field_clustering_torch
-        else:
-            mf_alg = mean_field_clustering
+        #if self.ac.repeat_id == 0:
+        #    mf_alg = mean_field_clustering_torch
+        #else:
+
+        mf_alg = mean_field_clustering
 
         if (self.ac.acq_fn in ["info_gain_object", "info_gain_pairs"]) and q is not None:
             n_iter = 50
