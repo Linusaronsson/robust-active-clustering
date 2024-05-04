@@ -16,7 +16,7 @@ from hashlib import sha256
 from sklearn.model_selection import train_test_split
 
 import itertools
-from rac.active_clustering_awc import ActiveClustering
+from rac.active_clustering_aws import ActiveClustering
 from rac.active_learning import ActiveLearning
 from pathlib import Path
 
