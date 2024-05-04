@@ -9,7 +9,7 @@ import numpy as np
 
 from scipy.spatial import distance
 
-from rac.correlation_clustering_awc import max_correlation_dynamic_K, mean_field_clustering
+from rac.correlation_clustering_aws import max_correlation_dynamic_K, mean_field_clustering
 from rac.query_strategies import QueryStrategy
 from rac.experiment_data import ExperimentData
 
