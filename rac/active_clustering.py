@@ -37,6 +37,9 @@ class ActiveClustering:
         self.N = len(self.Y)
         self.n_edges = (self.N*(self.N-1))/2
 
+        if self.N <= 500:
+            self.batch_size == 0.0025
+
         if self.batch_size < 1:
             self.batch_size = math.ceil(self.n_edges * self.batch_size)
 
@@ -47,9 +50,10 @@ class ActiveClustering:
         else:
             self.tau = self.tau
 
-        #if self.acq_fn in ["info_gain_object", "info_gain_pairs_random", "info_gain_pairs"]:
-        #    self.tau = 1
-        #    self.power_beta = 2
+        if self.acq_fn not in ["info_gain_object", "info_gain_pairs_random", "info_gain_pairs"]:
+            self.tau = 3
+            self.power_beta = 1
+
 
         if self.acq_fn in ["info_gain_object", "info_gain_pairs"]:
             self.info_gain_pair_mode = "entropy"
