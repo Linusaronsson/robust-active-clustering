@@ -410,7 +410,7 @@ class ExperimentReader:
                 else:
                     raise ValueError("incorrect dataset!")
 
-                cut_threshold = 20
+                cut_threshold = 30
                 df_filtered = df_filtered[df_filtered[vary[0]] < cut_threshold]
 
                 metric_map = {
@@ -423,11 +423,11 @@ class ExperimentReader:
                 acq_fn_map = {
                     "maxexp": "Maxexp", "maxmin": "Maxmin", "uncert": "Uncertainty",
                     "freq": "Frequency", "unif": "Uniform", "nCOBRAS": "nCOBRAS",
-                    "COBRAS": "COBRAS", "QECC": "QECC", "info_gain_object": "IGO",
-                    "cluster_incon": "IMU-C", "entropy": "Entropy", "info_gain_pairs_random": "IGP"
+                    "COBRAS": "COBRAS", "QECC": "QECC", "info_gain_object": "EIGO", "info_gain_pairs": "EIGP",
+                    "cluster_incon": "IMU-C", "entropy": "Entropy", "info_gain_pairs_random": "JEIG"
                 }
 
-                palette = sns.color_palette("tab20", 36)  # Change 'husl' to any of the recommended palettes
+                #palette = sns.color_palette("tab20", 36)  # Change 'husl' to any of the recommended palettes
                 #n_colors = 36
                 #colormap = mpl.cm.turbo
                 #color_indices = np.linspace(0, 1, n_colors)
@@ -439,16 +439,16 @@ class ExperimentReader:
                 ax = sns.lineplot(
                     x=vary[0],
                     y="y",
-                    hue=df_filtered[hues].apply(tuple, axis=1),
-                    #hue="acq_fn",
-                    #hue_order=["info_gain_object", "info_gain_pairs_random", "entropy", "cluster_incon", "maxexp", "maxmin", "unif"],
+                    #hue=df_filtered[hues].apply(tuple, axis=1),
+                    hue="acq_fn",
+                    hue_order=["info_gain_pairs_random", "info_gain_object", "info_gain_pairs", "entropy", "maxexp", "maxmin", "unif"],
                     errorbar=errorbar,
                     marker=".",
                     err_style=err_style,
                     data=df_filtered,
                     linestyle=linestyle,
-                    err_kws=err_kws,
-                    palette=palette
+                    err_kws=err_kws
+                    #palette=palette
                 )
 
                 #plt.setp(ax.lines, markeredgecolor='none')  # Removes the border of the markers
@@ -487,15 +487,15 @@ class ExperimentReader:
                 ax.legend(loc='upper left', bbox_to_anchor=(1,1))
                 plt.subplots_adjust(right=0.75)
 
-                #legs = ax.get_legend().get_texts()
-                #fix_legends = True
-                #if fix_legends:
-                #    ax.get_legend().set_title(None)
-                #    for ll in legs:
-                #        l = ll.get_text()
-                #        for k, v in acq_fn_map.items():
-                #            if k in l:
-                #                ll.set_text(v)
+                legs = ax.get_legend().get_texts()
+                fix_legends = True
+                if fix_legends:
+                    ax.get_legend().set_title(None)
+                    for ll in legs:
+                        l = ll.get_text()
+                        for k, v in acq_fn_map.items():
+                            if k in l:
+                                ll.set_text(v)
 
 
                 #legs = ax.get_legend().get_texts()
