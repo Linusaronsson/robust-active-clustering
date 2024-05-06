@@ -166,7 +166,7 @@ class ActiveClustering:
             self.total_time_elapsed = time.time() - self.start_time
 
             num_hours = self.total_time_elapsed / 3600
-            if num_hours > 14:
+            if num_hours > 27:
                 break
 
             if self._verbose:
