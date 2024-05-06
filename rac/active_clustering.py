@@ -166,7 +166,11 @@ class ActiveClustering:
             self.total_time_elapsed = time.time() - self.start_time
 
             num_hours = self.total_time_elapsed / 3600
-            if num_hours > 27:
+            if self.dataset_name == "synthetic":
+                max_hours = 4
+            else:
+                max_hours = 27
+            if num_hours > max_hours:
                 break
 
             if self._verbose:
