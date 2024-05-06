@@ -4,7 +4,7 @@
     "_n_workers": 14,
     "_local": true,
     "_verbose": true,
-    "_overwrite": true,
+    "_overwrite": false,
     "_mode": "ac",
     "seed": 14,
     "batch_size": 0.005,
