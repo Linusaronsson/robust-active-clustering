@@ -322,6 +322,7 @@ class ExperimentReader:
                 df_filtered[col] = df_filtered[metric].apply(lambda x: np.mean(x, axis=0))
                 df_filtered['array_lengths'] = df_filtered[col].apply(lambda x: len(x))
                 max_length = df_filtered['array_lengths'].max()
+                min_length = df_filtered['array_lengths'].min()
                 df_filtered = self.extend_dataframe(df_filtered, metric, max_length)
 
 
@@ -361,7 +362,7 @@ class ExperimentReader:
                 plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
                 plt.rc('legend', fontsize=18)    # legend fontsize
                 plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
-                plt.rc('figure', dpi=200)
+                plt.rc('figure', dpi=150)
                 plt.rc('figure', figsize=(6, 4))
 
                 # Customize gridlines
@@ -410,8 +411,13 @@ class ExperimentReader:
                 else:
                     raise ValueError("incorrect dataset!")
 
-                cut_threshold = 300
-                df_filtered = df_filtered[df_filtered[vary[0]] < cut_threshold]
+                #cut_threshold = 300
+
+                #if self.dataset == "20newsgroups":
+                    #df_filtered = df_filtered[df_filtered[vary[0]] < (min_length + 15)]
+                #else:
+
+                df_filtered = df_filtered[df_filtered[vary[0]] < (min_length + 5)]
 
                 metric_map = {
                     "ami": "AMI", "rand": "ARI", "time": "Time (s)", "num_violations": "Num. violations",
@@ -423,7 +429,7 @@ class ExperimentReader:
                 acq_fn_map = {
                     "maxexp": "Maxexp", "maxmin": "Maxmin", "uncert": "Uncertainty",
                     "freq": "Frequency", "unif": "Uniform", "nCOBRAS": "nCOBRAS",
-                    "COBRAS": "COBRAS", "QECC": "QECC", "info_gain_object": "EIGO", "info_gain_pairs": "EIGP",
+                    "COBRAS": "COBRAS", "QECC": "QECC", "info_gain_object": "EIG-O", "info_gain_pairs": "EIG-P",
                     "cluster_incon": "IMU-C", "entropy": "Entropy", "info_gain_pairs_random": "JEIG"
                 }
 
@@ -483,9 +489,9 @@ class ExperimentReader:
                 ax.set_xticklabels(labels)
 
                 plt.xlabel("Number of queries")
-                #ax.legend(loc='lower right')
-                ax.legend(loc='upper left', bbox_to_anchor=(1,1))
-                plt.subplots_adjust(right=0.75)
+                ax.legend(loc='upper left')
+                #ax.legend(loc='upper left', bbox_to_anchor=(1,1))
+                #plt.subplots_adjust(right=0.75)
 
                 legs = ax.get_legend().get_texts()
                 fix_legends = True
@@ -520,8 +526,8 @@ class ExperimentReader:
 
                 legend = ax.get_legend()
 
-                #if self.dataset != "20newsgroups":
-                    #ax.get_legend().set_visible(False)
+                if self.dataset != "synthetic":
+                    ax.get_legend().set_visible(False)
 
                 plt.savefig(file_path, dpi=150, bbox_inches='tight')
                 #plt.savefig(file_path, bbox_extra_artists=(legend,), dpi=150, bbox_inches='tight')
@@ -546,6 +552,7 @@ class ExperimentReader:
         capsize=6,
         linestyle="solid",
         prop=True,
+        varian=0,
         **config):
 
         config = copy.deepcopy(config)
@@ -608,13 +615,13 @@ class ExperimentReader:
 
             for metric in self.metrics:
                 df_filtered = self.filter_dataframe(data, exp_kwargs).reset_index()
-                #if metric in ["time_select_batch", "time_update_clustering", "time", "num_violations", "num_repeat_queries"]:
-                    #continue
                 col = "mean_" + metric
                 df_filtered[col] = df_filtered[metric].apply(lambda x: np.mean(x, axis=0))
                 df_filtered['array_lengths'] = df_filtered[col].apply(lambda x: len(x))
                 max_length = df_filtered['array_lengths'].max()
-                df_filtered = self.extend_dataframe(df_filtered, metric, max_length)
+                min_length = df_filtered['array_lengths'].min()
+                if metric not in ["time_select_batch", "time_update_clustering", "time", "num_violations", "num_repeat_queries"]:
+                    df_filtered = self.extend_dataframe(df_filtered, metric, max_length)
 
 
                 data_column_names = [metric]
@@ -674,7 +681,7 @@ class ExperimentReader:
                 else:
                     err_kws = {}
 
-                errorbar = ("sd", 0.5)
+                errorbar = ("sd", varian)
                 if "synthetic" in self.dataset:
                     cut_threshold = 25
                 elif self.dataset == "20newsgroups":
@@ -702,8 +709,8 @@ class ExperimentReader:
                 else:
                     raise ValueError("incorrect dataset!")
 
-                cut_threshold = 300
-                df_filtered = df_filtered[df_filtered[vary[0]] < cut_threshold]
+                #cut_threshold = 300
+                df_filtered = df_filtered[df_filtered[vary[0]] < (min_length + 45)]
 
                 metric_map = {
                     "ami": "AMI", "rand": "ARI", "time": "Time (s)", "num_violations": "Num. violations",
@@ -715,7 +722,7 @@ class ExperimentReader:
                 acq_fn_map = {
                     "maxexp": "Maxexp", "maxmin": "Maxmin", "uncert": "Uncertainty",
                     "freq": "Frequency", "unif": "Uniform", "nCOBRAS": "nCOBRAS",
-                    "COBRAS": "COBRAS", "QECC": "QECC", "info_gain_object": "EIGO", "info_gain_pairs": "EIGP",
+                    "COBRAS": "COBRAS", "QECC": "QECC", "info_gain_object": "EIG-O", "info_gain_pairs": "EIG-P",
                     "cluster_incon": "IMU-C", "entropy": "Entropy", "info_gain_pairs_random": "JEIG"
                 }
 
@@ -1007,7 +1014,7 @@ class ExperimentReader:
                 acq_fn_map = {
                     "maxexp": "Maxexp", "maxmin": "Maxmin", "uncert": "Uncertainty",
                     "freq": "Frequency", "unif": "Uniform", "nCOBRAS": "nCOBRAS",
-                    "COBRAS": "COBRAS", "QECC": "QECC", "info_gain_object": "EIGO", "info_gain_pairs": "EIGP",
+                    "COBRAS": "COBRAS", "QECC": "QECC", "info_gain_object": "EIG-O", "info_gain_pairs": "EIG-P",
                     "cluster_incon": "IMU-C", "entropy": "Entropy", "info_gain_pairs_random": "JEIG"
                 }
 

@@ -167,9 +167,15 @@ class ActiveClustering:
 
             num_hours = self.total_time_elapsed / 3600
             if self.dataset_name == "synthetic":
-                max_hours = 5
+                if self.acq_fn in ["info_gain_object", "info_gain_pairs"]:
+                    max_hours = 27
+                else:
+                    max_hours = 4
             else:
                 max_hours = 27
+
+
+
             if num_hours > max_hours:
                 break
 
