@@ -51,7 +51,7 @@ class ActiveClustering:
             self.tau = self.tau
 
         if self.acq_fn not in ["info_gain_object", "info_gain_pairs_random", "info_gain_pairs"]:
-            self.tau = 3
+            #self.tau = 3
             self.power_beta = 1
 
 
