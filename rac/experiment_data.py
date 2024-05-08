@@ -552,7 +552,7 @@ class ExperimentReader:
         capsize=6,
         linestyle="solid",
         prop=True,
-        varian=0,
+        varian=0.5,
         **config):
 
         config = copy.deepcopy(config)

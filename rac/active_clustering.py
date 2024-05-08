@@ -51,7 +51,7 @@ class ActiveClustering:
             self.tau = self.tau
 
         if self.acq_fn not in ["info_gain_object", "info_gain_pairs_random", "info_gain_pairs"]:
-            #self.tau = 3
+            self.tau = 3
             self.power_beta = 1
 
 
@@ -168,7 +168,7 @@ class ActiveClustering:
             num_hours = self.total_time_elapsed / 3600
             if self.dataset_name == "synthetic":
                 if self.acq_fn in ["info_gain_object", "info_gain_pairs"]:
-                    max_hours = 27
+                    max_hours = 37
                 else:
                     max_hours = 4
             else:
