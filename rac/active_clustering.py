@@ -174,8 +174,6 @@ class ActiveClustering:
             else:
                 max_hours = 47
 
-
-
             if num_hours > max_hours:
                 break
 
