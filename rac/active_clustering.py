@@ -172,7 +172,7 @@ class ActiveClustering:
                 else:
                     max_hours = 4
             else:
-                max_hours = 27
+                max_hours = 47
 
 
 
