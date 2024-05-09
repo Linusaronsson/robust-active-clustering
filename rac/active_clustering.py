@@ -37,8 +37,8 @@ class ActiveClustering:
         self.N = len(self.Y)
         self.n_edges = (self.N*(self.N-1))/2
 
-        if self.N <= 500:
-            self.batch_size == 0.0025
+        #if self.N <= 500:
+            #self.batch_size == 0.0025
 
         if self.batch_size < 1:
             self.batch_size = math.ceil(self.n_edges * self.batch_size)
@@ -166,13 +166,10 @@ class ActiveClustering:
             self.total_time_elapsed = time.time() - self.start_time
 
             num_hours = self.total_time_elapsed / 3600
-            if self.dataset_name == "synthetic":
-                if self.acq_fn in ["info_gain_object", "info_gain_pairs"]:
-                    max_hours = 37
-                else:
-                    max_hours = 4
-            else:
+            if self.acq_fn in ["info_gain_object", "info_gain_pairs"]:
                 max_hours = 47
+            else:
+                max_hours = 5
 
             if num_hours > max_hours:
                 break

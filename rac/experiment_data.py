@@ -198,7 +198,7 @@ class ExperimentReader:
                     for j in range(1, max_index):
                         if (j * batch_size) % ind_step == 0:
                             indices.append(j)
-                        if (j*batch_size)/n_edges > 0.35:
+                        if (j*batch_size)/n_edges > 0.3:
                             break
                     indices = np.array(indices)
                     df.at[i, metric] = np.mean(df.at[i, metric][:, indices], axis=1).reshape(-1, 1)
@@ -289,21 +289,6 @@ class ExperimentReader:
                 threshold=threshold
             )
         
-        # extending
-        #for metric in self.metrics:
-        #    if metric in ["time_select_batch", "time_update_clustering", "time", "num_violations", "num_repeat_queries"]:
-        #        continue
-        #    col = "mean_" + metric
-        #    data[col] = data[metric].apply(lambda x: np.mean(x, axis=0))
-        #    data['array_lengths'] = data[col].apply(lambda x: len(x))
-        #    max_length = data['array_lengths'].max()
-        #    print(max_length)
-        #    data = self.extend_dataframe(data, metric, max_length)
-
-        #data_column_names = self.metrics
-        #non_data_column_names = list(set(data.columns) - set(data_column_names))
-        #data = self.flatten_dataframe(data, non_data_column_names, data_column_names)
-
         for exp_vals in itertools.product(*options_values):
             exp_kwargs = dict(zip(options_keys, exp_vals))
 
@@ -383,41 +368,58 @@ class ExperimentReader:
                 else:
                     err_kws = {}
 
+                noise_lvl = exp_kwargs["noise_level"]
                 errorbar = ("sd", 0.5)
                 if "synthetic" in self.dataset:
-                    cut_threshold = 25
+                    if noise_lvl == 0.6:
+                        cut_threshold = 27
+                    else:
+                        cut_threshold = 18
                 elif self.dataset == "20newsgroups":
-                    cut_threshold = 20
+                    if noise_lvl == 0.4:
+                        cut_threshold = 15
+                    else:
+                        cut_threshold = 22
                 elif self.dataset == "breast_cancer":
                     cut_threshold = 10
                 elif self.dataset == "cardiotocography":
-                    cut_threshold = 15
-                elif self.dataset == "cifar10" or self.dataset == "cifar10_original":
-                    cut_threshold = 20
+                    if noise_lvl == 0.4:
+                        cut_threshold = 10
+                    else:
+                        cut_threshold = 12
+                elif self.dataset == "cifar10":
+                    if noise_lvl == 0.4:
+                        cut_threshold = 10
+                    else:
+                        cut_threshold = 14
                 elif self.dataset == "ecoli":
-                    cut_threshold = 25
+                    if noise_lvl == 0.4:
+                        cut_threshold = 15
+                    else:
+                        cut_threshold = 22
                 elif self.dataset == "forest_type_mapping":
-                    cut_threshold = 20
-                elif self.dataset == "mnist":
-                    cut_threshold = 20
-                elif self.dataset == "mnist_original":
-                    cut_threshold = 10000
-                elif self.dataset == "mushrooms":
-                    cut_threshold = 10
+                    if noise_lvl == 0.4:
+                        cut_threshold = 10
+                    else:
+                        cut_threshold = 13
                 elif self.dataset == "user_knowledge":
-                    cut_threshold = 15
+                    if noise_lvl == 0.4:
+                        cut_threshold = 14
+                    else:
+                        cut_threshold = 16
                 elif self.dataset == "yeast":
-                    cut_threshold = 15
+                    if noise_lvl == 0.4:
+                        cut_threshold = 7
+                    else:
+                        cut_threshold = 8
                 else:
                     raise ValueError("incorrect dataset!")
 
                 #cut_threshold = 300
 
-                #if self.dataset == "20newsgroups":
-                    #df_filtered = df_filtered[df_filtered[vary[0]] < (min_length + 15)]
-                #else:
+                df_filtered = df_filtered[df_filtered[vary[0]] < cut_threshold]
 
-                df_filtered = df_filtered[df_filtered[vary[0]] < (min_length + 5)]
+                #df_filtered = df_filtered[df_filtered[vary[0]] < (min_length + 5)]
 
                 metric_map = {
                     "ami": "AMI", "rand": "ARI", "time": "Time (s)", "num_violations": "Num. violations",
@@ -461,7 +463,7 @@ class ExperimentReader:
                 #plt.setp(ax.lines, alpha=0.7)  # Adjusts the transparency of the markers
                 plt.setp(ax.lines, markeredgewidth=0.5)  # Adjusts the transparency of the markers
                 #plt.setp(ax.lines, markersize=7)  # Adjusts the transparency of the markers
-                plt.setp(ax.lines, markersize=6)  # Adjusts the transparency of the markers
+                plt.setp(ax.lines, markersize=10)  # Adjusts the transparency of the markers
                 plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True, nbins=5))
                 #plt.gca().xaxis.set_major_locator(MaxNLocator(nbins=10))
 
@@ -489,7 +491,7 @@ class ExperimentReader:
                 ax.set_xticklabels(labels)
 
                 plt.xlabel("Number of queries")
-                ax.legend(loc='upper left')
+                ax.legend(loc="best")
                 #ax.legend(loc='upper left', bbox_to_anchor=(1,1))
                 #plt.subplots_adjust(right=0.75)
 
@@ -658,7 +660,7 @@ class ExperimentReader:
                 plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels
                 plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
                 plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
-                plt.rc('legend', fontsize=18)    # legend fontsize
+                plt.rc('legend', fontsize=16)    # legend fontsize
                 plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
                 plt.rc('figure', dpi=200)
                 plt.rc('figure', figsize=(6, 4))
@@ -710,7 +712,7 @@ class ExperimentReader:
                     raise ValueError("incorrect dataset!")
 
                 #cut_threshold = 300
-                df_filtered = df_filtered[df_filtered[vary[0]] < (min_length + 45)]
+                df_filtered = df_filtered[df_filtered[vary[0]] < (min_length + 30)]
 
                 metric_map = {
                     "ami": "AMI", "rand": "ARI", "time": "Time (s)", "num_violations": "Num. violations",
@@ -726,11 +728,28 @@ class ExperimentReader:
                     "cluster_incon": "IMU-C", "entropy": "Entropy", "info_gain_pairs_random": "JEIG"
                 }
 
-                palette = sns.color_palette("tab20", 36)  # Change 'husl' to any of the recommended palettes
+                #palette = sns.color_palette("tab20", 36)  # Change 'husl' to any of the recommended palettes
                 #n_colors = 36
                 #colormap = mpl.cm.turbo
                 #color_indices = np.linspace(0, 1, n_colors)
                 #palette = [mpl.colors.rgb2hex(colormap(i)) for i in color_indices]
+
+                # Define your full hue order
+                original_hue_order = [
+                    "info_gain_pairs_random", "info_gain_object", "info_gain_pairs",
+                    "entropy", "maxexp", "maxmin", "unif"
+                ]
+
+                # Generate the full palette using the current default Seaborn palette
+                current_palette = sns.color_palette()
+                palette_dict = dict(zip(original_hue_order, current_palette))
+
+                # Assume df_filtered is your DataFrame and 'acq_fn' is the column for hue categorization
+                available_hues = df_filtered['acq_fn'].unique()
+                filtered_hue_order = [hue for hue in original_hue_order if hue in available_hues]
+
+                # Filter the palette to only include available hues
+                filtered_palette = {hue: palette_dict[hue] for hue in filtered_hue_order}
 
                 if "x" in vary:
                     var = "total_queries"
@@ -738,23 +757,24 @@ class ExperimentReader:
                 ax = sns.lineplot(
                     x=vary[0],
                     y="y",
-                    hue=df_filtered[hues].apply(tuple, axis=1),
-                    #hue="acq_fn",
-                    #hue_order=["info_gain_pairs_random", "info_gain_object", "info_gain_pairs", "entropy", "maxexp", "maxmin", "unif"],
+                    #hue=df_filtered[hues].apply(tuple, axis=1),
+                    hue="acq_fn",
+                    hue_order=filtered_hue_order,
                     errorbar=errorbar,
                     marker=".",
                     err_style=err_style,
                     data=df_filtered,
                     linestyle=linestyle,
                     err_kws=err_kws,
-                    palette=palette
+                    palette=filtered_palette
+                    #palette=palette,
                 )
 
                 #plt.setp(ax.lines, markeredgecolor='none')  # Removes the border of the markers
                 #plt.setp(ax.lines, alpha=0.7)  # Adjusts the transparency of the markers
                 plt.setp(ax.lines, markeredgewidth=0.5)  # Adjusts the transparency of the markers
                 #plt.setp(ax.lines, markersize=7)  # Adjusts the transparency of the markers
-                plt.setp(ax.lines, markersize=6)  # Adjusts the transparency of the markers
+                plt.setp(ax.lines, markersize=markersize)  # Adjusts the transparency of the markers
                 plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True, nbins=5))
                 #plt.gca().xaxis.set_major_locator(MaxNLocator(nbins=10))
 
@@ -782,19 +802,19 @@ class ExperimentReader:
                 ax.set_xticklabels(labels)
 
                 plt.xlabel("Number of queries")
-                #ax.legend(loc='lower right')
-                ax.legend(loc='upper left', bbox_to_anchor=(1,1))
-                plt.subplots_adjust(right=0.75)
+                ax.legend(loc='best')
+                #ax.legend(loc='upper left', bbox_to_anchor=(1,1))
+                #plt.subplots_adjust(right=0.75)
 
-                #legs = ax.get_legend().get_texts()
-                #fix_legends = True
-                #if fix_legends:
-                #    ax.get_legend().set_title(None)
-                #    for ll in legs:
-                #        l = ll.get_text()
-                #        for k, v in acq_fn_map.items():
-                #            if k in l:
-                #                ll.set_text(v)
+                legs = ax.get_legend().get_texts()
+                fix_legends = True
+                if fix_legends:
+                    ax.get_legend().set_title(None)
+                    for ll in legs:
+                        l = ll.get_text()
+                        for k, v in acq_fn_map.items():
+                            if k in l:
+                                ll.set_text(v)
 
 
                 #legs = ax.get_legend().get_texts()
@@ -820,7 +840,7 @@ class ExperimentReader:
                 legend = ax.get_legend()
 
                 #if self.dataset != "20newsgroups":
-                    #ax.get_legend().set_visible(False)
+                ax.get_legend().set_visible(False)
 
                 plt.savefig(file_path, dpi=150, bbox_inches='tight')
                 #plt.savefig(file_path, bbox_extra_artists=(legend,), dpi=150, bbox_inches='tight')
@@ -950,7 +970,7 @@ class ExperimentReader:
                 plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels
                 plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
                 plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
-                plt.rc('legend', fontsize=18)    # legend fontsize
+                plt.rc('legend', fontsize=16.5)    # legend fontsize
                 plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
                 plt.rc('figure', dpi=150)
                 plt.rc('figure', figsize=(6, 4))
@@ -1055,10 +1075,10 @@ class ExperimentReader:
 
                 x_label_ = "Noise level" if vary[0] == "noise_level" else "Batch size"
                 plt.xlabel(x_label_)
-                #ax.legend(loc='lower right')
-                ax.legend(loc='upper left', bbox_to_anchor=(1,1))
+                ax.legend(loc='lower left')
+                #ax.legend(loc='upper left', bbox_to_anchor=(1,1))
                 #ax.legend(loc='best')
-                plt.subplots_adjust(right=0.75)
+                #plt.subplots_adjust(right=0.75)
 
                 legs = ax.get_legend().get_texts()
                 fix_legends = True
@@ -1094,7 +1114,296 @@ class ExperimentReader:
                 legend = ax.get_legend()
 
                 #if self.dataset != "20newsgroups":
-                    #ax.get_legend().set_visible(False)
+                #ax.get_legend().set_visible(False)
+
+                plt.savefig(file_path, dpi=150, bbox_inches='tight')
+                #plt.savefig(file_path, bbox_extra_artists=(legend,), dpi=150, bbox_inches='tight')
+                #plt.savefig(file_path, dpi=200, bbox_inches='tight')
+                plt.clf()
+
+    def generate_AL_curves4(
+        self,
+        data,
+        save_location,
+        categorize,
+        compare,
+        vary,
+        options_in_file_name,
+        auc=False, 
+        summary_method="auc_max_ind", 
+        indices=[], 
+        threshold=[], 
+        err_style="band",
+        marker=None,
+        markersize=6,
+        capsize=6,
+        linestyle="solid",
+        prop=True,
+        varian=0.5,
+        **config):
+
+        config = copy.deepcopy(config)
+
+        options_keys = []
+        options_values = []
+        compare_options = {}
+        vary_options = {}
+
+        for key, value in config.items():
+            if key[0] == "_":
+                continue
+            if type(value) != list:
+                value = [value]
+            
+            options_keys.append(key)
+            if key not in compare and key not in vary:
+                options_values.append(value)
+            else:
+                options_values.append([1111111111])
+
+        for option in compare:
+            compare_options[option] = config[option]
+
+        if "x" not in vary:
+            for option in vary:
+                vary_options[option] = config[option]
+            data = self.summarize_AL_procedure(
+                data,
+                auc=auc, 
+                method=summary_method, 
+                indices=indices, 
+                threshold=threshold
+            )
+        
+
+        for exp_vals in itertools.product(*options_values):
+            exp_kwargs = dict(zip(options_keys, exp_vals))
+
+            for option in compare:
+                exp_kwargs[option] = compare_options[option]
+
+            if "x" not in vary:
+                for option in vary:
+                    exp_kwargs[option] = vary_options[option]
+
+            for metric in self.metrics:
+                df_filtered = self.filter_dataframe(data, exp_kwargs).reset_index()
+                col = "mean_" + metric
+                df_filtered[col] = df_filtered[metric].apply(lambda x: np.mean(x, axis=0))
+                df_filtered['array_lengths'] = df_filtered[col].apply(lambda x: len(x))
+                max_length = df_filtered['array_lengths'].max()
+                min_length = df_filtered['array_lengths'].min()
+                if metric not in ["time_select_batch", "time_update_clustering", "time", "num_violations", "num_repeat_queries"]:
+                    df_filtered = self.extend_dataframe(df_filtered, metric, max_length)
+
+
+                data_column_names = [metric]
+                non_data_column_names = list(set(data.columns) - set(data_column_names))
+                if df_filtered.shape[0] == 0:
+                    print("No data for these options @@@@@@@")
+                    continue
+                df_filtered = self.flatten_dataframe(df_filtered, non_data_column_names, data_column_names)
+
+                path = save_location + "/" + metric + "/"
+                for option in categorize:
+                    path += str(exp_kwargs[option]) + "/" 
+                fig_path = Path(path)
+                fig_path.mkdir(parents=True, exist_ok=True)
+
+                file_name = metric + "_"
+                for option in options_in_file_name:
+                    file_name += str(exp_kwargs[option]) + "_"
+                file_name = file_name[:-1] + ".png"
+
+                file_path = path + file_name
+                self.dataset = exp_kwargs["dataset_name"] 
+                self.batch_size = exp_kwargs["batch_size"] 
+
+                hues = list(compare_options.keys())
+                sns.set_theme()
+                sns.set_style("white")
+                SMALL_SIZE = 16
+                MEDIUM_SIZE = 18
+                BIGGER_SIZE = 18
+
+                plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
+                plt.rc('axes', titlesize=SMALL_SIZE)     # fontsize of the axes title
+                plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels
+                plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+                plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+                plt.rc('legend', fontsize=16)    # legend fontsize
+                plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
+                plt.rc('figure', dpi=200)
+                plt.rc('figure', figsize=(6, 4))
+
+                # Customize gridlines
+                plt.grid(True, which='both', linestyle='--', linewidth=0.5)
+
+                # Set the border color and width
+                ax = plt.gca()  # Get current axis
+                for _, spine in ax.spines.items():
+                    spine.set_color('black')
+                    spine.set_linewidth(1)
+
+                if err_style == "bars":
+                    err_kws = {
+                        "capsize": capsize,
+                        "marker": marker,
+                        "markersize": markersize,
+                    }
+                else:
+                    err_kws = {}
+
+                errorbar = ("sd", varian)
+                if "synthetic" in self.dataset:
+                    cut_threshold = 25
+                elif self.dataset == "20newsgroups":
+                    cut_threshold = 20
+                elif self.dataset == "breast_cancer":
+                    cut_threshold = 10
+                elif self.dataset == "cardiotocography":
+                    cut_threshold = 15
+                elif self.dataset == "cifar10" or self.dataset == "cifar10_original":
+                    cut_threshold = 20
+                elif self.dataset == "ecoli":
+                    cut_threshold = 25
+                elif self.dataset == "forest_type_mapping":
+                    cut_threshold = 20
+                elif self.dataset == "mnist":
+                    cut_threshold = 20
+                elif self.dataset == "mnist_original":
+                    cut_threshold = 10000
+                elif self.dataset == "mushrooms":
+                    cut_threshold = 10
+                elif self.dataset == "user_knowledge":
+                    cut_threshold = 15
+                elif self.dataset == "yeast":
+                    cut_threshold = 15
+                else:
+                    raise ValueError("incorrect dataset!")
+
+                #cut_threshold = 300
+                df_filtered = df_filtered[df_filtered[vary[0]] < (min_length + 30)]
+
+                metric_map = {
+                    "ami": "AMI", "rand": "ARI", "time": "Time (s)", "num_violations": "Num. violations",
+                    "time_select_batch": "Time (s)", "time_update_clustering": "Time (s)",
+                    "num_repeat_queries": "Num. pairs re-queried", "accuracy": "Accuracy", 
+                    "v_measure": "V-measure", "train_accuracy": "Train accuracy", "pool_accuracy": "Pool accuracy"
+                }
+
+                acq_fn_map = {
+                    "maxexp": "Maxexp", "maxmin": "Maxmin", "uncert": "Uncertainty",
+                    "freq": "Frequency", "unif": "Uniform", "nCOBRAS": "nCOBRAS",
+                    "COBRAS": "COBRAS", "QECC": "QECC", "info_gain_object": "EIG-O", "info_gain_pairs": "EIG-P",
+                    "cluster_incon": "IMU-C", "entropy": "Entropy", "info_gain_pairs_random": "JEIG"
+                }
+
+                #palette = sns.color_palette("tab20", 36)  # Change 'husl' to any of the recommended palettes
+                #n_colors = 36
+                #colormap = mpl.cm.turbo
+                #color_indices = np.linspace(0, 1, n_colors)
+                #palette = [mpl.colors.rgb2hex(colormap(i)) for i in color_indices]
+
+                # Define your full hue order
+                original_hue_order = [
+                    "info_gain_pairs_random", "info_gain_object", "info_gain_pairs",
+                    "entropy", "maxexp", "maxmin", "unif"
+                ]
+
+                # Generate the full palette using the current default Seaborn palette
+                current_palette = sns.color_palette()
+                palette_dict = dict(zip(original_hue_order, current_palette))
+
+                # Assume df_filtered is your DataFrame and 'acq_fn' is the column for hue categorization
+                available_hues = df_filtered['acq_fn'].unique()
+                filtered_hue_order = [hue for hue in original_hue_order if hue in available_hues]
+
+                # Filter the palette to only include available hues
+                filtered_palette = {hue: palette_dict[hue] for hue in filtered_hue_order}
+
+                if "x" in vary:
+                    var = "total_queries"
+                var = vary[0]
+                df_filtered["mean_field_beta"] = df_filtered["mean_field_beta"].apply(lambda x: str(x))   
+
+                ax = sns.lineplot(
+                    x=vary[0],
+                    y="y",
+                    #hue=df_filtered[hues].apply(tuple, axis=1),
+                    hue="mean_field_beta",
+                    hue_order=["0.5", "1.0", "3.0", "5.0", "10.0", "100.0"],
+                    errorbar=errorbar,
+                    marker=".",
+                    err_style=err_style,
+                    data=df_filtered,
+                    linestyle=linestyle,
+                    err_kws=err_kws
+                    #palette=palette,
+                )
+
+                #plt.setp(ax.lines, markeredgecolor='none')  # Removes the border of the markers
+                #plt.setp(ax.lines, alpha=0.7)  # Adjusts the transparency of the markers
+                plt.setp(ax.lines, markeredgewidth=0.5)  # Adjusts the transparency of the markers
+                #plt.setp(ax.lines, markersize=7)  # Adjusts the transparency of the markers
+                plt.setp(ax.lines, markersize=markersize)  # Adjusts the transparency of the markers
+                plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True, nbins=5))
+                #plt.gca().xaxis.set_major_locator(MaxNLocator(nbins=10))
+
+
+                plt.ylabel(metric_map[metric])
+
+                #labels = self.construct_x_ticks(ax, prop)
+                #ws = 1-exp_kwargs["warm_start"]
+                N = len(self.Y)
+                n_edges = (N*(N-1))/2
+                #N_pool = int(n_edges*ws)
+                #rest = n_edges - N_pool
+                rest = 0
+                if self.batch_size < 1:
+                    batch_size = math.ceil(n_edges * self.batch_size)
+                else:
+                    batch_size = self.batch_size
+                labels = []
+                for item in ax.get_xticks():
+                    if prop:
+                        labels.append(round((int(item)*batch_size+rest)/n_edges, 2))
+                    else:
+                        lab = int(int(item)*batch_size+rest)
+                        labels.append(lab)
+                ax.set_xticklabels(labels)
+
+                plt.xlabel("Number of queries")
+                ax.legend(loc='best')
+                #ax.legend(loc='upper left', bbox_to_anchor=(1,1))
+                #plt.subplots_adjust(right=0.75)
+
+
+                #legs = ax.get_legend().get_texts()
+                #ax.get_legend().set_title(None)
+                #for ll in legs:
+                #    l = ll.get_text()
+                #    ll.set_text(r"$|\mathcal{D}_i|$ = " + l + r"$|\mathcal{E}|$")
+
+                legs = ax.get_legend().get_texts()
+                ax.get_legend().set_title(None)
+                for ll in legs:
+                    l = ll.get_text()
+                    ll.set_text(r"$\beta$ = " + l)
+
+                #legs = ax.get_legend().get_texts()
+                #ax.get_legend().set_title(None)
+                #for ll in legs:
+                #    l = ll.get_text()
+                #    l1, l2, = l.split(",")
+                #    l1 = l1[1:].strip()
+                #    l2 = l2[:-1].strip()
+                #    ll.set_text(r"$m = $" + l1 + r", $n = $" + l2)
+
+                legend = ax.get_legend()
+
+                #if self.dataset != "20newsgroups":
+                ax.get_legend().set_visible(False)
 
                 plt.savefig(file_path, dpi=150, bbox_inches='tight')
                 #plt.savefig(file_path, bbox_extra_artists=(legend,), dpi=150, bbox_inches='tight')
