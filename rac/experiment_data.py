@@ -384,14 +384,14 @@ class ExperimentReader:
                     cut_threshold = 10
                 elif self.dataset == "cardiotocography":
                     if noise_lvl == 0.4:
-                        cut_threshold = 10
+                        cut_threshold = 13
                     else:
-                        cut_threshold = 12
+                        cut_threshold = 18
                 elif self.dataset == "cifar10":
                     if noise_lvl == 0.4:
-                        cut_threshold = 10
+                        cut_threshold = 15
                     else:
-                        cut_threshold = 14
+                        cut_threshold = 23
                 elif self.dataset == "ecoli":
                     if noise_lvl == 0.4:
                         cut_threshold = 15
@@ -399,19 +399,19 @@ class ExperimentReader:
                         cut_threshold = 22
                 elif self.dataset == "forest_type_mapping":
                     if noise_lvl == 0.4:
-                        cut_threshold = 10
+                        cut_threshold = 15
                     else:
-                        cut_threshold = 13
+                        cut_threshold = 22
                 elif self.dataset == "user_knowledge":
                     if noise_lvl == 0.4:
-                        cut_threshold = 14
+                        cut_threshold = 21
                     else:
-                        cut_threshold = 16
+                        cut_threshold = 31
                 elif self.dataset == "yeast":
                     if noise_lvl == 0.4:
-                        cut_threshold = 7
+                        cut_threshold = 9
                     else:
-                        cut_threshold = 8
+                        cut_threshold = 11
                 else:
                     raise ValueError("incorrect dataset!")
 
