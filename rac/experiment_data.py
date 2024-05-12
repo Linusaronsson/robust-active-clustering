@@ -394,9 +394,9 @@ class ExperimentReader:
                         cut_threshold = 23
                 elif self.dataset == "ecoli":
                     if noise_lvl == 0.4:
-                        cut_threshold = 15
+                        cut_threshold = 150
                     else:
-                        cut_threshold = 22
+                        cut_threshold = 150
                 elif self.dataset == "forest_type_mapping":
                     if noise_lvl == 0.4:
                         cut_threshold = 15
@@ -463,7 +463,7 @@ class ExperimentReader:
                 #plt.setp(ax.lines, alpha=0.7)  # Adjusts the transparency of the markers
                 plt.setp(ax.lines, markeredgewidth=0.5)  # Adjusts the transparency of the markers
                 #plt.setp(ax.lines, markersize=7)  # Adjusts the transparency of the markers
-                plt.setp(ax.lines, markersize=10)  # Adjusts the transparency of the markers
+                plt.setp(ax.lines, markersize=0)  # Adjusts the transparency of the markers
                 plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True, nbins=5))
                 #plt.gca().xaxis.set_major_locator(MaxNLocator(nbins=10))
 
