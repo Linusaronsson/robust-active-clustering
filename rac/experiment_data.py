@@ -415,7 +415,7 @@ class ExperimentReader:
                 else:
                     raise ValueError("incorrect dataset!")
 
-                #cut_threshold = 300
+                cut_threshold = 30
 
                 df_filtered = df_filtered[df_filtered[vary[0]] < cut_threshold]
 
@@ -463,7 +463,7 @@ class ExperimentReader:
                 #plt.setp(ax.lines, alpha=0.7)  # Adjusts the transparency of the markers
                 plt.setp(ax.lines, markeredgewidth=0.5)  # Adjusts the transparency of the markers
                 #plt.setp(ax.lines, markersize=7)  # Adjusts the transparency of the markers
-                plt.setp(ax.lines, markersize=0)  # Adjusts the transparency of the markers
+                plt.setp(ax.lines, markersize=10)  # Adjusts the transparency of the markers
                 plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True, nbins=5))
                 #plt.gca().xaxis.set_major_locator(MaxNLocator(nbins=10))
 
@@ -712,7 +712,7 @@ class ExperimentReader:
                     raise ValueError("incorrect dataset!")
 
                 #cut_threshold = 300
-                df_filtered = df_filtered[df_filtered[vary[0]] < (min_length + 30)]
+                df_filtered = df_filtered[df_filtered[vary[0]] < (min_length + 10)]
 
                 metric_map = {
                     "ami": "AMI", "rand": "ARI", "time": "Time (s)", "num_violations": "Num. violations",
@@ -742,14 +742,14 @@ class ExperimentReader:
 
                 # Generate the full palette using the current default Seaborn palette
                 current_palette = sns.color_palette()
-                palette_dict = dict(zip(original_hue_order, current_palette))
+                #palette_dict = dict(zip(original_hue_order, current_palette))
 
                 # Assume df_filtered is your DataFrame and 'acq_fn' is the column for hue categorization
                 available_hues = df_filtered['acq_fn'].unique()
-                filtered_hue_order = [hue for hue in original_hue_order if hue in available_hues]
+                #filtered_hue_order = [hue for hue in original_hue_order if hue in available_hues]
 
                 # Filter the palette to only include available hues
-                filtered_palette = {hue: palette_dict[hue] for hue in filtered_hue_order}
+                #filtered_palette = {hue: palette_dict[hue] for hue in filtered_hue_order}
 
                 if "x" in vary:
                     var = "total_queries"
@@ -759,14 +759,14 @@ class ExperimentReader:
                     y="y",
                     #hue=df_filtered[hues].apply(tuple, axis=1),
                     hue="acq_fn",
-                    hue_order=filtered_hue_order,
+                    hue_order=original_hue_order,
                     errorbar=errorbar,
                     marker=".",
                     err_style=err_style,
                     data=df_filtered,
                     linestyle=linestyle,
-                    err_kws=err_kws,
-                    palette=filtered_palette
+                    err_kws=err_kws
+                    #palette=filtered_palette
                     #palette=palette,
                 )
 
@@ -802,7 +802,7 @@ class ExperimentReader:
                 ax.set_xticklabels(labels)
 
                 plt.xlabel("Number of queries")
-                ax.legend(loc='best')
+                ax.legend(loc='upper left')
                 #ax.legend(loc='upper left', bbox_to_anchor=(1,1))
                 #plt.subplots_adjust(right=0.75)
 
@@ -1325,14 +1325,14 @@ class ExperimentReader:
                 if "x" in vary:
                     var = "total_queries"
                 var = vary[0]
-                df_filtered["mean_field_beta"] = df_filtered["mean_field_beta"].apply(lambda x: str(x))   
+                df_filtered["num_edges_info_gain"] = df_filtered["num_edges_info_gain"].apply(lambda x: str(x))   
 
                 ax = sns.lineplot(
                     x=vary[0],
                     y="y",
                     #hue=df_filtered[hues].apply(tuple, axis=1),
-                    hue="mean_field_beta",
-                    hue_order=["0.5", "1.0", "3.0", "5.0", "10.0", "100.0"],
+                    hue="num_edges_info_gain",
+                    hue_order=["20", "10", "5", "3", "1"],
                     errorbar=errorbar,
                     marker=".",
                     err_style=err_style,
@@ -1389,7 +1389,13 @@ class ExperimentReader:
                 ax.get_legend().set_title(None)
                 for ll in legs:
                     l = ll.get_text()
-                    ll.set_text(r"$\beta$ = " + l)
+                    ll.set_text(r"$|\mathcal{E}^{EIG}|$ = " + l + r"$N$")
+
+                #legs = ax.get_legend().get_texts()
+                #ax.get_legend().set_title(None)
+                #for ll in legs:
+                #    l = ll.get_text()
+                #    ll.set_text(r"$\beta$ = " + l)
 
                 #legs = ax.get_legend().get_texts()
                 #ax.get_legend().set_title(None)
@@ -1403,7 +1409,7 @@ class ExperimentReader:
                 legend = ax.get_legend()
 
                 #if self.dataset != "20newsgroups":
-                ax.get_legend().set_visible(False)
+                #ax.get_legend().set_visible(False)
 
                 plt.savefig(file_path, dpi=150, bbox_inches='tight')
                 #plt.savefig(file_path, bbox_extra_artists=(legend,), dpi=150, bbox_inches='tight')
