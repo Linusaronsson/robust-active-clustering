@@ -171,6 +171,9 @@ class ActiveClustering:
             else:
                 max_hours = 5
 
+            if self.dataset_name == "synthetic":
+                max_hours = 5
+
             if num_hours > max_hours:
                 break
 
