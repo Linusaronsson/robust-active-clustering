@@ -712,7 +712,7 @@ class ExperimentReader:
                     raise ValueError("incorrect dataset!")
 
                 #cut_threshold = 300
-                df_filtered = df_filtered[df_filtered[vary[0]] < (min_length + 10)]
+                df_filtered = df_filtered[df_filtered[vary[0]] < 100]
 
                 metric_map = {
                     "ami": "AMI", "rand": "ARI", "time": "Time (s)", "num_violations": "Num. violations",
@@ -728,7 +728,7 @@ class ExperimentReader:
                     "cluster_incon": "IMU-C", "entropy": "Entropy", "info_gain_pairs_random": "JEIG"
                 }
 
-                #palette = sns.color_palette("tab20", 36)  # Change 'husl' to any of the recommended palettes
+                palette = sns.color_palette("tab20", 36)  # Change 'husl' to any of the recommended palettes
                 #n_colors = 36
                 #colormap = mpl.cm.turbo
                 #color_indices = np.linspace(0, 1, n_colors)
@@ -757,9 +757,9 @@ class ExperimentReader:
                 ax = sns.lineplot(
                     x=vary[0],
                     y="y",
-                    #hue=df_filtered[hues].apply(tuple, axis=1),
-                    hue="acq_fn",
-                    hue_order=original_hue_order,
+                    hue=df_filtered[hues].apply(tuple, axis=1),
+                    #hue="acq_fn",
+                    #hue_order=original_hue_order,
                     errorbar=errorbar,
                     marker=".",
                     err_style=err_style,
@@ -803,18 +803,18 @@ class ExperimentReader:
 
                 plt.xlabel("Number of queries")
                 ax.legend(loc='upper left')
-                #ax.legend(loc='upper left', bbox_to_anchor=(1,1))
-                #plt.subplots_adjust(right=0.75)
+                ax.legend(loc='upper left', bbox_to_anchor=(1,1))
+                plt.subplots_adjust(right=0.75)
 
-                legs = ax.get_legend().get_texts()
-                fix_legends = True
-                if fix_legends:
-                    ax.get_legend().set_title(None)
-                    for ll in legs:
-                        l = ll.get_text()
-                        for k, v in acq_fn_map.items():
-                            if k in l:
-                                ll.set_text(v)
+                #legs = ax.get_legend().get_texts()
+                #fix_legends = True
+                #if fix_legends:
+                #    ax.get_legend().set_title(None)
+                #    for ll in legs:
+                #        l = ll.get_text()
+                #        for k, v in acq_fn_map.items():
+                #            if k in l:
+                #                ll.set_text(v)
 
 
                 #legs = ax.get_legend().get_texts()
@@ -840,7 +840,7 @@ class ExperimentReader:
                 legend = ax.get_legend()
 
                 #if self.dataset != "20newsgroups":
-                ax.get_legend().set_visible(False)
+                #ax.get_legend().set_visible(False)
 
                 plt.savefig(file_path, dpi=150, bbox_inches='tight')
                 #plt.savefig(file_path, bbox_extra_artists=(legend,), dpi=150, bbox_inches='tight')
