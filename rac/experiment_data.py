@@ -415,7 +415,7 @@ class ExperimentReader:
                 else:
                     raise ValueError("incorrect dataset!")
 
-                cut_threshold = 30
+                cut_threshold = 35
 
                 df_filtered = df_filtered[df_filtered[vary[0]] < cut_threshold]
 
@@ -435,7 +435,7 @@ class ExperimentReader:
                     "cluster_incon": "IMU-C", "entropy": "Entropy", "info_gain_pairs_random": "JEIG"
                 }
 
-                #palette = sns.color_palette("tab20", 36)  # Change 'husl' to any of the recommended palettes
+                palette = sns.color_palette("tab20", 36)  # Change 'husl' to any of the recommended palettes
                 #n_colors = 36
                 #colormap = mpl.cm.turbo
                 #color_indices = np.linspace(0, 1, n_colors)
@@ -447,16 +447,16 @@ class ExperimentReader:
                 ax = sns.lineplot(
                     x=vary[0],
                     y="y",
-                    #hue=df_filtered[hues].apply(tuple, axis=1),
-                    hue="acq_fn",
-                    hue_order=["info_gain_pairs_random", "info_gain_object", "info_gain_pairs", "entropy", "maxexp", "maxmin", "unif"],
+                    hue=df_filtered[hues].apply(tuple, axis=1),
+                    #hue="acq_fn",
+                    #hue_order=["info_gain_pairs_random", "info_gain_object", "info_gain_pairs", "entropy", "maxexp", "maxmin", "unif"],
                     errorbar=errorbar,
                     marker=".",
                     err_style=err_style,
                     data=df_filtered,
                     linestyle=linestyle,
-                    err_kws=err_kws
-                    #palette=palette
+                    err_kws=err_kws,
+                    palette=palette
                 )
 
                 #plt.setp(ax.lines, markeredgecolor='none')  # Removes the border of the markers
@@ -492,8 +492,8 @@ class ExperimentReader:
 
                 plt.xlabel("Number of queries")
                 ax.legend(loc="best")
-                #ax.legend(loc='upper left', bbox_to_anchor=(1,1))
-                #plt.subplots_adjust(right=0.75)
+                ax.legend(loc='upper left', bbox_to_anchor=(1,1))
+                plt.subplots_adjust(right=0.75)
 
                 legs = ax.get_legend().get_texts()
                 fix_legends = True
@@ -528,8 +528,8 @@ class ExperimentReader:
 
                 legend = ax.get_legend()
 
-                if self.dataset != "synthetic":
-                    ax.get_legend().set_visible(False)
+                #if self.dataset != "synthetic":
+                    #ax.get_legend().set_visible(False)
 
                 plt.savefig(file_path, dpi=150, bbox_inches='tight')
                 #plt.savefig(file_path, bbox_extra_artists=(legend,), dpi=150, bbox_inches='tight')
