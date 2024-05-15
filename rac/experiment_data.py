@@ -384,9 +384,9 @@ class ExperimentReader:
                     cut_threshold = 10
                 elif self.dataset == "cardiotocography":
                     if noise_lvl == 0.4:
-                        cut_threshold = 13
+                        cut_threshold = 20
                     else:
-                        cut_threshold = 18
+                        cut_threshold = 28
                 elif self.dataset == "cifar10":
                     if noise_lvl == 0.4:
                         cut_threshold = 15
@@ -415,7 +415,7 @@ class ExperimentReader:
                 else:
                     raise ValueError("incorrect dataset!")
 
-                cut_threshold = 35
+                #cut_threshold = 35
 
                 df_filtered = df_filtered[df_filtered[vary[0]] < cut_threshold]
 
@@ -441,14 +441,31 @@ class ExperimentReader:
                 #color_indices = np.linspace(0, 1, n_colors)
                 #palette = [mpl.colors.rgb2hex(colormap(i)) for i in color_indices]
 
+                original_hue_order = [
+                    "info_gain_pairs_random", "info_gain_object", "info_gain_pairs",
+                    "entropy", "maxexp", "maxmin", "unif"
+                ]
+
+                # Generate the full palette using the current default Seaborn palette
+                current_palette = sns.color_palette()
+                palette_dict = dict(zip(original_hue_order, current_palette))
+
+                # Assume df_filtered is your DataFrame and 'acq_fn' is the column for hue categorization
+                available_hues = df_filtered['acq_fn'].unique()
+                filtered_hue_order = [hue for hue in original_hue_order if hue in available_hues]
+
+                # Filter the palette to only include available hues
+                filtered_palette = {hue: palette_dict[hue] for hue in filtered_hue_order}
+
                 if "x" in vary:
                     var = "total_queries"
                 var = vary[0]
                 ax = sns.lineplot(
                     x=vary[0],
                     y="y",
-                    hue=df_filtered[hues].apply(tuple, axis=1),
-                    #hue="acq_fn",
+                    #hue=df_filtered[hues].apply(tuple, axis=1),
+                    hue="acq_fn",
+                    hue_order=original_hue_order,
                     #hue_order=["info_gain_pairs_random", "info_gain_object", "info_gain_pairs", "entropy", "maxexp", "maxmin", "unif"],
                     errorbar=errorbar,
                     marker=".",
@@ -456,7 +473,8 @@ class ExperimentReader:
                     data=df_filtered,
                     linestyle=linestyle,
                     err_kws=err_kws,
-                    palette=palette
+                    palette=filtered_palette
+                    #palette=palette
                 )
 
                 #plt.setp(ax.lines, markeredgecolor='none')  # Removes the border of the markers
@@ -528,8 +546,8 @@ class ExperimentReader:
 
                 legend = ax.get_legend()
 
-                #if self.dataset != "synthetic":
-                    #ax.get_legend().set_visible(False)
+                if self.dataset != "synthetic":
+                    ax.get_legend().set_visible(False)
 
                 plt.savefig(file_path, dpi=150, bbox_inches='tight')
                 #plt.savefig(file_path, bbox_extra_artists=(legend,), dpi=150, bbox_inches='tight')
