@@ -394,9 +394,9 @@ class ExperimentReader:
                         cut_threshold = 23
                 elif self.dataset == "ecoli":
                     if noise_lvl == 0.4:
-                        cut_threshold = 150
+                        cut_threshold = 44
                     else:
-                        cut_threshold = 150
+                        cut_threshold = 69
                 elif self.dataset == "forest_type_mapping":
                     if noise_lvl == 0.4:
                         cut_threshold = 15
@@ -409,9 +409,9 @@ class ExperimentReader:
                         cut_threshold = 31
                 elif self.dataset == "yeast":
                     if noise_lvl == 0.4:
-                        cut_threshold = 9
-                    else:
                         cut_threshold = 11
+                    else:
+                        cut_threshold = 16
                 else:
                     raise ValueError("incorrect dataset!")
 
@@ -465,15 +465,15 @@ class ExperimentReader:
                     y="y",
                     #hue=df_filtered[hues].apply(tuple, axis=1),
                     hue="acq_fn",
-                    hue_order=original_hue_order,
-                    #hue_order=["info_gain_pairs_random", "info_gain_object", "info_gain_pairs", "entropy", "maxexp", "maxmin", "unif"],
+                    #hue_order=original_hue_order,
+                    hue_order=["info_gain_pairs_random", "info_gain_object", "info_gain_pairs", "entropy", "maxexp", "maxmin", "unif"],
                     errorbar=errorbar,
                     marker=".",
                     err_style=err_style,
                     data=df_filtered,
                     linestyle=linestyle,
                     err_kws=err_kws,
-                    palette=filtered_palette
+                    #palette=filtered_palette
                     #palette=palette
                 )
 
@@ -481,7 +481,11 @@ class ExperimentReader:
                 #plt.setp(ax.lines, alpha=0.7)  # Adjusts the transparency of the markers
                 plt.setp(ax.lines, markeredgewidth=0.5)  # Adjusts the transparency of the markers
                 #plt.setp(ax.lines, markersize=7)  # Adjusts the transparency of the markers
-                plt.setp(ax.lines, markersize=10)  # Adjusts the transparency of the markers
+                if self.dataset == "ecoli":
+                    mz = 8
+                else:
+                    mz = 10
+                plt.setp(ax.lines, markersize=mz)  # Adjusts the transparency of the markers
                 plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True, nbins=5))
                 #plt.gca().xaxis.set_major_locator(MaxNLocator(nbins=10))
 
@@ -510,8 +514,8 @@ class ExperimentReader:
 
                 plt.xlabel("Number of queries")
                 ax.legend(loc="best")
-                ax.legend(loc='upper left', bbox_to_anchor=(1,1))
-                plt.subplots_adjust(right=0.75)
+                #ax.legend(loc='upper left', bbox_to_anchor=(1,1))
+                #plt.subplots_adjust(right=0.75)
 
                 legs = ax.get_legend().get_texts()
                 fix_legends = True
@@ -678,7 +682,7 @@ class ExperimentReader:
                 plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels
                 plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
                 plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
-                plt.rc('legend', fontsize=16)    # legend fontsize
+                plt.rc('legend', fontsize=14)    # legend fontsize
                 plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
                 plt.rc('figure', dpi=200)
                 plt.rc('figure', figsize=(6, 4))
@@ -760,14 +764,14 @@ class ExperimentReader:
 
                 # Generate the full palette using the current default Seaborn palette
                 current_palette = sns.color_palette()
-                #palette_dict = dict(zip(original_hue_order, current_palette))
+                palette_dict = dict(zip(original_hue_order, current_palette))
 
                 # Assume df_filtered is your DataFrame and 'acq_fn' is the column for hue categorization
                 available_hues = df_filtered['acq_fn'].unique()
-                #filtered_hue_order = [hue for hue in original_hue_order if hue in available_hues]
+                filtered_hue_order = [hue for hue in original_hue_order if hue in available_hues]
 
                 # Filter the palette to only include available hues
-                #filtered_palette = {hue: palette_dict[hue] for hue in filtered_hue_order}
+                filtered_palette = {hue: palette_dict[hue] for hue in filtered_hue_order}
 
                 if "x" in vary:
                     var = "total_queries"
@@ -775,7 +779,8 @@ class ExperimentReader:
                 ax = sns.lineplot(
                     x=vary[0],
                     y="y",
-                    hue=df_filtered[hues].apply(tuple, axis=1),
+                    hue="acq_fn",
+                    style="tau",
                     #hue="acq_fn",
                     #hue_order=original_hue_order,
                     errorbar=errorbar,
@@ -783,8 +788,9 @@ class ExperimentReader:
                     err_style=err_style,
                     data=df_filtered,
                     linestyle=linestyle,
-                    err_kws=err_kws
-                    #palette=filtered_palette
+                    err_kws=err_kws,
+                    palette=filtered_palette,
+                    dashes={1: '', 500: (2, 2)}
                     #palette=palette,
                 )
 
@@ -792,9 +798,39 @@ class ExperimentReader:
                 #plt.setp(ax.lines, alpha=0.7)  # Adjusts the transparency of the markers
                 plt.setp(ax.lines, markeredgewidth=0.5)  # Adjusts the transparency of the markers
                 #plt.setp(ax.lines, markersize=7)  # Adjusts the transparency of the markers
-                plt.setp(ax.lines, markersize=markersize)  # Adjusts the transparency of the markers
+                plt.setp(ax.lines, markersize=0)  # Adjusts the transparency of the markers
                 plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True, nbins=5))
                 #plt.gca().xaxis.set_major_locator(MaxNLocator(nbins=10))
+                # Adjust line styles
+                # Adjust line styles
+
+
+                # Customize the legend
+                handles, labels = ax.get_legend_handles_labels()
+
+                # Filter and sort labels according to the original_hue_order
+                sorted_labels = [label for label in original_hue_order if label in labels]
+                sorted_handles = []
+
+                # Add string categories with the same colors and map to new strings
+                for label in sorted_labels:
+                    for handle, full_label in zip(handles, labels):
+                        if label == full_label:
+                            new_label = acq_fn_map.get(label, label)
+                            sorted_handles.append(plt.Line2D([0], [0], color=handle.get_color(), label=new_label))
+                            break
+
+                # Create custom legend entries for line styles
+                solid_line = plt.Line2D([0], [0], color='black', linestyle='-', label='Value 1 (Solid)')
+                dashed_line = plt.Line2D([0], [0], color='black', linestyle='--', label='Value 500 (Dashed)')
+
+                # Add custom line style entries
+                sorted_handles.extend([solid_line, dashed_line])
+                sorted_labels = [acq_fn_map[label] for label in sorted_labels]
+                sorted_labels.extend(["No re-queries", 'Re-queries'])
+
+                # Update the legend
+                ax.legend(handles=sorted_handles, labels=sorted_labels)
 
 
                 plt.ylabel(metric_map[metric])
@@ -820,9 +856,9 @@ class ExperimentReader:
                 ax.set_xticklabels(labels)
 
                 plt.xlabel("Number of queries")
-                ax.legend(loc='upper left')
-                ax.legend(loc='upper left', bbox_to_anchor=(1,1))
-                plt.subplots_adjust(right=0.75)
+                #ax.legend(loc='upper left')
+                #ax.legend(loc='upper left', bbox_to_anchor=(1,1))
+                #plt.subplots_adjust(right=0.75)
 
                 #legs = ax.get_legend().get_texts()
                 #fix_legends = True
@@ -855,7 +891,7 @@ class ExperimentReader:
                 #        else:
                 #            ll.set_text(r"$\xi$ = " + xi)
 
-                legend = ax.get_legend()
+                #legend = ax.get_legend()
 
                 #if self.dataset != "20newsgroups":
                 #ax.get_legend().set_visible(False)

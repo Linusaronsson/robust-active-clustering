@@ -1,5 +1,5 @@
 {
-    "_experiment_name": "ablation_req",
+    "_experiment_name": "ablation_req_new",
     "_num_repeats": 14,
     "_n_workers": 14,
     "_local": true,

@@ -1,5 +1,5 @@
 {
-    "_experiment_name": "ablation_req",
+    "_experiment_name": "ablation_req_new",
     "_num_repeats": 14,
     "_n_workers": 14,
     "_local": true,
@@ -17,7 +17,7 @@
     "sample_size": 1,
     "infer_threshold": -1,
     "start_inferring": 0,
-    "acq_fn": "entropy",
+    "acq_fn": "info_gain_pairs_random",
     "eps": 0.8,
     "beta": 1,
     "tau": 10,
