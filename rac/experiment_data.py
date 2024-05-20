@@ -734,7 +734,7 @@ class ExperimentReader:
                     raise ValueError("incorrect dataset!")
 
                 #cut_threshold = 300
-                df_filtered = df_filtered[df_filtered[vary[0]] < 100]
+                df_filtered = df_filtered[df_filtered[vary[0]] < 50]
 
                 metric_map = {
                     "ami": "AMI", "rand": "ARI", "time": "Time (s)", "num_violations": "Num. violations",
@@ -1337,7 +1337,8 @@ class ExperimentReader:
                     raise ValueError("incorrect dataset!")
 
                 #cut_threshold = 300
-                df_filtered = df_filtered[df_filtered[vary[0]] < (min_length + 30)]
+                #df_filtered = df_filtered[df_filtered[vary[0]] < (min_length + 30)]
+                df_filtered = df_filtered[df_filtered[vary[0]] < 35]
 
                 metric_map = {
                     "ami": "AMI", "rand": "ARI", "time": "Time (s)", "num_violations": "Num. violations",
@@ -1384,9 +1385,10 @@ class ExperimentReader:
                 ax = sns.lineplot(
                     x=vary[0],
                     y="y",
-                    #hue=df_filtered[hues].apply(tuple, axis=1),
-                    hue="num_edges_info_gain",
-                    hue_order=["20", "10", "5", "3", "1"],
+                    hue=df_filtered[hues].apply(tuple, axis=1),
+                    #hue="num_edges_info_gain",
+                    #hue_order=["20", "10", "5", "3", "1"],
+                    #hue_order=filtered_hue_order,
                     errorbar=errorbar,
                     marker=".",
                     err_style=err_style,
@@ -1439,11 +1441,11 @@ class ExperimentReader:
                 #    l = ll.get_text()
                 #    ll.set_text(r"$|\mathcal{D}_i|$ = " + l + r"$|\mathcal{E}|$")
 
-                legs = ax.get_legend().get_texts()
-                ax.get_legend().set_title(None)
-                for ll in legs:
-                    l = ll.get_text()
-                    ll.set_text(r"$|\mathcal{E}^{EIG}|$ = " + l + r"$N$")
+                #legs = ax.get_legend().get_texts()
+                #ax.get_legend().set_title(None)
+                #for ll in legs:
+                #    l = ll.get_text()
+                #    ll.set_text(r"$|\mathcal{E}^{EIG}|$ = " + l + r"$N$")
 
                 #legs = ax.get_legend().get_texts()
                 #ax.get_legend().set_title(None)
@@ -1451,14 +1453,14 @@ class ExperimentReader:
                 #    l = ll.get_text()
                 #    ll.set_text(r"$\beta$ = " + l)
 
-                #legs = ax.get_legend().get_texts()
-                #ax.get_legend().set_title(None)
-                #for ll in legs:
-                #    l = ll.get_text()
-                #    l1, l2, = l.split(",")
-                #    l1 = l1[1:].strip()
-                #    l2 = l2[:-1].strip()
-                #    ll.set_text(r"$m = $" + l1 + r", $n = $" + l2)
+                legs = ax.get_legend().get_texts()
+                ax.get_legend().set_title(None)
+                for ll in legs:
+                    l = ll.get_text()
+                    l1, l2, = l.split(",")
+                    l1 = l1[1:].strip()
+                    l2 = l2[:-1].strip()
+                    ll.set_text(r"$m = $" + l1 + r", $n = $" + l2)
 
                 legend = ax.get_legend()
 
